@@ -155,3 +155,15 @@
     stroke-width: 1.5;
   }
 }
+
+/* View transitions. Cliques passam para a página durante a transição. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* Troca de tema e crossfade padrão: a página inteira em 250ms. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-base);
+  animation-timing-function: var(--ease-standard);
+}

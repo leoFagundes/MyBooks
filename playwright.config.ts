@@ -7,6 +7,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
+  // Na máquina de desenvolvimento (Windows), dois ou mais navegadores headless
+  // ao mesmo tempo fazem as requisições para localhost pararem de chegar ao
+  // servidor (medido até com um http.createServer puro). Localmente, um
+  // navegador por vez; no CI, o padrão.
+  workers: process.env.CI ? undefined : 1,
   reporter: "list",
   use: {
     baseURL,

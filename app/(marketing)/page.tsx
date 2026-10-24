@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Landing provisória: a narrativa com rolagem chega na Fase 7.
 export default function HomePage() {
   return (
@@ -12,6 +14,12 @@ export default function HomePage() {
         Guarde o que você leu, o que está lendo e o que ainda quer ler. Visite a
         estante de outros leitores e traga para a sua o que chamar sua atenção.
       </p>
+      <Link
+        href="/dev"
+        className="w-fit rounded-control bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+      >
+        Ver os componentes
+      </Link>
     </main>
   );
 }

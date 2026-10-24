@@ -39,7 +39,10 @@ export function MotionDemo() {
       <DemoRow label="Entradas em sequência">
         <Replay onClick={() => setEntryKey((key) => key + 1)} />
       </DemoRow>
-      <Stagger key={entryKey} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <Stagger
+        key={`entradas-${entryKey}`}
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+      >
         {books.map((book, index) => (
           <StaggerItem
             key={book.title}
@@ -60,7 +63,7 @@ export function MotionDemo() {
         <Replay onClick={() => setTitleKey((key) => key + 1)} />
       </DemoRow>
       <TextReveal
-        key={titleKey}
+        key={`titulo-${titleKey}`}
         as="p"
         text="Sua vida de leitor, em uma estante só."
         className="font-serif text-4xl leading-tight tracking-tight text-balance sm:text-5xl"

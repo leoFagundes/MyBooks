@@ -14,7 +14,7 @@ import { DemoRow } from "./dev-section";
 function BookCardSkeleton() {
   return (
     <div className="flex w-32 flex-col gap-2.5">
-      <Skeleton className="aspect-[2/3] w-full rounded-cover" />
+      <Skeleton className="aspect-2/3 w-full rounded-cover" />
       <Skeleton className="h-3.5 w-4/5" />
       <Skeleton className="h-3 w-1/2" />
     </div>

@@ -1,10 +1,16 @@
 import type { Page } from "@playwright/test";
 
+// A vitrine tem uma capa quebrada de propósito, para mostrar o fallback.
+const EXPECTED_BROKEN = ["/capas/nao-existe.jpg"];
+
 /** Junta erros de console e exceções da página para o teste conferir no fim. */
 export function trackPageErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (message.type() !== "error") return;
+    const url = message.location().url;
+    if (EXPECTED_BROKEN.some((path) => url.includes(path))) return;
+    errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
   return errors;

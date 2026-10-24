@@ -159,6 +159,65 @@
   }
 }
 
+/* Livros (spec §4) ----------------------------------------------------- */
+
+/* Contorno quase invisível: capas claras não somem no fundo claro. */
+.book-cover {
+  outline: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  outline-offset: -1px;
+}
+
+/* Dobra: leve sombra interna na borda esquerda, como num livro de verdade. */
+.book-fold {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 7%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0.22),
+    rgb(0 0 0 / 0.04) 45%,
+    rgb(255 255 255 / 0.08) 70%,
+    transparent
+  );
+}
+
+/* Reflexo de luz que acompanha o cursor (a posição vem do componente). */
+.cover-glare {
+  --glare-color: color-mix(in oklab, var(--paper) 40%, transparent);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+}
+
+/* Lombada: luz na borda esquerda e sombra na direita. */
+.spine {
+  box-shadow:
+    inset 2px 0 0 rgb(255 255 255 / 0.1),
+    inset -2px 0 0 rgb(0 0 0 / 0.14);
+}
+
+/* Prateleira: uma linha fina sob cada fileira, onde as lombadas se apoiam.
+   Cada fileira tem a altura da lombada mais alta (192px) mais folga para ela
+   subir no hover. */
+.shelf {
+  --shelf-row: 200px;
+  --shelf-gap: 28px;
+  --shelf-line: color-mix(in oklab, var(--foreground) 24%, transparent);
+  row-gap: var(--shelf-gap);
+  background-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--shelf-row) - 1px),
+    var(--shelf-line) calc(var(--shelf-row) - 1px),
+    var(--shelf-line) var(--shelf-row),
+    transparent var(--shelf-row)
+  );
+  background-size: 100% calc(var(--shelf-row) + var(--shelf-gap));
+  background-repeat: repeat-y;
+}
+
 /* View transitions. Cliques passam para a página durante a transição. */
 ::view-transition {
   pointer-events: none;

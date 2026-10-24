@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BooksDemo } from "./_components/books-demo";
 import { ButtonsDemo } from "./_components/buttons-demo";
 import { DevSection } from "./_components/dev-section";
 import { FeedbackDemo } from "./_components/feedback-demo";
@@ -105,6 +106,15 @@ export default function DevPage() {
         description="Barra fina e translúcida no topo e, no celular, a pílula flutuante. ⌘K abre a paleta de comandos de qualquer página."
       >
         <NavPreview />
+      </DevSection>
+
+      <DevSection
+        id="livros"
+        number="09"
+        title="Capas, lombadas e prateleira"
+        description="A cor vem das capas. Sem capa, ou quando ela não carrega, entra a capa tipográfica na cor do título. As lombadas variam com as páginas e se afastam umas das outras no hover."
+      >
+        <BooksDemo />
       </DevSection>
     </main>
   );

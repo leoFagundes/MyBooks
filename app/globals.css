@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "lenis/dist/lenis.css";
 
 /* O script do tema põe data-theme no <html> antes da primeira pintura. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

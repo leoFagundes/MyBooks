@@ -5,6 +5,7 @@ import { ButtonsDemo } from "./_components/buttons-demo";
 import { DevSection } from "./_components/dev-section";
 import { FeedbackDemo } from "./_components/feedback-demo";
 import { FieldsDemo } from "./_components/fields-demo";
+import { MotionDemo } from "./_components/motion-demo";
 import { NavigationDemo } from "./_components/navigation-demo";
 import { OverlaysDemo } from "./_components/overlays-demo";
 import { TokensDemo } from "./_components/tokens-demo";
@@ -89,6 +90,15 @@ export default function DevPage() {
         description="Skeletons discretos, estados vazios com uma ação e toasts com desfazer."
       >
         <FeedbackDemo />
+      </DevSection>
+
+      <DevSection
+        id="movimento"
+        number="07"
+        title="Movimento"
+        description="Presets de lib/motion.ts: entradas que acontecem uma vez, títulos que saem do desfoque e molas para o que é tocável. A rolagem desta página usa Lenis."
+      >
+        <MotionDemo />
       </DevSection>
     </main>
   );

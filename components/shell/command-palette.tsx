@@ -3,7 +3,7 @@
 import { Command } from "cmdk";
 import { CornerDownLeft, House, Search, Shapes, SunMoon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createContext, use, useEffect, useState } from "react";
+import { createContext, use, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { routes } from "@/lib/routes";
@@ -68,6 +68,7 @@ function CommandPalette({
 }) {
   const router = useRouter();
   const { resolved, setPreference } = useTheme();
+  const returnFocus = useRef<HTMLElement | null>(null);
 
   function run(action: () => void) {
     onOpenChange(false);
@@ -80,6 +81,16 @@ function CommandPalette({
         showCloseButton={false}
         aria-describedby={undefined}
         className="top-[14vh] max-w-lg translate-y-0 gap-0 overflow-hidden p-0"
+        // Sem DialogTrigger, o Radix não sabe a quem devolver o foco: guarda
+        // quem estava focado ao abrir (o botão Buscar ou onde o ⌘K foi apertado)
+        onOpenAutoFocus={() => {
+          const active = document.activeElement;
+          returnFocus.current = active instanceof HTMLElement ? active : null;
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocus.current?.focus();
+        }}
       >
         <DialogTitle className="sr-only">Paleta de comandos</DialogTitle>
         <Command label="Paleta de comandos" loop>

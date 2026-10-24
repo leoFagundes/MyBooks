@@ -1,8 +1,9 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { Minus, Plus, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import { AnimatedNumber } from "@/components/motion/animated-number";
 import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { SwapText } from "@/components/motion/swap-text";
 import { TextReveal } from "@/components/motion/text-reveal";
@@ -33,6 +34,7 @@ export function MotionDemo() {
   const [titleKey, setTitleKey] = useState(0);
   const [following, setFollowing] = useState(false);
   const [springsOn, setSpringsOn] = useState(false);
+  const [bookCount, setBookCount] = useState(128);
 
   return (
     <>
@@ -79,6 +81,44 @@ export function MotionDemo() {
           <SwapText text={following ? "Seguindo" : "Seguir"} />
         </Button>
       </DemoRow>
+
+      <DemoRow label="Números">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setBookCount((count) => count + 1)}
+        >
+          <Plus />
+          Somar um livro
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={bookCount === 0}
+          onClick={() => setBookCount((count) => Math.max(0, count - 1))}
+        >
+          <Minus />
+          Tirar um livro
+        </Button>
+      </DemoRow>
+      <p className="flex flex-wrap gap-x-2 gap-y-1 font-mono text-sm text-muted-foreground">
+        <span data-testid="contador-livros">
+          <AnimatedNumber value={bookCount} className="text-foreground" />{" "}
+          livros
+        </span>
+        <span aria-hidden>·</span>
+        <span>
+          <AnimatedNumber value={12} className="text-foreground" /> coleções
+        </span>
+        <span aria-hidden>·</span>
+        <span>
+          <AnimatedNumber value={1204} className="text-foreground" /> seguidores
+        </span>
+        <span aria-hidden>·</span>
+        <span>
+          <AnimatedNumber value={87} className="text-foreground" /> seguindo
+        </span>
+      </p>
 
       <DemoRow label="Molas">
         <Button

@@ -30,6 +30,18 @@ test.describe("capas, lombadas e prateleira", () => {
     ).toBeVisible();
   });
 
+  test.describe("sem JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    // A capa costuma ser o LCP: não pode esperar a hidratação para aparecer
+    test("a capa aparece sem esperar a hidratação", async ({ page }) => {
+      const image = page
+        .getByTestId("capa-torto-arado")
+        .getByRole("img", { name: "Capa de Torto Arado" });
+      await expect(image).toHaveCSS("opacity", "1");
+    });
+  });
+
   test("a prateleira mostra uma lombada por livro", async ({ page }) => {
     const shelf = page.getByRole("list", { name: "Prateleira" });
     await expect(shelf.getByRole("listitem")).toHaveCount(15);

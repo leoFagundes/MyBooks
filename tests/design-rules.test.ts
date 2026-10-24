@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { describe, expect, test } from "vitest";
+import { COVER_RADIUS_PX } from "@/features/books/lib/cover";
 import { durations, easing } from "@/lib/motion";
 
 const root = join(__dirname, "..");
@@ -112,5 +113,12 @@ describe("movimento no CSS espelha lib/motion.ts", () => {
     expect(css).toContain(`--duration-fast: ${durations.fast * 1000}ms;`);
     expect(css).toContain(`--duration-base: ${durations.base * 1000}ms;`);
     expect(css).toContain(`--duration-slow: ${durations.slow * 1000}ms;`);
+  });
+});
+
+// O Motion só corrige o raio durante a animação de layout com valor em px
+describe("raio da capa no CSS espelha features/books/lib/cover.ts", () => {
+  test("mesmo valor em px", () => {
+    expect(css).toContain(`--radius-cover: ${COVER_RADIUS_PX}px;`);
   });
 });

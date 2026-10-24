@@ -13,24 +13,40 @@ import { springs } from "@/lib/motion";
 import { CAN_HOVER, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 import { bookColor, pickInk } from "../lib/color";
+import { COVER_RADIUS_PX } from "../lib/cover";
 import type { BookVisual } from "../types";
 
 const MAX_TILT = 6;
 
-const widths = { sm: "w-24", md: "w-36", lg: "w-52", fill: "w-full" } as const;
+const widths = {
+  xs: "w-10",
+  sm: "w-24",
+  md: "w-36",
+  lg: "w-52",
+  fill: "w-full",
+} as const;
 const sizes = {
+  xs: "40px",
   sm: "96px",
   md: "144px",
   lg: "208px",
   fill: "(min-width: 768px) 20vw, 45vw",
 } as const;
 
+// Capas que já chegaram nesta visita, por endereço e tamanho. Quando uma delas
+// monta de novo (a troca entre grade e lista, por exemplo), vem do cache e
+// aparece na hora, sem repetir o fade.
+const arrivedCovers = new Set<string>();
+
 type BookCoverProps = {
   book: BookVisual;
   size?: keyof typeof widths;
   /** Inclinação 3D seguindo o cursor (só com mouse e sem movimento reduzido). */
   tilt?: boolean;
-  priority?: boolean;
+  /** Pré-carrega a imagem no <head>: só para a capa que é o LCP da página. */
+  preload?: boolean;
+  /** Capas com o mesmo layoutId viajam de um lugar para outro (Motion). */
+  layoutId?: string;
   className?: string;
 };
 
@@ -43,11 +59,11 @@ export function BookCover({
   book,
   size = "md",
   tilt = true,
-  priority = false,
+  preload = false,
+  layoutId,
   className,
 }: BookCoverProps) {
   const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const reduced = useReducedMotion() ?? false;
   const canHover = useMediaQuery(CAN_HOVER);
   const tiltOn = tilt && canHover && !reduced;
@@ -61,6 +77,20 @@ export function BookCover({
 
   const color = bookColor(book);
   const showImage = Boolean(book.coverUrl) && !failed;
+  const coverKey = `${book.coverUrl}|${size}`;
+
+  // Esconde só a imagem que ainda vai chegar, para ela entrar com fade. Vinda
+  // do servidor ela já nasce visível: sem JS, ou antes de hidratar, aparece.
+  function hideUntilLoaded(image: HTMLImageElement | null) {
+    if (!image || image.complete || image.naturalWidth > 0) return;
+    if (arrivedCovers.has(coverKey)) return;
+    image.dataset.loading = "";
+  }
+
+  function onLoad(event: React.SyntheticEvent<HTMLImageElement>) {
+    arrivedCovers.add(coverKey);
+    delete event.currentTarget.dataset.loading;
+  }
 
   function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
     if (!tiltOn) return;
@@ -88,25 +118,26 @@ export function BookCover({
       style={{ "--cover": color } as React.CSSProperties}
     >
       <motion.div
+        layoutId={layoutId}
+        // Na troca de vista a capa nova assume na hora, sem esmaecer com a antiga
+        layoutCrossfade={false}
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
-        style={{ rotateX, rotateY }}
-        className="book-cover relative aspect-2/3 overflow-hidden rounded-cover bg-(--cover)"
+        style={{ rotateX, rotateY, borderRadius: COVER_RADIUS_PX }}
+        className="book-cover relative aspect-2/3 overflow-hidden bg-(--cover)"
       >
         {showImage ? (
           <Image
+            ref={hideUntilLoaded}
             src={book.coverUrl ?? ""}
             alt={`Capa de ${book.title}`}
             fill
             sizes={sizes[size]}
-            priority={priority}
-            onLoad={() => setLoaded(true)}
+            preload={preload}
+            onLoad={onLoad}
             onError={() => setFailed(true)}
             // Enquanto carrega, aparece a cor da capa; a imagem chega com fade
-            className={cn(
-              "object-cover transition-opacity duration-400",
-              loaded ? "opacity-100" : "opacity-0",
-            )}
+            className="object-cover transition-opacity duration-400 data-loading:opacity-0"
           />
         ) : (
           <GeneratedCover book={book} color={color} />

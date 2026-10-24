@@ -10,6 +10,7 @@ import { NavPreview } from "./_components/nav-preview";
 import { NavigationDemo } from "./_components/navigation-demo";
 import { OverlaysDemo } from "./_components/overlays-demo";
 import { TokensDemo } from "./_components/tokens-demo";
+import { ViewsDemo } from "./_components/views-demo";
 
 export const metadata: Metadata = {
   title: "Componentes",
@@ -115,6 +116,15 @@ export default function DevPage() {
         description="A cor vem das capas. Sem capa, ou quando ela não carrega, entra a capa tipográfica na cor do título. As lombadas variam com as páginas e se afastam umas das outras no hover."
       >
         <BooksDemo />
+      </DevSection>
+
+      <DevSection
+        id="visualizacoes"
+        number="10"
+        title="Estante, grade e lista"
+        description="As três vistas do perfil. Entre a grade e a lista, cada capa viaja até o novo lugar; o resto esmaece."
+      >
+        <ViewsDemo />
       </DevSection>
     </main>
   );

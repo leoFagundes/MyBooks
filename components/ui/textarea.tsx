@@ -1,0 +1,19 @@
+import { cn } from "@/lib/utils";
+import { fieldClasses } from "./input";
+
+/** Cresce com o texto (field-sizing), sem altura animada. */
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(
+        fieldClasses,
+        "field-sizing-content min-h-24 py-2.5 leading-relaxed",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Textarea };

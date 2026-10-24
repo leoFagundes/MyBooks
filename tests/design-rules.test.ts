@@ -32,10 +32,14 @@ function offenders(pattern: RegExp) {
   );
 }
 
+// Primeiro bloco cuja lista de seletores inclui `selector` (ex.: ":root, [data-theme] {").
 function block(selector: string) {
-  const start = css.indexOf(`${selector} {`);
-  expect(start, `bloco ${selector} no globals.css`).toBeGreaterThanOrEqual(0);
-  return css.slice(start, css.indexOf("}", start));
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const blocks = withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g);
+  for (const [, selectors, body] of blocks) {
+    if (selectors.split(",").some((s) => s.trim() === selector)) return body;
+  }
+  throw new Error(`bloco ${selector} não encontrado no globals.css`);
 }
 
 describe("nenhuma cor solta no código (spec §2)", () => {

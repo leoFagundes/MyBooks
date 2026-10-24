@@ -68,7 +68,9 @@
   --font-heading: var(--font-geist-sans);
 }
 
-:root {
+/* [data-theme="light"] permite uma ilha clara dentro do tema escuro (prévias no /dev). */
+:root,
+[data-theme="light"] {
   /* Claro (spec §2) */
   --background: #fafaf8;
   --surface: #ffffff;

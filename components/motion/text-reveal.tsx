@@ -1,7 +1,12 @@
 "use client";
 
 import { motion, stagger, useReducedMotion } from "motion/react";
-import { entranceVariants, staggerDelay, tweens } from "@/lib/motion";
+import {
+  entranceTransition,
+  entranceVariants,
+  staggerDelay,
+  tweens,
+} from "@/lib/motion";
 import { splitWords } from "./split-words";
 
 type TextRevealProps = {
@@ -33,8 +38,8 @@ export function TextReveal({ text, as = "h1", className }: TextRevealProps) {
         <span key={`${word}-${index}`}>
           <motion.span
             className="inline-block"
-            variants={entranceVariants(reduced)}
-            transition={tweens.slow}
+            variants={entranceVariants}
+            transition={entranceTransition(reduced, tweens.slow)}
           >
             {word}
           </motion.span>

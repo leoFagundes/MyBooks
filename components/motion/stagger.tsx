@@ -1,7 +1,12 @@
 "use client";
 
 import { motion, stagger, useReducedMotion } from "motion/react";
-import { entranceVariants, staggerDelay, tweens } from "@/lib/motion";
+import {
+  entranceTransition,
+  entranceVariants,
+  staggerDelay,
+  tweens,
+} from "@/lib/motion";
 
 /** Grupo cujos itens entram em sequência de 35ms, uma vez (spec §3, momento 3). */
 export function Stagger({
@@ -31,8 +36,8 @@ export function StaggerItem({
   const reduced = useReducedMotion() ?? false;
   return (
     <motion.div
-      variants={entranceVariants(reduced)}
-      transition={tweens.slow}
+      variants={entranceVariants}
+      transition={entranceTransition(reduced, tweens.slow)}
       {...props}
     >
       {children}

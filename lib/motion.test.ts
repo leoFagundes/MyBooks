@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   durations,
   easing,
+  entranceTransition,
   entranceVariants,
   overlayVariants,
   pressScale,
@@ -44,17 +45,30 @@ describe("presets de movimento (spec §3)", () => {
   });
 });
 
-describe("entranceVariants", () => {
-  test("entra com fade, 8px para cima e blur de 4px para 0", () => {
-    const variants = entranceVariants(false);
-    expect(variants.hidden).toEqual({ opacity: 0, y: 8, filter: "blur(4px)" });
-    expect(variants.visible).toEqual({ opacity: 1, y: 0, filter: "blur(0px)" });
+describe("entradas", () => {
+  test("entram com fade, 8px para cima e blur de 4px para 0", () => {
+    expect(entranceVariants.hidden).toEqual({
+      opacity: 0,
+      y: 8,
+      filter: "blur(4px)",
+    });
+    expect(entranceVariants.visible).toEqual({
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+    });
   });
 
-  test("com movimento reduzido vira só opacidade", () => {
-    const variants = entranceVariants(true);
-    expect(variants.hidden).toEqual({ opacity: 0 });
-    expect(variants.visible).toEqual({ opacity: 1 });
+  test("com movimento reduzido, posição e desfoque vão direto ao fim", () => {
+    expect(entranceTransition(true, tweens.slow)).toEqual({
+      ...tweens.slow,
+      y: { duration: 0 },
+      filter: { duration: 0 },
+    });
+  });
+
+  test("com movimento normal, a transição fica como veio", () => {
+    expect(entranceTransition(false, tweens.slow)).toEqual(tweens.slow);
   });
 });
 

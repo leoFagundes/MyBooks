@@ -24,15 +24,23 @@ export const staggerDelay = 0.035;
 
 export const pressScale = 0.97;
 
-/** Fade + 8px para cima + blur de 4px para 0. Reduzido: só opacidade. */
-export function entranceVariants(reduced: boolean): Variants {
-  if (reduced) {
-    return { hidden: { opacity: 0 }, visible: { opacity: 1 } };
-  }
-  return {
-    hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
-    visible: { opacity: 1, y: 0, filter: "blur(0px)" },
-  };
+/**
+ * Fade + 8px para cima + blur de 4px para 0. Os estados são os mesmos com
+ * movimento reduzido: o servidor não sabe da preferência, e o HTML precisa
+ * bater na hidratação. O que muda é a transição (veja entranceTransition).
+ */
+export const entranceVariants: Variants = {
+  hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+};
+
+/** Com movimento reduzido, posição e desfoque vão direto ao fim; só a opacidade anima. */
+export function entranceTransition(
+  reduced: boolean,
+  transition: Transition,
+): Transition {
+  if (!reduced) return transition;
+  return { ...transition, y: { duration: 0 }, filter: { duration: 0 } };
 }
 
 /** Modais, popovers e paleta: entram de 0.96 com mola e saem mais rápido. */

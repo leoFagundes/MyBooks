@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { ButtonsDemo } from "./_components/buttons-demo";
 import { DevSection } from "./_components/dev-section";
 import { FeedbackDemo } from "./_components/feedback-demo";
 import { FieldsDemo } from "./_components/fields-demo";
 import { MotionDemo } from "./_components/motion-demo";
+import { NavPreview } from "./_components/nav-preview";
 import { NavigationDemo } from "./_components/navigation-demo";
 import { OverlaysDemo } from "./_components/overlays-demo";
 import { TokensDemo } from "./_components/tokens-demo";
@@ -23,12 +23,9 @@ export default function DevPage() {
   return (
     <main className="mx-auto max-w-5xl px-6 pt-16 pb-32">
       <header className="flex flex-col gap-3 border-b border-border pb-10">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
-            Fase 1 · Fundação
-          </p>
-          <ThemeToggle />
-        </div>
+        <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
+          Fase 1 · Fundação
+        </p>
         <h1 className="font-serif text-5xl tracking-tight text-balance">
           Componentes e movimento
         </h1>
@@ -99,6 +96,15 @@ export default function DevPage() {
         description="Presets de lib/motion.ts: entradas que acontecem uma vez, títulos que saem do desfoque e molas para o que é tocável. A rolagem desta página usa Lenis."
       >
         <MotionDemo />
+      </DevSection>
+
+      <DevSection
+        id="navegacao-app"
+        number="08"
+        title="Navegação"
+        description="Barra fina e translúcida no topo e, no celular, a pílula flutuante. ⌘K abre a paleta de comandos de qualquer página."
+      >
+        <NavPreview />
       </DevSection>
     </main>
   );

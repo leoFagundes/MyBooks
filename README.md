@@ -29,3 +29,5 @@ Abra [http://localhost:3000/dev](http://localhost:3000/dev) para ver os componen
 | `npm test`          | testes unitários (Vitest)                   |
 | `npm run test:e2e`  | testes de ponta a ponta (Playwright)        |
 | `npm run format`    | formata o código (Prettier)                 |
+
+Antes do primeiro `npm run test:e2e`, instale o navegador dos testes com `npx playwright install chromium`.

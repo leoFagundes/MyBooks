@@ -24,39 +24,39 @@ Cada uma precisa do seu ok.
 
 ## 3. Bibliotecas e versões
 
-| Pacote                                                   | Versão                    | Fase | Nota                                                            |
-| -------------------------------------------------------- | ------------------------- | ---- | --------------------------------------------------------------- |
-| next                                                     | 16.4.3                    | —    | já instalado                                                    |
-| react · react-dom                                        | 19.3.1                    | 1    | sobe da 19.3.0                                                  |
-| typescript                                               | 6.0.3                     | 1    | sobe da 5.9.3 (proposta 4)                                      |
-| @types/node                                              | 24.19.2                   | 1    | Node 24 local e padrão da Vercel; `engines.node: "24.x"`        |
-| tailwindcss · @tailwindcss/turbopack                     | 4.3.3                     | —    | já instalados                                                   |
-| eslint · eslint-config-next                              | 9.39.5 · 16.4.3           | —    | já instalados                                                   |
-| prettier · prettier-plugin-tailwindcss                   | 3.9.10 · 0.8.1            | 1    | ordena as classes                                               |
-| babel-plugin-react-compiler                              | 1.0.0                     | 1    | proposta 6                                                      |
-| motion                                                   | 14.6.0                    | 1    | 13 e 14 sem mudança que nos afete                               |
-| lenis                                                    | 1.3.27                    | 1    | `lenis/react` guiado pelo `frame` do Motion                     |
-| shadcn · radix-ui                                        | 4.22.1 · 1.8.1            | 1    | `shadcn init --base radix`                                      |
-| class-variance-authority · clsx · tailwind-merge         | 0.7.1 · 2.1.1 · 3.7.0     | 1    | usados pelo shadcn                                              |
-| lucide-react                                             | 1.61.0                    | 1    | traço 1.5                                                       |
-| sonner                                                   | 2.0.8                     | 1    |                                                                 |
-| @number-flow/react                                       | 0.6.2                     | 1    |                                                                 |
-| vitest                                                   | 5.0.5                     | 1    | ambiente node, só utilitários puros                             |
-| @supabase/supabase-js · @supabase/ssr                    | 2.118.0 · 0.12.7          | 2    | chave publishable e `getClaims()`                               |
-| supabase (CLI)                                           | 2.122.0                   | 2    | migrations, seed e `gen types`                                  |
-| zod · react-hook-form · @hookform/resolvers              | 4.6.7 · 7.91.0 · 6.0.0    | 2    | o mesmo schema valida formulário e Server Action                |
-| react-easy-crop                                          | 6.2.4                     | 2    | recorte do avatar                                               |
-| server-only                                              | 0.0.1                     | 2    |                                                                 |
-| @playwright/test · @next/playwright                      | 1.64.1 · 16.4.3           | 2    | `instant()` testa o que aparece de imediato na navegação        |
-| cmdk                                                     | 1.1.1                     | 3    | paleta de adicionar livro; ⌘K completo na 7                     |
-| @tanstack/react-query                                    | 5.104.5                   | 3    | busca instantânea e scroll infinito                             |
-| sharp · node-vibrant                                     | 0.35.5 · 4.0.4            | 3    | proposta 3                                                      |
-| @dnd-kit/core · sortable · utilities                     | 6.3.1 · 10.0.0 · 3.2.2    | 4    | sem release desde dez/2024; o sucessor ainda é 0.5, reavalio na 4 |
-| fractional-indexing                                      | 4.0.0                     | 4    | só ESM                                                          |
-| three · @react-three/fiber · @react-three/drei           | 0.186.1 · 9.8.2 · 10.7.9  | 6    | carregados com `next/dynamic`, sem SSR                          |
-| @zxing/browser                                           | 0.2.1                     | 7    | alternativa ao BarcodeDetector                                  |
-| papaparse                                                | 5.7.0                     | 7    | CSV do Goodreads                                                |
-| @vercel/analytics · @vercel/speed-insights               | 2.0.1 · 2.0.0             | 8    |                                                                 |
+| Pacote                                           | Versão                   | Fase | Nota                                                              |
+| ------------------------------------------------ | ------------------------ | ---- | ----------------------------------------------------------------- |
+| next                                             | 16.4.3                   | —    | já instalado                                                      |
+| react · react-dom                                | 19.3.1                   | 1    | sobe da 19.3.0                                                    |
+| typescript                                       | 6.0.3                    | 1    | sobe da 5.9.3 (proposta 4)                                        |
+| @types/node                                      | 24.19.2                  | 1    | Node 24 local e padrão da Vercel; `engines.node: "24.x"`          |
+| tailwindcss · @tailwindcss/turbopack             | 4.3.3                    | —    | já instalados                                                     |
+| eslint · eslint-config-next                      | 9.39.5 · 16.4.3          | —    | já instalados                                                     |
+| prettier · prettier-plugin-tailwindcss           | 3.9.10 · 0.8.1           | 1    | ordena as classes                                                 |
+| babel-plugin-react-compiler                      | 1.0.0                    | 1    | proposta 6                                                        |
+| motion                                           | 14.6.0                   | 1    | 13 e 14 sem mudança que nos afete                                 |
+| lenis                                            | 1.3.27                   | 1    | `lenis/react` guiado pelo `frame` do Motion                       |
+| shadcn · radix-ui                                | 4.22.1 · 1.8.1           | 1    | `shadcn init --base radix`                                        |
+| class-variance-authority · clsx · tailwind-merge | 0.7.1 · 2.1.1 · 3.7.0    | 1    | usados pelo shadcn                                                |
+| lucide-react                                     | 1.61.0                   | 1    | traço 1.5                                                         |
+| sonner                                           | 2.0.8                    | 1    |                                                                   |
+| @number-flow/react                               | 0.6.2                    | 1    |                                                                   |
+| vitest                                           | 5.0.5                    | 1    | ambiente node, só utilitários puros                               |
+| @supabase/supabase-js · @supabase/ssr            | 2.118.0 · 0.12.7         | 2    | chave publishable e `getClaims()`                                 |
+| supabase (CLI)                                   | 2.122.0                  | 2    | migrations, seed e `gen types`                                    |
+| zod · react-hook-form · @hookform/resolvers      | 4.6.7 · 7.91.0 · 6.0.0   | 2    | o mesmo schema valida formulário e Server Action                  |
+| react-easy-crop                                  | 6.2.4                    | 2    | recorte do avatar                                                 |
+| server-only                                      | 0.0.1                    | 2    |                                                                   |
+| @playwright/test · @next/playwright              | 1.64.1 · 16.4.3          | 2    | `instant()` testa o que aparece de imediato na navegação          |
+| cmdk                                             | 1.1.1                    | 3    | paleta de adicionar livro; ⌘K completo na 7                       |
+| @tanstack/react-query                            | 5.104.5                  | 3    | busca instantânea e scroll infinito                               |
+| sharp · node-vibrant                             | 0.35.5 · 4.0.4           | 3    | proposta 3                                                        |
+| @dnd-kit/core · sortable · utilities             | 6.3.1 · 10.0.0 · 3.2.2   | 4    | sem release desde dez/2024; o sucessor ainda é 0.5, reavalio na 4 |
+| fractional-indexing                              | 4.0.0                    | 4    | só ESM                                                            |
+| three · @react-three/fiber · @react-three/drei   | 0.186.1 · 9.8.2 · 10.7.9 | 6    | carregados com `next/dynamic`, sem SSR                            |
+| @zxing/browser                                   | 0.2.1                    | 7    | alternativa ao BarcodeDetector                                    |
+| papaparse                                        | 5.7.0                    | 7    | CSV do Goodreads                                                  |
+| @vercel/analytics · @vercel/speed-insights       | 2.0.1 · 2.0.0            | 8    |                                                                   |
 
 Ficam de fora: vaul e next-themes (propostas 1 e 2) e fast-average-color, porque a cor é extraída no servidor.
 
@@ -131,6 +131,7 @@ Imagens OG ficam como `opengraph-image.tsx` dentro de cada rota pública (perfil
    3. Google Books como alternativa.
 
    No cliente, React Query com debounce curto, mantendo os resultados anteriores enquanto a pessoa digita.
+
 5. **Capa que viaja até a página do livro.** Usa `<ViewTransition>` do React 19.3, estável e sem flag, com `name="capa-<id>"`/`"titulo-<id>"` e `share="morph"`. O morph só acontece se a página do livro já estiver pronta no clique. Por isso o `<BookLink>` faz prefetch completo por intenção (hover, foco ou toque), e a capa e o título do destino vêm de leitura em cache. Se o prefetch não chegar a tempo, a página entra com crossfade. Em navegador sem View Transitions, um fade do Motion cumpre o mesmo papel. Dentro da mesma tela, só Motion (`layout`/`layoutId`).
 6. **Movimento.** `lib/motion.ts` é a única fonte de molas, curva e durações. O `<MotionConfig reducedMotion="user">` desliga transform e layout para quem pede movimento reduzido, e os presets também tiram o blur, para sobrar só opacidade. O Lenis fica na raiz com `autoRaf: false`, guiado pelo loop `frame` do Motion, então existe um único requestAnimationFrame. Áreas com scroll próprio levam `data-lenis-prevent`.
 7. **Rota `/@usuario`.** Rewrite de `/@:username` e `/@:username/:path*` para `/u/...`. As abas viram sub-rotas (`/@ana/colecoes`, `/@ana/citacoes`): o cabeçalho fica no layout, cada aba tem URL compartilhável e o indicador desliza com `layoutId`. Com `typedRoutes` ligado, as URLs saem de `lib/routes.ts`.

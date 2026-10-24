@@ -33,6 +33,12 @@ function LenisRoot() {
         autoRaf: false,
         // Listas, gavetas e a paleta rolam por conta própria
         allowNestedScroll: true,
+        // Modal, gaveta, menu e paleta travam a página: o Radix marca o body
+        // e cancela a roda (menos perto de um campo focado). O Lenis sai do
+        // caminho nos dois casos, senão rola a página por trás
+        virtualScroll: ({ event }) =>
+          !event.defaultPrevented &&
+          !document.body.hasAttribute("data-scroll-locked"),
         // Clicar num link interno para a inércia antes da navegação
         stopInertiaOnNavigate: true,
         anchors: true,

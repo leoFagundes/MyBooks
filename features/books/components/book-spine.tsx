@@ -54,7 +54,7 @@ export function BookSpine({
         ...({ "--cover": color } as React.CSSProperties),
       }}
       className={cn(
-        "spine relative flex shrink-0 flex-col items-center justify-between overflow-hidden rounded-[3px] bg-(--cover) py-3 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "spine relative flex shrink-0 flex-col items-center justify-between overflow-hidden rounded-[3px] bg-(--cover) py-3",
         pickInk(color) === "ink" ? "text-ink" : "text-paper",
       )}
     >

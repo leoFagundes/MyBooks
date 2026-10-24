@@ -28,7 +28,7 @@ export function NavLink({ item, active, indicatorId, variant }: NavLinkProps) {
       aria-current={active ? "page" : undefined}
       aria-label={variant === "pill" ? item.label : undefined}
       className={cn(
-        "relative flex items-center justify-center text-sm transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "relative flex items-center justify-center text-sm transition-colors",
         variant === "top" ? "h-8 rounded-control px-3" : "size-11 rounded-full",
         active
           ? "text-foreground"

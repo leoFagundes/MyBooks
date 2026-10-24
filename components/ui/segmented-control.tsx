@@ -54,8 +54,10 @@ export function SegmentedControl<T extends string>({
           <RadioGroupPrimitive.Item
             key={option.value}
             value={option.value}
+            // Contorno de foco por dentro: o grupo rola na horizontal e
+            // cortaria um contorno por fora
             className={cn(
-              "relative inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              "relative inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md px-3 text-sm whitespace-nowrap transition-colors focus-visible:-outline-offset-2",
               size === "sm" ? "h-7" : "h-8",
               active
                 ? "text-foreground"

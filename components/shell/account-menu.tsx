@@ -31,7 +31,7 @@ export function AccountMenu({ viewer }: { viewer: NavViewer }) {
         <button
           type="button"
           aria-label="Abrir menu da conta"
-          className="ml-1 cursor-pointer rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="ml-1 cursor-pointer rounded-full"
         >
           <Avatar>
             {viewer.avatarUrl ? (

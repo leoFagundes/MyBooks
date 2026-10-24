@@ -71,7 +71,7 @@ function TabsTrigger({
       data-slot="tabs-trigger"
       value={value}
       className={cn(
-        "relative -mb-px inline-flex cursor-pointer items-center gap-2 pb-3 text-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring data-[state=active]:text-foreground",
+        "relative -mb-px inline-flex cursor-pointer items-center gap-2 pb-3 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-offset-4 data-[state=active]:text-foreground",
         className,
       )}
       {...props}
@@ -96,7 +96,7 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("outline-none", className)}
+      className={className}
       {...props}
     >
       <motion.div

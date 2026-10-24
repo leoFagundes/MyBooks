@@ -122,3 +122,22 @@ describe("raio da capa no CSS espelha features/books/lib/cover.ts", () => {
     expect(css).toContain(`--radius-cover: ${COVER_RADIUS_PX}px;`);
   });
 });
+
+describe("foco visível (spec §8)", () => {
+  // No Tailwind 4, outline-none/outline-hidden zeram --tw-outline-style, e
+  // focus-visible:outline-2 desenha com esse estilo: o contorno some
+  test("nenhuma classe apaga o contorno de foco", () => {
+    const erased = files.flatMap((file) =>
+      readFileSync(join(root, file), "utf8")
+        .split("\n")
+        .filter(
+          (line) =>
+            /\boutline-(?:none|hidden)\b/.test(line) &&
+            /focus-visible:outline-(?:\d|\[)/.test(line) &&
+            !/focus-visible:outline-solid\b/.test(line),
+        )
+        .map(() => file),
+    );
+    expect(erased).toEqual([]);
+  });
+});

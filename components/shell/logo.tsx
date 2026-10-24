@@ -9,7 +9,7 @@ export function Logo({ className }: { className?: string }) {
       href={routes.home}
       aria-label="MyBooks, página inicial"
       className={cn(
-        "inline-flex w-fit items-center gap-2 rounded-control text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring",
+        "inline-flex w-fit items-center gap-2 rounded-control text-foreground focus-visible:outline-offset-4",
         className,
       )}
     >

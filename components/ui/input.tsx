@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 // Campos usam --border-strong (via --input) para ter 3:1 de contraste.
 const fieldClasses =
-  "w-full min-w-0 rounded-control border border-input bg-surface px-3 text-sm text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive";
+  "w-full min-w-0 rounded-control border border-input bg-surface px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive";
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (

@@ -190,7 +190,7 @@ export function OverlaysDemo() {
             <button
               type="button"
               aria-label="Abrir menu da conta"
-              className="cursor-pointer rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="cursor-pointer rounded-full"
             >
               <Avatar className="size-9">
                 <AvatarFallback>{initials("Ana Lívia")}</AvatarFallback>

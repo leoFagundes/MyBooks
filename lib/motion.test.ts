@@ -13,9 +13,21 @@ import {
 
 describe("presets de movimento (spec §3)", () => {
   test("molas snappy, smooth e gentle com os valores da spec", () => {
-    expect(springs.snappy).toEqual({ type: "spring", bounce: 0, visualDuration: 0.2 });
-    expect(springs.smooth).toEqual({ type: "spring", bounce: 0.15, visualDuration: 0.4 });
-    expect(springs.gentle).toEqual({ type: "spring", bounce: 0.25, visualDuration: 0.6 });
+    expect(springs.snappy).toEqual({
+      type: "spring",
+      bounce: 0,
+      visualDuration: 0.2,
+    });
+    expect(springs.smooth).toEqual({
+      type: "spring",
+      bounce: 0.15,
+      visualDuration: 0.4,
+    });
+    expect(springs.gentle).toEqual({
+      type: "spring",
+      bounce: 0.25,
+      visualDuration: 0.6,
+    });
   });
 
   test("curva e durações das transições sem mola", () => {
@@ -60,7 +72,9 @@ describe("overlayVariants", () => {
   test("sai mais rápido do que entra", () => {
     const variants = overlayVariants(false);
     const exit = variants.exit as { transition: { duration: number } };
-    expect(exit.transition.duration).toBeLessThan(springs.smooth.visualDuration);
+    expect(exit.transition.duration).toBeLessThan(
+      springs.smooth.visualDuration,
+    );
   });
 
   test("com movimento reduzido não usa escala", () => {
@@ -76,7 +90,10 @@ describe("sheetVariants", () => {
   test("a gaveta de baixo entra deslizando de fora da tela", () => {
     const variants = sheetVariants("bottom", false);
     expect(variants.hidden).toMatchObject({ y: "100%" });
-    expect(variants.visible).toMatchObject({ y: 0, transition: springs.smooth });
+    expect(variants.visible).toMatchObject({
+      y: 0,
+      transition: springs.smooth,
+    });
   });
 
   test("a gaveta lateral entra pela direita", () => {

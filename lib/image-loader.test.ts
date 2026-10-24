@@ -6,16 +6,33 @@ const cover = "https://covers.openlibrary.org/b/id/647501-L.jpg";
 describe("imageLoader", () => {
   test("escolhe o menor tamanho da Open Library que cobre a largura (S 38, M 180, L 333)", () => {
     expect(imageLoader({ src: cover, width: 32 })).toBe(
-      "https://covers.openlibrary.org/b/id/647501-S.jpg?w=32",
+      "https://covers.openlibrary.org/b/id/647501-S.jpg?default=false",
     );
     expect(imageLoader({ src: cover, width: 128 })).toBe(
-      "https://covers.openlibrary.org/b/id/647501-M.jpg?w=128",
+      "https://covers.openlibrary.org/b/id/647501-M.jpg?default=false",
     );
     expect(imageLoader({ src: cover, width: 180 })).toBe(
-      "https://covers.openlibrary.org/b/id/647501-M.jpg?w=180",
+      "https://covers.openlibrary.org/b/id/647501-M.jpg?default=false",
     );
     expect(imageLoader({ src: cover, width: 640 })).toBe(
-      "https://covers.openlibrary.org/b/id/647501-L.jpg?w=640",
+      "https://covers.openlibrary.org/b/id/647501-L.jpg?default=false",
+    );
+  });
+
+  // Sem capa, a Open Library responde 200 com um GIF transparente de 1px, e o
+  // onError nunca dispara; com default=false ela responde 404
+  test("pede 404 quando não há capa, para a capa tipográfica entrar", () => {
+    expect(imageLoader({ src: cover, width: 96 })).toMatch(
+      /\?default=false$/,
+    );
+  });
+
+  test("larguras do mesmo tamanho dão a mesma URL, para aproveitar o cache", () => {
+    expect(imageLoader({ src: cover, width: 640 })).toBe(
+      imageLoader({ src: cover, width: 1080 }),
+    );
+    expect(imageLoader({ src: cover, width: 48 })).toBe(
+      imageLoader({ src: cover, width: 96 }),
     );
   });
 
@@ -25,13 +42,17 @@ describe("imageLoader", () => {
         src: "https://covers.openlibrary.org/b/isbn/9788535902778-M.jpg",
         width: 96,
       }),
-    ).toBe("https://covers.openlibrary.org/b/isbn/9788535902778-M.jpg?w=96");
+    ).toBe(
+      "https://covers.openlibrary.org/b/isbn/9788535902778-M.jpg?default=false",
+    );
     expect(
       imageLoader({
         src: "https://covers.openlibrary.org/b/olid/OL7353617M-S.jpg",
         width: 400,
       }),
-    ).toBe("https://covers.openlibrary.org/b/olid/OL7353617M-L.jpg?w=400");
+    ).toBe(
+      "https://covers.openlibrary.org/b/olid/OL7353617M-L.jpg?default=false",
+    );
   });
 
   test("outras imagens passam direto, só com a largura na URL", () => {

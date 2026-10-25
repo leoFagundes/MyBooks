@@ -7,3 +7,7 @@ test-results
 playwright-report
 blob-report
 supabase/templates
+# Gerado por npm run db:types
+lib/supabase/database.types.ts
+# Arquivos da CLI do Supabase (supabase link)
+supabase/.temp

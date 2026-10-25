@@ -90,7 +90,7 @@ describe("atividades", () => {
           select id, '${LIVRO}', 'a0' from public.collections where title = 'Segredo';`,
         asAdmin(),
         check(
-          `${activities(`type = 'collection_create'`)} = 1`,
+          `${activities(`actor_id = '${ANA}' and type = 'collection_create'`)} = 1`,
           "só a pública aparece",
         ),
         check(
@@ -98,14 +98,14 @@ describe("atividades", () => {
           "livro na pública aparece",
         ),
         check(
-          `${activities(`type = 'collection_add'`)} = 1`,
+          `${activities(`actor_id = '${ANA}' and type = 'collection_add'`)} = 1`,
           "livro na privada não",
         ),
         asUser(ANA),
         `delete from public.collection_items where collection_id = '${COLECAO}';`,
         asAdmin(),
         check(
-          `${activities(`type = 'collection_add'`)} = 0`,
+          `${activities(`actor_id = '${ANA}' and type = 'collection_add'`)} = 0`,
           "tirar o livro apaga a atividade",
         ),
       ),
@@ -298,7 +298,7 @@ describe("notificações", () => {
         `delete from public.collection_likes where user_id = '${BIA}';`,
         asAdmin(),
         check(
-          `${notifications(`type = 'collection_like'`)} = 0`,
+          `${notifications(`actor_id = '${BIA}' and type = 'collection_like'`)} = 0`,
           "descurtir tira o aviso",
         ),
       ),

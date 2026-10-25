@@ -298,7 +298,10 @@ describe("curtir, salvar e copiar", () => {
         ),
         `delete from public.collection_likes where user_id = '${BIA}';`,
         asAdmin(),
-        check(`${count("public.collection_likes")} = 0`, "descurtiu"),
+        check(
+          `${count("public.collection_likes where collection_id = '" + PUBLICA + "'")} = 0`,
+          "descurtiu",
+        ),
       ),
     );
   });

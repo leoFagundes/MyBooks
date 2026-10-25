@@ -21,7 +21,8 @@
     "db:link": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js link --project-ref djehboxlhvjtlrvmdiis",
     "db:push": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js db push --linked",
     "db:seed": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js db push --linked --include-seed",
-    "db:types": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js gen types typescript --project-id djehboxlhvjtlrvmdiis --schema public > lib/supabase/database.types.ts"
+    "db:types": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js gen types typescript --project-id djehboxlhvjtlrvmdiis --schema public > lib/supabase/database.types.ts",
+    "seed:gerar": "tsx scripts/gerar-seed.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",
@@ -60,6 +61,7 @@
     "prettier-plugin-tailwindcss": "0.8.1",
     "supabase": "2.122.0",
     "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vitest": "5.0.5"
   }

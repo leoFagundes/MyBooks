@@ -135,26 +135,36 @@ describe("catálogo", () => {
     );
   });
 
-  test("search_catalog acha sem acento e por autor", async () => {
+  test("search_catalog acha sem acento, pelo autor e com erro de digitação", async () => {
+    // Títulos que o seed não tem: cada resultado só pode vir deste teste
+    const SAGARANA = "00000000-0000-4000-8000-000000000103";
+    const ESTORIAS = "00000000-0000-4000-8000-000000000104";
     await runSql(
       sqlTransaction(
         ...readers(),
         books(),
+        `insert into public.books (id, title, authors, source) values
+          ('${SAGARANA}', 'Sagarana', '{"João Guimarães Rosa"}', 'manual'),
+          ('${ESTORIAS}', 'Primeiras Estórias', '{"João Guimarães Rosa"}', 'manual');`,
         asAnon(),
         check(
-          `exists (select 1 from public.search_catalog('sertao') where id = '${SERTAO}')`,
+          `exists (select 1 from public.search_catalog('sertao') where title = 'Grande Sertão: Veredas')`,
           "sertao acha Sertão",
         ),
         check(
-          `exists (select 1 from public.search_catalog('guimaraes rosa') where id = '${SERTAO}')`,
+          `exists (select 1 from public.search_catalog('estorias') where id = '${ESTORIAS}')`,
+          "sem acento",
+        ),
+        check(
+          `(select count(*) from public.search_catalog('guimaraes rosa', 20) where id in ('${SAGARANA}', '${ESTORIAS}')) = 2`,
           "pelo autor",
         ),
         check(
-          `exists (select 1 from public.search_catalog('hobit') where id = '${HOBBIT}')`,
+          `exists (select 1 from public.search_catalog('sagarna') where id = '${SAGARANA}')`,
           "tolera erro de digitação",
         ),
         check(
-          `(select id from public.search_catalog('grande sertao veredas') limit 1) = '${SERTAO}'`,
+          `(select id from public.search_catalog('primeiras estorias') limit 1) = '${ESTORIAS}'`,
           "o mais parecido vem primeiro",
         ),
         check(

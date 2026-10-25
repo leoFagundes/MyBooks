@@ -31,7 +31,8 @@ type BookSpineProps = {
  * Lombada (spec §4): cor da capa, título na vertical com contraste AA
  * garantido, largura pelas páginas e altura variando pelo id. O título
  * desce de cima para baixo, como pede a ABNT. Apertada, vira a origem da
- * viagem até a página do livro, onde se transforma na capa.
+ * viagem até a página do livro, onde se transforma na capa. Na volta, a
+ * capa gira de novo até ela: a classe do par vem de quem chega.
  */
 export function BookSpine({
   book,
@@ -53,7 +54,7 @@ export function BookSpine({
   return (
     <ViewTransition
       name={source.isSource ? coverName(book.id) : undefined}
-      share="lombada"
+      share="vira-lombada"
       default="none"
     >
       <MotionLink
@@ -71,7 +72,7 @@ export function BookSpine({
           ...({ "--cover": background } as React.CSSProperties),
         }}
         className={cn(
-          "spine relative flex shrink-0 flex-col items-center justify-between overflow-hidden rounded-[3px] bg-(--cover) py-3",
+          "spine relative flex shrink-0 flex-col items-center justify-between overflow-hidden rounded-cover bg-(--cover) py-3",
           ink === "ink" ? "text-ink" : "text-paper",
         )}
       >

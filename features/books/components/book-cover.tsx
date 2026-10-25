@@ -25,6 +25,7 @@ const widths = {
   sm: "w-24",
   md: "w-36",
   lg: "w-52",
+  hero: "w-40 sm:w-52 lg:w-60",
   fill: "w-full",
 } as const;
 const sizes = {
@@ -32,6 +33,7 @@ const sizes = {
   sm: "96px",
   md: "144px",
   lg: "208px",
+  hero: "(min-width: 1024px) 240px, (min-width: 640px) 208px, 160px",
   fill: "(min-width: 768px) 20vw, 45vw",
 } as const;
 

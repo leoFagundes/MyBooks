@@ -219,14 +219,17 @@ function BookRow({
           bookId={book.id}
           href={href}
           source={source}
-          className="font-serif text-lg leading-tight text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4"
+          className="font-serif text-lg leading-tight tracking-tight"
         >
+          {/* Uma caixa só, do tamanho do texto, como o título do topo */}
           <ViewTransition
             name={source.isSource ? titleName(book.id) : undefined}
             share="titulo"
             default="none"
           >
-            <span>{book.title}</span>
+            <span className="inline-block text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4">
+              {book.title}
+            </span>
           </ViewTransition>
         </BookLink>
         <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">

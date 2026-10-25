@@ -120,6 +120,62 @@
     1
   );
   --spring-smooth-duration: 750ms;
+  /* Giro da lombada: onde fica a quina a cada passo da mola smooth, na ida
+     (lombada → capa) e na volta. Gerados em tests/design-rules.test.ts. */
+  --quina-ida: linear(
+    0,
+    0.2476,
+    0.5291,
+    0.7067,
+    0.8196,
+    0.8917,
+    0.9369,
+    0.9643,
+    0.9805,
+    0.9899,
+    0.9953,
+    0.9984,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  );
+  --quina-volta: linear(
+    0,
+    0.0138,
+    0.0571,
+    0.1296,
+    0.2237,
+    0.3319,
+    0.4493,
+    0.5712,
+    0.6916,
+    0.8013,
+    0.8917,
+    0.9579,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  );
 
   --radius: 10px;
 
@@ -307,18 +363,196 @@
   }
 }
 
-/* Movimento reduzido: nada se desloca, só esmaece */
+/* A capa viaja da estante até o topo da página do livro (BookLink → BookHero).
+   O voo usa a mola smooth; a troca das duas fotos é mais curta que o voo. */
+::view-transition-group(.capa),
+::view-transition-group(.vira-capa),
+::view-transition-group(.vira-lombada),
+::view-transition-group(.titulo) {
+  animation-duration: var(--spring-smooth-duration);
+  animation-timing-function: var(--spring-smooth);
+}
+::view-transition-old(.capa),
+::view-transition-new(.capa),
+::view-transition-old(.titulo),
+::view-transition-new(.titulo) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-standard);
+}
+
+/* Os dois títulos abraçam o texto, então as duas fotos crescem na mesma
+   escala. Centradas na altura, a diferença de entrelinha não aparece. */
+::view-transition-old(.titulo),
+::view-transition-new(.titulo) {
+  inset-block-start: 50%;
+  translate: 0 -50%;
+}
+
+/* Um desfoque leve no meio do voo esconde a interpolação das imagens */
+::view-transition-image-pair(.capa) {
+  animation: capa-no-ar var(--spring-smooth-duration) var(--ease-standard) both;
+}
+@keyframes capa-no-ar {
+  30% {
+    filter: blur(2px);
+  }
+}
+
+/* Da lombada para a capa (vira-capa) e de volta (vira-lombada): o livro gira
+   pela quina enquanto voa, como uma caixa. As duas fotos guardam a proporção
+   (têm a altura do grupo) e dividem a quina, a lombada à esquerda e a capa à
+   direita. O giro segue a mola do voo, e o par desliza nas curvas --quina-*
+   para o livro seguir centrado no grupo. Sem crossfade: cada face some
+   quando fica de perfil. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(.vira-capa),
+  ::view-transition-new(.vira-capa),
+  ::view-transition-old(.vira-lombada),
+  ::view-transition-new(.vira-lombada) {
+    inline-size: auto;
+    block-size: 100%;
+    mix-blend-mode: normal;
+    backface-visibility: hidden;
+  }
+  /* A lombada encosta na quina pela direita; a capa, pela esquerda */
+  ::view-transition-old(.vira-capa),
+  ::view-transition-new(.vira-lombada) {
+    right: 0;
+    transform-origin: right center;
+  }
+  ::view-transition-new(.vira-capa),
+  ::view-transition-old(.vira-lombada) {
+    left: 100%;
+    transform-origin: left center;
+  }
+  ::view-transition-image-pair(.vira-capa) {
+    animation: quina-ida var(--spring-smooth-duration) var(--quina-ida) both;
+  }
+  ::view-transition-image-pair(.vira-lombada) {
+    animation: quina-volta var(--spring-smooth-duration) var(--quina-volta) both;
+  }
+  ::view-transition-old(.vira-capa) {
+    animation: lombada-sai var(--spring-smooth-duration) var(--spring-smooth)
+      both;
+  }
+  ::view-transition-new(.vira-capa) {
+    animation: capa-entra var(--spring-smooth-duration) var(--spring-smooth)
+      both;
+  }
+  ::view-transition-old(.vira-lombada) {
+    animation: capa-sai var(--spring-smooth-duration) var(--spring-smooth) both;
+  }
+  ::view-transition-new(.vira-lombada) {
+    animation: lombada-entra var(--spring-smooth-duration) var(--spring-smooth)
+      both;
+  }
+}
+/* O translate em % é da largura do par, que é a do grupo */
+@keyframes quina-ida {
+  to {
+    translate: -100% 0;
+  }
+}
+@keyframes quina-volta {
+  from {
+    translate: -100% 0;
+  }
+}
+/* A face que se afasta escurece, como quem sai da luz */
+@keyframes lombada-sai {
+  from {
+    transform: perspective(900px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(900px) rotateY(-90deg);
+    filter: brightness(0.55);
+  }
+}
+@keyframes lombada-entra {
+  from {
+    transform: perspective(900px) rotateY(-90deg);
+    filter: brightness(0.55);
+  }
+  to {
+    transform: perspective(900px) rotateY(0deg);
+  }
+}
+@keyframes capa-entra {
+  from {
+    transform: perspective(900px) rotateY(90deg);
+    filter: brightness(0.6);
+  }
+  to {
+    transform: perspective(900px) rotateY(0deg);
+  }
+}
+@keyframes capa-sai {
+  from {
+    transform: perspective(900px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(900px) rotateY(90deg);
+    filter: brightness(0.6);
+  }
+}
+
+/* Brilho muito sutil da cor da capa no topo da página do livro, como no
+   Apple Music. A cor vem do --cover do próprio elemento (nada global). */
+.ambient-glow {
+  background: radial-gradient(
+    60% 100% at 50% 0%,
+    color-mix(in oklab, var(--cover) 22%, transparent),
+    transparent 75%
+  );
+}
+[data-theme="dark"] .ambient-glow {
+  background: radial-gradient(
+    60% 100% at 50% 0%,
+    color-mix(in oklab, var(--cover) 30%, transparent),
+    transparent 75%
+  );
+}
+
+/* Movimento reduzido: nada se desloca, só esmaece. As regras com classe vêm
+   à parte: um navegador sem view-transition-class descarta a lista inteira
+   em que elas aparecem, e as genéricas têm de valer mesmo assim. */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*) {
     animation-duration: 0s;
     animation-delay: 0s;
   }
-  ::view-transition-old(*),
-  ::view-transition-old(.pagina-sai) {
+  ::view-transition-old(*) {
     animation: sumir var(--duration-fast) var(--ease-standard) both;
   }
-  ::view-transition-new(*),
-  ::view-transition-new(.pagina-entra) {
+  ::view-transition-new(*) {
+    animation: aparecer var(--duration-fast) var(--ease-standard) both;
+  }
+
+  ::view-transition-group(.capa),
+  ::view-transition-group(.vira-capa),
+  ::view-transition-group(.vira-lombada),
+  ::view-transition-group(.titulo) {
+    animation-duration: 0s;
+    animation-delay: 0s;
+  }
+  ::view-transition-image-pair(.capa) {
+    animation: none;
+  }
+  /* Lombada e capa não têm a mesma forma: só a foto de chegada aparece */
+  ::view-transition-old(.vira-capa),
+  ::view-transition-old(.vira-lombada) {
+    display: none;
+  }
+  ::view-transition-old(.pagina-sai),
+  ::view-transition-old(.capa),
+  ::view-transition-old(.titulo) {
+    animation: sumir var(--duration-fast) var(--ease-standard) both;
+  }
+  ::view-transition-new(.pagina-entra),
+  ::view-transition-new(.capa),
+  ::view-transition-new(.vira-capa),
+  ::view-transition-new(.vira-lombada),
+  ::view-transition-new(.titulo) {
     animation: aparecer var(--duration-fast) var(--ease-standard) both;
   }
 }

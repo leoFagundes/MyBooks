@@ -5,6 +5,8 @@ export type RecordedAnimation = {
   name: string;
   duration: number;
   delay: number;
+  /** Largura da caixa no primeiro e no último quadro (só nos grupos). */
+  widths?: [number, number];
 };
 
 export type RecordedTransition = {
@@ -51,11 +53,22 @@ export async function spyViewTransitions(page: Page) {
             .map((animation) => {
               const effect = animation.effect as KeyframeEffect;
               const timing = effect.getTiming();
+              const frames = effect.getKeyframes();
+              const first = frames[0]?.width;
+              const last = frames.at(-1)?.width;
               return {
                 pseudo: effect.pseudoElement ?? "",
                 name: (animation as CSSAnimation).animationName ?? "",
                 duration: Number(timing.duration),
                 delay: Number(timing.delay ?? 0),
+                ...(typeof first === "string" && typeof last === "string"
+                  ? {
+                      widths: [parseFloat(first), parseFloat(last)] as [
+                        number,
+                        number,
+                      ],
+                    }
+                  : {}),
               };
             });
           records.push({ types, animations });

@@ -141,3 +141,36 @@ export const sampleBooks: BookVisual[] = [
     publishedYear: 1960,
   },
 ];
+
+// Sinopses curtas em pt-BR para a página de demonstração do livro (/dev).
+export const sampleDescriptions: Record<string, string> = {
+  "dom-casmurro":
+    "Bento Santiago, o Bentinho, já velho e recolhido, decide contar a própria história para atar as duas pontas da vida. Relembra a infância na rua de Matacavalos, o amor por Capitu, a vizinha de olhos de ressaca, e o casamento que parecia feliz até que uma dúvida passa a consumi-lo: teria ela o traído com Escobar, seu melhor amigo?",
+  "a-hora-da-estrela":
+    "O narrador Rodrigo S.M. conta a vida de Macabéa, uma moça alagoana que vive no Rio de Janeiro, trabalha como datilógrafa e mal sabe que existe. Entre o namoro com Olímpico e a visita a uma cartomante, Clarice escreve sobre a pobreza, a solidão e o próprio ato de escrever.",
+  "torto-arado":
+    "No sertão baiano da Chapada Diamantina, as irmãs Bibiana e Belonísia, filhas de trabalhadores de uma fazenda, têm a vida unida para sempre por um acidente na infância. Narrado em três vozes, o romance acompanha as famílias que trabalham uma terra que não é delas e a luta pelo direito de ficar.",
+  "grande-sertao-veredas":
+    "Riobaldo, ex-jagunço que virou fazendeiro, conta a um visitante da cidade a sua travessia pelo sertão de Minas Gerais. Entre as guerras dos bandos de jagunços, a vingança contra Hermógenes e o amor calado por Diadorim, ele volta sempre à mesma pergunta: fez ou não fez um pacto com o diabo nas Veredas Mortas?",
+  "1984":
+    "Na Oceânia, um Estado que vigia cada gesto sob o olhar do Grande Irmão, Winston Smith trabalha no Ministério da Verdade reescrevendo o passado para que ele concorde com o Partido. Quando começa a escrever um diário e se apaixona por Julia, descobre o preço de pensar por conta própria.",
+  duna: "No planeta desértico Arrakis, única fonte da especiaria mais valiosa do universo, o jovem Paul Atreides vê a família ser traída pelos Harkonnen. Refugiado no deserto entre os fremen, ele passa a ser visto como o messias que aquele povo esperava.",
+  "o-hobbit":
+    "Bilbo Bolseiro, um hobbit que gosta do conforto da sua toca, é convencido pelo mago Gandalf a acompanhar treze anões numa jornada para recuperar o tesouro tomado pelo dragão Smaug. No caminho, encontra trolls, elfos, aranhas gigantes e um anel que muda tudo.",
+  "cem-anos-de-solidao":
+    "A história da família Buendía ao longo de sete gerações em Macondo, a cidade fundada por José Arcadio Buendía no meio do pântano. Guerras civis, amores proibidos, a chegada do trem e da companhia bananeira se misturam a acontecimentos mágicos narrados como se fossem comuns.",
+  "ensaio-sobre-a-cegueira":
+    "Um homem fica cego de repente, parado num semáforo, e a cegueira branca se espalha pela cidade. Os primeiros doentes são isolados num manicômio, onde a única pessoa que ainda enxerga, a mulher do médico, testemunha até onde podem chegar a crueldade e a solidariedade.",
+  sapiens:
+    "Yuval Noah Harari conta a história da humanidade em quatro grandes viradas: a Revolução Cognitiva, a Agrícola, a unificação da humanidade e a Científica. O livro pergunta como uma espécie de primatas sem importância passou a dominar o planeta, e se isso nos tornou mais felizes.",
+  "memorias-postumas-de-bras-cubas":
+    "Já morto, Brás Cubas decide escrever as próprias memórias e dedica o livro ao verme que primeiro roeu as frias carnes do seu cadáver. Com ironia e nenhuma pressa, repassa uma vida de privilégios, o amor por Virgília e as pequenas vaidades de quem nunca precisou trabalhar.",
+  "vidas-secas":
+    "Fugindo da seca, Fabiano, sinhá Vitória, os dois meninos e a cachorra Baleia atravessam o sertão nordestino até uma fazenda abandonada. Em capítulos que quase se leem sozinhos, Graciliano Ramos mostra uma família que mal consegue pôr em palavras o que sofre.",
+  "o-pequeno-principe":
+    "Um aviador cai no deserto do Saara e encontra um menino vindo de um asteroide minúsculo, onde deixou uma rosa. O pequeno príncipe conta suas viagens por planetas habitados por adultos estranhos e o que aprendeu com uma raposa sobre cativar e ser responsável.",
+  "a-paixao-segundo-gh":
+    "G.H., uma escultora que vive bem num apartamento de cobertura no Rio, entra no quarto da empregada que acabou de ir embora e encontra uma barata. O encontro desmonta tudo o que ela sabia sobre si mesma, num dos romances mais radicais da literatura brasileira.",
+  "quarto-de-despejo":
+    "O diário de Carolina Maria de Jesus, catadora de papel e mãe de três filhos, na favela do Canindé, em São Paulo, no fim dos anos 1950. Escrito em cadernos encontrados no lixo, o livro registra a fome, o trabalho e a lucidez de quem chamava a favela de quarto de despejo da cidade.",
+};

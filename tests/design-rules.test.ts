@@ -155,22 +155,75 @@ describe("tintas da capa no CSS espelham features/books/lib/color.ts", () => {
   });
 });
 
+// Um navegador sem view-transition-class (Safari 18.0 e 18.1) descarta a
+// lista inteira de seletores em que uma classe aparece: as regras genéricas
+// (o movimento reduzido, por exemplo) ficariam sem efeito
+test("nenhuma regra mistura pseudo-elementos genéricos de view transition com classes", () => {
+  const mixed = [...css.matchAll(/([^{}]+)\{/g)]
+    .map(([, selectors]) => selectors.trim())
+    .filter(
+      (selectors) =>
+        selectors.includes("::view-transition") &&
+        /\(\*\)/.test(selectors) &&
+        /\(\./.test(selectors),
+    );
+  expect(mixed).toEqual([]);
+});
+
 // A capa viaja entre páginas com CSS: a curva tem de ser a mola smooth
 describe("mola das transições entre páginas espelha lib/motion.ts", () => {
+  const [duration, ...curve] = spring({
+    keyframes: [0, 1],
+    ...springs.smooth,
+  })
+    .toString()
+    .split(" ");
+  const steps = curve
+    .join(" ")
+    .replace(/^linear\(|\)$/g, "")
+    .split(",")
+    .map(Number);
+  // O Prettier quebra o linear() em várias linhas: compara sem os espaços
+  const flat = (text: string) =>
+    text
+      .replace(/\s+/g, " ")
+      .replace(/\(\s/g, "(")
+      .replace(/\s\)/g, ")")
+      .replace(/,\s\)/g, ")");
+  const linear = (values: number[]) =>
+    `linear(${values.map((value) => String(Number(value.toFixed(4)))).join(", ")})`;
+
   test("--spring-smooth e a duração vêm da mola smooth do Motion", () => {
-    const generated = spring({
-      keyframes: [0, 1],
-      ...springs.smooth,
-    }).toString();
-    const [duration, ...curve] = generated.split(" ");
-    // O Prettier quebra o linear() em várias linhas: compara sem os espaços
-    const flat = (text: string) =>
-      text
-        .replace(/\s+/g, " ")
-        .replace(/\(\s/g, "(")
-        .replace(/\s\)/g, ")")
-        .replace(/,\s\)/g, ")");
     expect(css).toContain(`--spring-smooth-duration: ${duration};`);
     expect(flat(css)).toContain(`--spring-smooth: ${flat(curve.join(" "))};`);
+  });
+
+  // Da lombada para a capa, o livro gira pela quina enquanto voa; o par
+  // desliza para a quina ficar onde mantém o livro centrado no grupo. A conta
+  // usa um livro típico (lombada de 32 × 176px, capa de 312px de altura) e a
+  // perspectiva de 900px do CSS. Mudou a mola? Cole os valores esperados.
+  test("--quina-ida e --quina-volta seguem a mola e a geometria do livro", () => {
+    const [spine, height, cover, perspective] = [32, 176, 312, 900];
+    // Onde fica a quina, em fração da largura do grupo, no progresso p da ida
+    const corner = (p: number) => {
+      const width = spine + p * ((2 / 3) * cover - spine);
+      const h = height + p * (cover - height);
+      const s = (spine / height) * h;
+      const c = (2 / 3) * h;
+      const angle = (Math.PI / 2) * p;
+      // A borda livre de cada face se afasta e encolhe na perspectiva
+      const seenSpine =
+        (s * Math.cos(angle) * perspective) /
+        (perspective + s * Math.sin(angle));
+      const seenCover =
+        (c * Math.sin(angle) * perspective) /
+        (perspective + c * Math.cos(angle));
+      return 0.5 + (seenSpine - seenCover) / (2 * width);
+    };
+    const progress = steps.map((p) => Math.min(1, Math.max(0, p)));
+    const ida = progress.map((p) => 1 - corner(p));
+    const volta = progress.map((p) => corner(1 - p));
+    expect(flat(css)).toContain(`--quina-ida: ${linear(ida)};`);
+    expect(flat(css)).toContain(`--quina-volta: ${linear(volta)};`);
   });
 });

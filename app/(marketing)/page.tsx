@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { routes } from "@/lib/routes";
 
-// Landing provisória: a narrativa com rolagem chega na Fase 7.
+// Landing provisória: a narrativa com rolagem chega na Fase 7. Quem já tem
+// conta e abre / vai direto ao /inicio (proxy)
 export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-6 px-6 py-24">
@@ -14,12 +17,17 @@ export default function HomePage() {
         Guarde o que você leu, o que está lendo e o que ainda quer ler. Visite a
         estante de outros leitores e traga para a sua o que chamar sua atenção.
       </p>
-      <Link
-        href="/dev"
-        className="w-fit rounded-control bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-      >
-        Ver os componentes
-      </Link>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <Button size="lg" asChild>
+          <Link href={routes.cadastro}>Criar minha estante</Link>
+        </Button>
+        <Link
+          href={routes.entrar}
+          className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Já tenho conta
+        </Link>
+      </div>
     </main>
   );
 }

@@ -2,7 +2,7 @@
 
 import { Compass, House, Library } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { createContext, Suspense, use } from "react";
 import { isActivePath } from "@/lib/nav";
 import { routes } from "@/lib/routes";
 import { NavLink, type NavItem } from "./nav-link";
@@ -13,17 +13,29 @@ export type NavViewer = {
   avatarUrl: string | null;
 };
 
+export function estanteItem(viewer: NavViewer | null): NavItem {
+  return {
+    href: viewer ? routes.profile(viewer.username) : routes.entrar,
+    label: "Minha estante",
+    icon: Library,
+  };
+}
+
 export function mainNavItems(viewer: NavViewer | null): NavItem[] {
   return [
     { href: routes.inicio, label: "Início", icon: House },
     { href: routes.explorar, label: "Explorar", icon: Compass },
-    {
-      href: viewer ? routes.profile(viewer.username) : routes.entrar,
-      label: "Minha estante",
-      icon: Library,
-    },
+    estanteItem(viewer),
   ];
 }
+
+/**
+ * O id do indicador da barra: o link que chega depois, num slot com Suspense
+ * ("Minha estante"), desliza junto com os outros.
+ */
+export const NavIndicatorContext = createContext("");
+
+export const useNavIndicator = () => use(NavIndicatorContext);
 
 type NavLinksProps = {
   items: NavItem[];

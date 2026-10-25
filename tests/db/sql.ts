@@ -51,13 +51,19 @@ export function check(condition: string, message: string): string {
   return `do $$ begin assert (${condition}), ${literal(message)}; end $$;`;
 }
 
-/** Falha quando o comando passa: para provar que a RLS ou um check barram. */
+/**
+ * Falha quando o comando passa: para provar que a RLS ou um check barram.
+ * Tabela, coluna ou função inexistente não conta como barreira.
+ */
 export function rejects(statement: string, message: string): string {
   return `do $$ begin
   begin
     ${statement}
-  exception when others then
-    return;
+  exception
+    when undefined_table or undefined_column or undefined_function then
+      raise;
+    when others then
+      return;
   end;
   raise exception ${literal(`devia ter sido barrado: ${message}`)};
 end $$;`;

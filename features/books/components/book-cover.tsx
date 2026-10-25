@@ -27,6 +27,8 @@ const widths = {
   lg: "w-52",
   hero: "w-40 sm:w-52 lg:w-60",
   fill: "w-full",
+  // Uma das capas do leque da coleção: a largura vem de quem posiciona
+  fan: "w-full",
 } as const;
 const sizes = {
   xs: "40px",
@@ -35,6 +37,7 @@ const sizes = {
   lg: "208px",
   hero: "(min-width: 1024px) 240px, (min-width: 640px) 208px, 160px",
   fill: "(min-width: 768px) 20vw, 45vw",
+  fan: "120px",
 } as const;
 
 // Capas que já chegaram nesta visita, por endereço e tamanho. Quando uma delas

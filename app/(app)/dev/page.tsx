@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageTransition } from "@/components/motion/page-transition";
 import { BooksDemo } from "./_components/books-demo";
 import { ButtonsDemo } from "./_components/buttons-demo";
+import { CollectionsDemo } from "./_components/collections-demo";
 import { DevSection } from "./_components/dev-section";
 import { FeedbackDemo } from "./_components/feedback-demo";
 import { FieldsDemo } from "./_components/fields-demo";
@@ -127,6 +128,15 @@ export default function DevPage() {
           description="As três vistas do perfil. Entre a grade e a lista, cada capa viaja até o novo lugar; o resto esmaece."
         >
           <ViewsDemo />
+        </DevSection>
+
+        <DevSection
+          id="colecoes"
+          number="11"
+          title="Coleções"
+          description="A capa em leque se abre com mola no hover. O clique abre uma espiada que cresce do próprio card; com Ctrl ou ⌘, o link abre a página."
+        >
+          <CollectionsDemo />
         </DevSection>
       </main>
     </PageTransition>

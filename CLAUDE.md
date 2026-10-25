@@ -16,9 +16,11 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
   - Já existe: schema com RLS (perfis, catálogo, estante, citações, follows, coleções, atividades e notificações por trigger), Storage (avatares e capas), seed (8 leitores, 44 livros, coleções), tipos gerados, entrar e cadastrar (e-mail e senha, link mágico, Google), sair, barra com a conta, `/inicio` provisório e onboarding em 4 passos.
   - E-mails: saem com o modelo padrão do Supabase, em inglês (o plano gratuito com o e-mail padrão não aceita modelos próprios), e só chegam a quem é da equipe do projeto, 2 por hora. Os links voltam por `/auth/callback` e precisam abrir no mesmo navegador. Os modelos em pt-BR de `supabase/templates` entram com o SMTP próprio, na Fase 8.
   - Google: falta criar o cliente OAuth no Google Cloud, com o retorno `https://djehboxlhvjtlrvmdiis.supabase.co/auth/v1/callback`, e ligar o provedor no Supabase. Até lá, o botão avisa que o login com Google ainda não está ligado.
-- Ainda não existem as páginas além de `/`, `/dev`, `/entrar`, `/cadastro`, `/onboarding` e `/inicio`: os links da navegação e das lombadas (`/explorar`, `/@usuario`, `/livro/[id]`) dão 404 até a fase de cada um. As demos do `/dev` usam `features/books/sample-books.ts`, com os mesmos slugs do seed (`seedId` de `scripts/seed-ids.ts` dá o id).
-- Na Fase 3, troque os `Link` das lombadas, da grade e da lista por `<BookLink>`, tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem e dê `viewTransitionName: "site-header"` à barra superior junto com as transições entre rotas.
-- Próxima: Fase 3 (Estante), com o rebase da branch `fase-3-estante` sobre esta. Atualize esta seção ao fim de cada fase.
+- Fase 3 (Estante), branch `fase-3-estante`, rebaseada sobre a fase 2 terminada: transições entre páginas, `<BookLink>`, topo da página do livro com a viagem da capa (demonstração em `/dev/livro/[slug]`) e normalização da Open Library e do Google Books (`features/books/lib/search-result.ts`). Faltam as Tasks 5–12.
+- Ainda não existem as páginas além de `/`, `/dev`, `/dev/livro/[slug]`, `/entrar`, `/cadastro`, `/onboarding` e `/inicio`: os links da navegação e das lombadas (`/explorar`, `/@usuario`, `/livro/[id]`) dão 404 até a fase de cada um. As demos do `/dev` usam `features/books/sample-books.ts`, com os mesmos slugs do seed (`seedId` de `scripts/seed-ids.ts` dá o id). Tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem.
+- O catálogo segue `BOOK_LIMITS` (`search-result.ts`) nos checks do banco, e o `source_id` da Open Library é o id da obra sem `/works/`.
+- O Google Books só responde com `GOOGLE_BOOKS_API_KEY` (a cota anônima é zero); ela entra na busca da Task 5.
+- Atualize esta seção ao fim de cada fase.
 
 ## Comandos
 
@@ -28,7 +30,8 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Banco (CLI do Supabase pelo `.env.local`): `npm run db:link` uma vez; `npm run db:push -- --yes` aplica as migrations; `npm run db:seed -- --yes` aplica também o `supabase/seed.sql`; `npm run db:types` gera `lib/supabase/database.types.ts`. `npm run seed:gerar` refaz o `seed.sql` a partir de `scripts/seed-data.ts` (busca cada obra uma vez na Open Library, com cache em disco).
 - `npm run test:db`: testes de banco, em SQL de verdade, pela API de gestão; precisam do `SUPABASE_ACCESS_TOKEN`.
 - `npm run build` termina com `scripts/verificar-bundle.mjs` (postbuild): chave secreta no bundle do navegador derruba o build.
-- O projeto mora em `C:\Users\Adm\Dev\mybooks`, fora do OneDrive, e não deve voltar para uma pasta sincronizada: o OneDrive transforma arquivos em marcadores de nuvem, o `next dev` perde avisos de mudança e o `next build` falha com EPERM.
+- `npm run test:e2e:producao`: build de produção e `next start` na porta 3100 para os `*.producao.spec.ts`. Prefetch, e com ele o par da capa entre páginas, só existe em produção.
+- O projeto mora em `C:\Users\Adm\Dev\mybooks`, fora do OneDrive, e não deve voltar para uma pasta sincronizada: o OneDrive transforma arquivos em marcadores de nuvem, o `next dev` perde avisos de mudança e o `next build` falha com EPERM. O `prebuild` (`scripts/limpar-next.mjs`) ainda limpa o `.next` antes do build.
 - O repositório não tem remoto: o histórico existe só nesta máquina.
 - Fim de fase: typecheck, lint, testes e build sem erros → resumo do que testar manualmente → commit.
 
@@ -57,7 +60,8 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Depois de uma mutação, chame `updateTag(tag)` dentro da Server Action. `revalidateTag` exige dois argumentos: `revalidateTag(tag, 'max')`.
 - O cliente despacha Server Actions uma por vez. Nunca use uma para leitura ou busca; use um Route Handler GET.
 - Activity mantém até 3 rotas montadas e escondidas. Popover, menu, ⌘K e sheet fecham no cleanup de `useLayoutEffect`. Nenhuma página escreve variável CSS global. O logout usa `window.location.assign`.
-- Links para `/livro/[id]` em listas usam `<BookLink>` (prefetch completo por intenção); sem isso o morph da capa não acontece.
+- Links para `/livro/[id]` em listas usam `<BookLink>` (prefetch completo por intenção); sem isso o morph da capa não acontece. O prefetch da intenção (`Next-Router-Prefetch: 2`) pode esperar a fila dos prefetches automáticos: nos testes, espere esse pedido antes do clique.
+- O voltar e o avançar do navegador nunca animam: o Next restaura a rota guardada de forma síncrona. A volta animada é um link da própria página.
 - `usePathname` e `useSearchParams` em client components ficam dentro de `<Suspense>`; sem isso, com Cache Components, o build falha.
 - As barras do app são estáticas: só o que depende da conta (o canto da conta e o "Minha estante") chega em slots com `<Suspense>` (`TopNav slots`, `BottomNav estante`). Barra inteira num Suspense é trocada no meio de um clique e briga com o `aria-hidden` dos modais do Radix.
 - O `error.tsx` recebe `{ error: unknown, retry }` (no Next 16.4, `retry` no lugar de `reset`).
@@ -103,7 +107,8 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Elementos interativos usam mola, nada é linear e nada aparece ou some de repente. Toda saída é mais rápida que a entrada.
 - `<MotionConfig reducedMotion="user">` fica na raiz. A versão reduzida de qualquer animação é só opacidade.
 - O servidor não sabe da preferência de movimento: nada que muda o HTML inicial (variantes, `initial`) pode depender de `useReducedMotion` no render, ou a hidratação não bate. O modo reduzido muda só a transição, como em `entranceTransition`.
-- Entre rotas, `<ViewTransition>` do React, com nomes únicos na página (`capa-<id>`, `titulo-<id>`). Dentro da mesma tela, Motion.
+- Entre rotas, `<ViewTransition>` do React com `default="none"` e nomes únicos na página (`capa-<id>`, `titulo-<id>`, de `transition-names.ts`). Dentro da mesma tela, Motion. O conteúdo da página entra e sai com `<PageTransition>`.
+- Classes das viagens: `capa` (capa para capa), `vira-capa` (lombada para capa, pelo tipo `livro-lombada`), `vira-lombada` (a volta) e `titulo`. A classe de um par vem do elemento que chega. No CSS, regra genérica (`(*)`) nunca divide a lista de seletores com uma classe, e as curvas `--quina-*` são geradas no design-rules a partir da mola.
 - Capa que viaja na mesma tela: `<BookCover layoutId>` dentro de um `<LayoutGroup id>` próprio (veja `ShelfViews`). O raio vai no style em px (`COVER_RADIUS_PX`, espelho de `--radius-cover`), senão o Motion distorce os cantos.
 - Contadores usam `<AnimatedNumber>` (NumberFlow). Os dígitos ficam `aria-hidden` e o número formatado vai em texto para leitores de tela.
 - Lenis fica na raiz, guiado pelo `frame` do Motion. Ele sai do caminho quando a rolagem está travada (evento cancelado ou `body[data-scroll-locked]`, que o Radix põe com modal, gaveta, menu e paleta abertos) e deixa áreas com scroll próprio rolarem sozinhas (`allowNestedScroll`). `data-lenis-prevent` só para o que fugir disso.
@@ -118,7 +123,7 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 ## Testes
 
 - Vitest para utilitários puros, em `*.test.ts` ao lado do código. `tests/design-rules.test.ts` barra hex solto em TS/TSX, classes da paleta padrão do Tailwind e `outline-none` que apaga o foco, e confere que o CSS espelha `lib/motion.ts`, o raio da capa e as tintas `--ink`/`--paper`.
-- Playwright em `e2e/`, com seletores por papel (`getByRole`), porque o Activity deixa rotas escondidas no DOM. `e2e/helpers.ts` tem `trackPageErrors`, `presetTheme`, `openCommandPalette` e `waitForHydration` (use logo depois do `goto` quando a interação depende de JS: antes de hidratar, um link segue o HTML e um botão não responde).
+- Playwright em `e2e/`, com seletores por papel (`getByRole`), porque o Activity deixa rotas escondidas no DOM. `e2e/helpers.ts` tem `trackPageErrors`, `presetTheme`, `openCommandPalette` e `waitForHydration` (use logo depois do `goto` quando a interação depende de JS: antes de hidratar, um link segue o HTML e um botão não responde). Nos testes de transição, `e2e/support/view-transitions.ts` grava os pseudo-elementos e as animações de cada uma.
 - Testes de banco em `tests/db/`: SQL dentro de `begin … rollback` (`tests/db/sql.ts`: `createUser`, `asUser`, `asAnon`, `asAdmin`, `check`, `rejects`). Um `update` que a RLS filtra não dá erro, só afeta 0 linhas: confira com `check` depois. O seed está no banco: conte só o que o teste criou.
 - E2E com conta: `e2e/support/supabase-admin.ts` cria e apaga contas pelo admin (`createTestUser`, `deleteTestUser`, que também apaga os avatares) e monta os cookies de sessão (`sessionCookies`; com `expired`, o proxy precisa renovar). Nenhum E2E manda e-mail: o link mágico vem do `generateLink`, aberto em `/auth/confirm`.
 - O anunciador de rotas do Next também tem `role="alert"`: ao procurar o alerta de um formulário, exclua `#__next-route-announcer__`.

@@ -1,0 +1,60 @@
+{
+  "_nota": "Montado no formato documentado do recurso Volume (developers.google.com/books/docs/v1/reference/volumes). Sem chave de API o Google Books responde 429 com cota anônima zero, então não há resposta real gravada. Ids e capas são ilustrativos.",
+  "kind": "books#volumes",
+  "totalItems": 3,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "SEM-CHAVE-01",
+      "volumeInfo": {
+        "title": "Torto arado",
+        "authors": ["Itamar Vieira Junior"],
+        "publisher": "Todavia",
+        "publishedDate": "2019-08-01",
+        "industryIdentifiers": [
+          { "type": "ISBN_13", "identifier": "9786580309313" },
+          { "type": "ISBN_10", "identifier": "6580309318" }
+        ],
+        "pageCount": 280,
+        "printType": "BOOK",
+        "categories": ["Fiction"],
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=SEM-CHAVE-01&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=SEM-CHAVE-01&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        },
+        "language": "pt"
+      }
+    },
+    {
+      "kind": "books#volume",
+      "id": "SEM-CHAVE-02",
+      "volumeInfo": {
+        "title": "Memórias de um sargento de milícias",
+        "authors": ["Manuel Antônio de Almeida"],
+        "publishedDate": "1983",
+        "industryIdentifiers": [
+          { "type": "ISBN_10", "identifier": "8508007736" }
+        ],
+        "pageCount": 176,
+        "printType": "BOOK",
+        "language": "pt-BR"
+      }
+    },
+    {
+      "kind": "books#volume",
+      "id": "SEM-CHAVE-03",
+      "volumeInfo": {
+        "title": "Dom Casmurro",
+        "subtitle": "  romance  ",
+        "authors": ["Machado de Assis"],
+        "publishedDate": "1899",
+        "industryIdentifiers": [
+          { "type": "OTHER", "identifier": "UOM:39015012345678" }
+        ],
+        "printType": "BOOK",
+        "categories": ["Fiction / Classics", "Fiction / Classics"],
+        "language": "pt"
+      }
+    }
+  ]
+}

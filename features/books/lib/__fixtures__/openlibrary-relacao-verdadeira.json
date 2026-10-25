@@ -1,0 +1,15 @@
+{
+  "query": "relação verdadeira",
+  "numFound": 292,
+  "docs": [
+    {
+      "author_name": ["Estevan Félix Carrasco"],
+      "first_publish_year": 1748,
+      "key": "/works/OL45775504W",
+      "language": ["por"],
+      "number_of_pages_median": 15,
+      "title": "Relaçaõ verdadeira com todas as circumstancias, das ruînas, e estragos, que causáraõ os terremótos em várias partes do Reyno de Valença nos dias vinte e tres de março, e dous de abril, e da repetiçaõ, que fez o terremóto, em cinco de mayo deste presente anno de 1748",
+      "subject": ["Earthquakes"]
+    }
+  ]
+}

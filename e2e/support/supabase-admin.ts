@@ -68,8 +68,16 @@ export async function createTestUser(
   return { id: data.user.id, email, password, username: profile.username };
 }
 
+/** Apaga a conta e os avatares dela (o Storage não apaga junto com a conta). */
 export async function deleteTestUser(id: string) {
-  const { error } = await adminClient().auth.admin.deleteUser(id);
+  const admin = adminClient();
+  const { data: files } = await admin.storage.from("avatars").list(id);
+  if (files && files.length > 0) {
+    await admin.storage
+      .from("avatars")
+      .remove(files.map((file) => `${id}/${file.name}`));
+  }
+  const { error } = await admin.auth.admin.deleteUser(id);
   if (error) throw error;
 }
 

@@ -618,6 +618,18 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      suggested_readers: {
+        Args: { max_results?: number }
+        Returns: {
+          avatar_url: string
+          common_genres: number
+          display_name: string
+          favorite_genres: string[]
+          id: string
+          is_private: boolean
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

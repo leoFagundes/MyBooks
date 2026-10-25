@@ -2,12 +2,16 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { toBookVisual } from "@/features/books/lib/to-book-visual";
 import type { BookVisual } from "@/features/books/types";
-import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { SHELF_STATUSES, type ShelfStatus } from "./schemas";
+
+// A coluna é texto com check no banco; o tipo gerado não sabe disso
+const isShelfStatus = (value: string): value is ShelfStatus =>
+  (SHELF_STATUSES as readonly string[]).includes(value);
 
 export type ShelfItem = {
   book: BookVisual;
-  status: Tables<"user_books">["status"];
+  status: ShelfStatus;
 };
 
 /**
@@ -31,6 +35,6 @@ export async function getShelf(userId: string): Promise<ShelfItem[]> {
     .order("updated_at", { ascending: false });
   if (error) throw error;
   return data.flatMap(({ status, book }) =>
-    book ? [{ book: toBookVisual(book), status }] : [],
+    book && isShelfStatus(status) ? [{ book: toBookVisual(book), status }] : [],
   );
 }

@@ -2,7 +2,12 @@ import { existsSync } from "node:fs";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-const PROJECT_REF = "pdlxsimtcamwadfbjyjm";
+// O projeto é o da URL do app: trocar de banco é trocar só o .env.local
+function projectRef(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) throw new Error("Falta NEXT_PUBLIC_SUPABASE_URL no .env.local");
+  return new URL(url).hostname.split(".")[0];
+}
 
 /** Roda SQL no banco do projeto pela API de gestão do Supabase. */
 export async function runSql(query: string): Promise<unknown[]> {
@@ -13,7 +18,7 @@ export async function runSql(query: string): Promise<unknown[]> {
     );
   }
   const response = await fetch(
-    `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`,
+    `https://api.supabase.com/v1/projects/${projectRef()}/database/query`,
     {
       method: "POST",
       headers: {

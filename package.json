@@ -18,10 +18,10 @@
     "format:check": "prettier --check .",
     "test:db": "vitest run --config vitest.db.config.mts",
     "supabase": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js",
-    "db:link": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js link --project-ref pdlxsimtcamwadfbjyjm",
+    "db:link": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js link --project-ref djehboxlhvjtlrvmdiis",
     "db:push": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js db push --linked",
     "db:seed": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js db push --linked --include-seed",
-    "db:types": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js gen types typescript --project-id pdlxsimtcamwadfbjyjm --schema public > lib/supabase/database.types.ts"
+    "db:types": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js gen types typescript --project-id djehboxlhvjtlrvmdiis --schema public > lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",

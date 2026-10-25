@@ -4,7 +4,7 @@
 
 **Goal:** Ligar o MyBooks ao projeto Supabase na nuvem: schema com RLS, triggers, Storage e seed; login por e-mail e senha, link mágico e Google; e o onboarding de 4 passos.
 
-**Architecture:** Migrations SQL em `supabase/migrations`, aplicadas com a CLI (`db push --linked`) no projeto `pdlxsimtcamwadfbjyjm`, que é o ambiente de desenvolvimento (escolha do usuário). Sem Docker, os testes de banco rodam como SQL dentro de `begin … rollback` pela API de gestão do Supabase, sem deixar dados. O app lê a sessão com `@supabase/ssr` (`getClaims()`, chaves ES256 já ativas), dentro de `'use cache: private'` e `<Suspense>`, e o `proxy.ts` renova a sessão e redireciona.
+**Architecture:** Migrations SQL em `supabase/migrations`, aplicadas com a CLI (`db push --linked`) no projeto `djehboxlhvjtlrvmdiis` (supabase-cerulean-yacht), que é o ambiente de desenvolvimento (escolha do usuário; até 25/10/2026 era o `pdlxsimtcamwadfbjyjm`, que o token dele não alcança). Sem Docker, os testes de banco rodam como SQL dentro de `begin … rollback` pela API de gestão do Supabase, sem deixar dados. O app lê a sessão com `@supabase/ssr` (`getClaims()`, chaves ES256 já ativas), dentro de `'use cache: private'` e `<Suspense>`, e o `proxy.ts` renova a sessão e redireciona.
 
 **Tech Stack:** Next 16.4.3, React 19.3.1, @supabase/supabase-js 2.118.0, @supabase/ssr 0.12.7, supabase (CLI) 2.122.0, zod 4.6.7, react-hook-form 7.91.0, @hookform/resolvers 6.0.0, react-easy-crop 6.2.4, server-only 0.0.1, node-vibrant 4.0.4 (seed), Vitest 5.0.5, Playwright 1.64.1.
 
@@ -37,7 +37,7 @@
 1. **Token de acesso** (antes da Task 1, passo 5): Account → Access Tokens → gerar e pôr em `SUPABASE_ACCESS_TOKEN` no `.env.local`. A CLI aplica as migrations e gera os tipos com ele, e os testes de banco rodam por ele. Se o `db push` pedir, a senha do banco vai em `SUPABASE_DB_PASSWORD`.
 2. **URLs do Auth** (antes da Task 9): Site URL `http://localhost:3000` e Redirect URL `http://localhost:3000/**`. Previews e produção entram na Fase 8.
 3. **Modelos de e-mail** (antes da Task 9): "Confirm signup" e "Magic Link" com os textos de `supabase/templates/`, que apontam para `/auth/confirm` com `token_hash` (funciona até abrindo o e-mail em outro aparelho).
-4. **Google** (antes de testar o botão): cliente OAuth no Google Cloud com o retorno `https://pdlxsimtcamwadfbjyjm.supabase.co/auth/v1/callback`, e o provedor ligado no Supabase.
+4. **Google** (antes de testar o botão): cliente OAuth no Google Cloud com o retorno `https://djehboxlhvjtlrvmdiis.supabase.co/auth/v1/callback`, e o provedor ligado no Supabase.
 5. O e-mail padrão do Supabase só entrega para endereços da equipe do projeto e manda poucos por hora. Para testar à mão, use o seu e-mail; SMTP próprio fica para a Fase 8.
 
 ## Fora desta fase
@@ -59,10 +59,10 @@
 - Produces: `publicEnv: { supabaseUrl: string; supabasePublishableKey: string; siteUrl: string }` (zod, com referências explícitas a `process.env.NEXT_PUBLIC_*`); scripts `db:push`, `db:types`, `db:link`, `test:db`; `runSql(sql: string): Promise<unknown>` e `sqlTransaction(...statements: string[]): string` (envolve em `begin … rollback`) em `tests/db/sql.ts`; helpers SQL `asUser(id)`, `asAnon()`, `createUser({ id, email, meta })` (insert em `auth.users` + `auth.identities`).
 
 - [ ] **Step 1:** Instalar com `-E`: @supabase/supabase-js 2.118.0, @supabase/ssr 0.12.7, zod 4.6.7, react-hook-form 7.91.0, @hookform/resolvers 6.0.0, react-easy-crop 6.2.4, server-only 0.0.1; dev: supabase 2.122.0, node-vibrant 4.0.4.
-- [ ] **Step 2:** Renomear no `.env.local` por script que não imprime valores: `API_KEY_SUPABASE` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SECRET_KEY_SUPABASE` → `SUPABASE_SECRET_KEY`, remover `ANON_SUPABSE` (a publicável substitui), acrescentar `NEXT_PUBLIC_SUPABASE_URL=https://pdlxsimtcamwadfbjyjm.supabase.co`. `.env.example` com todas as variáveis, incluindo `SUPABASE_ACCESS_TOKEN` (só para CLI e testes).
+- [ ] **Step 2:** Renomear no `.env.local` por script que não imprime valores: `API_KEY_SUPABASE` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SECRET_KEY_SUPABASE` → `SUPABASE_SECRET_KEY`, remover `ANON_SUPABSE` (a publicável substitui), acrescentar `NEXT_PUBLIC_SUPABASE_URL=https://djehboxlhvjtlrvmdiis.supabase.co`. `.env.example` com todas as variáveis, incluindo `SUPABASE_ACCESS_TOKEN` (só para CLI e testes).
 - [ ] **Step 3: Testes** em `lib/env.test.ts`: `parsePublicEnv` aceita URL https e chave `sb_publishable_`; recusa chave `sb_secret_` no lugar da publicável e URL ausente, com mensagem em pt-BR.
 - [ ] **Step 4:** Rodar. Expected: FAIL (módulo inexistente). Implementar `lib/env.ts`. Expected: PASS.
-- [ ] **Step 5:** `supabase init` (`--yes`), `scripts/supabase.mjs` (carrega `.env.local` com `process.loadEnvFile` e repassa os argumentos ao binário da CLI), scripts npm, `supabase link --project-ref pdlxsimtcamwadfbjyjm`. Playwright carrega `.env.local` no config.
+- [ ] **Step 5:** `supabase init` (`--yes`), `scripts/supabase.mjs` (carrega `.env.local` com `process.loadEnvFile` e repassa os argumentos ao binário da CLI), scripts npm, `supabase link --project-ref djehboxlhvjtlrvmdiis`. Playwright carrega `.env.local` no config.
 - [ ] **Step 6: Teste** `tests/db/smoke.test.ts`: `runSql("select 1 as ok")` devolve `[{ ok: 1 }]`; um `sqlTransaction` com `assert false` falha com a mensagem do assert. Rodar `npm run test:db`. Expected: PASS (se a API não aceitar transação com vários comandos, a Task inteira para e vira ruling).
 - [ ] **Step 7:** Commit `chore(supabase): CLI, variáveis e testes de banco`.
 

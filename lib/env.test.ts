@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { parsePublicEnv } from "./env";
 
 const valid = {
-  supabaseUrl: "https://pdlxsimtcamwadfbjyjm.supabase.co",
+  supabaseUrl: "https://djehboxlhvjtlrvmdiis.supabase.co",
   supabasePublishableKey: "sb_publishable_abc123",
   siteUrl: "https://mybooks.app",
 };

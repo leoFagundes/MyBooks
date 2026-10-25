@@ -43,6 +43,7 @@ export function BottomNav({
           !preview &&
             "fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden",
         )}
+        style={preview ? undefined : { viewTransitionName: "site-pill" }}
       >
         <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border bg-background/85 p-1.5 backdrop-blur-md">
           <NavLinks

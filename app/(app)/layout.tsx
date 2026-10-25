@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PageTransition } from "@/components/motion/page-transition";
 import { AccountActions } from "@/components/shell/account-actions";
 import { BottomNav } from "@/components/shell/bottom-nav";
 import { EstanteLink } from "@/components/shell/estante-link";
@@ -37,10 +38,13 @@ function estanteSlot(variant: "top" | "pill") {
 // Telas do app: barra superior e, no celular, a pílula inferior. As barras
 // fazem parte da página; só o que depende da conta chega depois, cada pedaço
 // no seu Suspense, para nada esperar a sessão (e a barra não ser trocada
-// inteira no meio de um clique)
+// inteira no meio de um clique).
+// O PageTransition daqui só anima quando o layout inteiro chega ou sai (vindo
+// da landing, por exemplo): o React só anima a transição que vem antes de
+// qualquer elemento novo, e a das páginas fica dentro deste div.
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex min-h-dvh flex-col pb-28 md:pb-0">
+    <PageTransition className="flex min-h-dvh flex-col pb-28 md:pb-0">
       <TopNav
         slots={{
           estante: estanteSlot("top"),
@@ -53,6 +57,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       />
       <div className="flex-1">{children}</div>
       <BottomNav estante={estanteSlot("pill")} />
-    </div>
+    </PageTransition>
   );
 }

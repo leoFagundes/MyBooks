@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PageTransition } from "@/components/motion/page-transition";
 import { BooksDemo } from "./_components/books-demo";
 import { ButtonsDemo } from "./_components/buttons-demo";
 import { DevSection } from "./_components/dev-section";
@@ -23,109 +24,111 @@ export default function DevPage() {
   if (process.env.VERCEL_ENV === "production") notFound();
 
   return (
-    <main className="mx-auto max-w-5xl px-6 pt-16 pb-32">
-      <header className="flex flex-col gap-3 border-b border-border pb-10">
-        <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
-          Fase 1 · Fundação
-        </p>
-        <h1 className="font-serif text-5xl tracking-tight text-balance">
-          Componentes e movimento
-        </h1>
-        <p className="max-w-xl text-pretty text-muted-foreground">
-          Tudo que a interface do MyBooks usa, num lugar só. Passe o mouse,
-          clique e troque o tema para ver cada estado.
-        </p>
-      </header>
+    <PageTransition>
+      <main className="mx-auto max-w-5xl px-6 pt-16 pb-32">
+        <header className="flex flex-col gap-3 border-b border-border pb-10">
+          <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
+            Fase 1 · Fundação
+          </p>
+          <h1 className="font-serif text-5xl tracking-tight text-balance">
+            Componentes e movimento
+          </h1>
+          <p className="max-w-xl text-pretty text-muted-foreground">
+            Tudo que a interface do MyBooks usa, num lugar só. Passe o mouse,
+            clique e troque o tema para ver cada estado.
+          </p>
+        </header>
 
-      <DevSection
-        id="tokens"
-        number="01"
-        title="Cor, tipo e forma"
-        description="A interface fica neutra para a cor vir das capas. O acento aparece só em foco, curtidas e seleção."
-      >
-        <TokensDemo />
-      </DevSection>
+        <DevSection
+          id="tokens"
+          number="01"
+          title="Cor, tipo e forma"
+          description="A interface fica neutra para a cor vir das capas. O acento aparece só em foco, curtidas e seleção."
+        >
+          <TokensDemo />
+        </DevSection>
 
-      <DevSection
-        id="botoes"
-        number="02"
-        title="Botões"
-        description="Todo botão encolhe um pouco ao clicar, com mola. O primário é invertido."
-      >
-        <ButtonsDemo />
-      </DevSection>
+        <DevSection
+          id="botoes"
+          number="02"
+          title="Botões"
+          description="Todo botão encolhe um pouco ao clicar, com mola. O primário é invertido."
+        >
+          <ButtonsDemo />
+        </DevSection>
 
-      <DevSection
-        id="campos"
-        number="03"
-        title="Campos"
-        description="Borda mais forte que a dos cards, para os campos se destacarem com contraste AA."
-      >
-        <FieldsDemo />
-      </DevSection>
+        <DevSection
+          id="campos"
+          number="03"
+          title="Campos"
+          description="Borda mais forte que a dos cards, para os campos se destacarem com contraste AA."
+        >
+          <FieldsDemo />
+        </DevSection>
 
-      <DevSection
-        id="sobreposicoes"
-        number="04"
-        title="Modais, gavetas e menus"
-        description="Entram de 0.96 para 1 com mola e saem mais rápido. A gaveta de baixo fecha arrastando a alça."
-      >
-        <OverlaysDemo />
-      </DevSection>
+        <DevSection
+          id="sobreposicoes"
+          number="04"
+          title="Modais, gavetas e menus"
+          description="Entram de 0.96 para 1 com mola e saem mais rápido. A gaveta de baixo fecha arrastando a alça."
+        >
+          <OverlaysDemo />
+        </DevSection>
 
-      <DevSection
-        id="navegacao"
-        number="05"
-        title="Abas e escolhas"
-        description="O indicador desliza entre as opções com layout animado."
-      >
-        <NavigationDemo />
-      </DevSection>
+        <DevSection
+          id="navegacao"
+          number="05"
+          title="Abas e escolhas"
+          description="O indicador desliza entre as opções com layout animado."
+        >
+          <NavigationDemo />
+        </DevSection>
 
-      <DevSection
-        id="estados"
-        number="06"
-        title="Carregando, vazio e avisos"
-        description="Skeletons discretos, estados vazios com uma ação e toasts com desfazer."
-      >
-        <FeedbackDemo />
-      </DevSection>
+        <DevSection
+          id="estados"
+          number="06"
+          title="Carregando, vazio e avisos"
+          description="Skeletons discretos, estados vazios com uma ação e toasts com desfazer."
+        >
+          <FeedbackDemo />
+        </DevSection>
 
-      <DevSection
-        id="movimento"
-        number="07"
-        title="Movimento"
-        description="Presets de lib/motion.ts: entradas que acontecem uma vez, títulos que saem do desfoque e molas para o que é tocável. A rolagem desta página usa Lenis."
-      >
-        <MotionDemo />
-      </DevSection>
+        <DevSection
+          id="movimento"
+          number="07"
+          title="Movimento"
+          description="Presets de lib/motion.ts: entradas que acontecem uma vez, títulos que saem do desfoque e molas para o que é tocável. A rolagem desta página usa Lenis."
+        >
+          <MotionDemo />
+        </DevSection>
 
-      <DevSection
-        id="navegacao-app"
-        number="08"
-        title="Navegação"
-        description="Barra fina e translúcida no topo e, no celular, a pílula flutuante. ⌘K abre a paleta de comandos de qualquer página."
-      >
-        <NavPreview />
-      </DevSection>
+        <DevSection
+          id="navegacao-app"
+          number="08"
+          title="Navegação"
+          description="Barra fina e translúcida no topo e, no celular, a pílula flutuante. ⌘K abre a paleta de comandos de qualquer página."
+        >
+          <NavPreview />
+        </DevSection>
 
-      <DevSection
-        id="livros"
-        number="09"
-        title="Capas, lombadas e prateleira"
-        description="A cor vem das capas. Sem capa, ou quando ela não carrega, entra a capa tipográfica na cor do título. As lombadas variam com as páginas e se afastam umas das outras no hover."
-      >
-        <BooksDemo />
-      </DevSection>
+        <DevSection
+          id="livros"
+          number="09"
+          title="Capas, lombadas e prateleira"
+          description="A cor vem das capas. Sem capa, ou quando ela não carrega, entra a capa tipográfica na cor do título. As lombadas variam com as páginas e se afastam umas das outras no hover."
+        >
+          <BooksDemo />
+        </DevSection>
 
-      <DevSection
-        id="visualizacoes"
-        number="10"
-        title="Estante, grade e lista"
-        description="As três vistas do perfil. Entre a grade e a lista, cada capa viaja até o novo lugar; o resto esmaece."
-      >
-        <ViewsDemo />
-      </DevSection>
-    </main>
+        <DevSection
+          id="visualizacoes"
+          number="10"
+          title="Estante, grade e lista"
+          description="As três vistas do perfil. Entre a grade e a lista, cada capa viaja até o novo lugar; o resto esmaece."
+        >
+          <ViewsDemo />
+        </DevSection>
+      </main>
+    </PageTransition>
   );
 }

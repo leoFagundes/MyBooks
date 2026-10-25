@@ -91,6 +91,35 @@
   --duration-fast: 150ms;
   --duration-base: 250ms;
   --duration-slow: 400ms;
+  /* Mola smooth em CSS, para as transições entre páginas */
+  --spring-smooth: linear(
+    0,
+    0.0663,
+    0.2105,
+    0.3763,
+    0.5332,
+    0.6669,
+    0.7733,
+    0.8533,
+    0.9107,
+    0.9499,
+    0.9754,
+    0.9911,
+    1,
+    1.0044,
+    1.0061,
+    1.0062,
+    1.0055,
+    1.0045,
+    1.0035,
+    1.0026,
+    1.0018,
+    1.0012,
+    1.0008,
+    1,
+    1
+  );
+  --spring-smooth-duration: 750ms;
 
   --radius: 10px;
 
@@ -225,7 +254,82 @@
 
 /* Troca de tema e crossfade padrão: a página inteira em 250ms. */
 ::view-transition-old(root),
-::view-transition-new(root) {
+::view-transition-new(root),
+::view-transition-old(site-header),
+::view-transition-new(site-header),
+::view-transition-old(site-pill),
+::view-transition-new(site-pill) {
   animation-duration: var(--duration-base);
   animation-timing-function: var(--ease-standard);
+}
+
+/* Nas navegações, as barras ficam paradas e por cima do que viaja */
+:root:not(:active-view-transition-type(theme))::view-transition-group(
+    site-header
+  ),
+:root:not(:active-view-transition-type(theme))::view-transition-group(
+    site-pill
+  ) {
+  animation: none;
+  z-index: 100;
+}
+:root:not(:active-view-transition-type(theme))::view-transition-old(
+    site-header
+  ),
+:root:not(:active-view-transition-type(theme))::view-transition-old(site-pill) {
+  display: none;
+}
+:root:not(:active-view-transition-type(theme))::view-transition-new(
+    site-header
+  ),
+:root:not(:active-view-transition-type(theme))::view-transition-new(site-pill) {
+  animation: none;
+}
+
+/* Conteúdo das páginas (PageTransition): sai rápido, entra depois, com calma */
+::view-transition-old(.pagina-sai) {
+  animation: pagina-sai var(--duration-fast) var(--ease-standard) both;
+}
+::view-transition-new(.pagina-entra) {
+  animation: pagina-entra var(--duration-base) var(--ease-standard) 120ms both;
+}
+
+@keyframes pagina-sai {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes pagina-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+}
+
+/* Movimento reduzido: nada se desloca, só esmaece */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) {
+    animation-duration: 0s;
+    animation-delay: 0s;
+  }
+  ::view-transition-old(*),
+  ::view-transition-old(.pagina-sai) {
+    animation: sumir var(--duration-fast) var(--ease-standard) both;
+  }
+  ::view-transition-new(*),
+  ::view-transition-new(.pagina-entra) {
+    animation: aparecer var(--duration-fast) var(--ease-standard) both;
+  }
+}
+
+@keyframes sumir {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
 }

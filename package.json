@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/limpar-next.mjs",
     "build": "next build",
     "postbuild": "node scripts/verificar-bundle.mjs",
     "start": "next start",
@@ -14,7 +15,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=desktop --project=mobile",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:db": "vitest run --config vitest.db.config.mts",
@@ -23,7 +24,8 @@
     "db:push": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js db push --linked",
     "db:seed": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js db push --linked --include-seed",
     "db:types": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js gen types typescript --project-id djehboxlhvjtlrvmdiis --schema public > lib/supabase/database.types.ts",
-    "seed:gerar": "tsx scripts/gerar-seed.mts"
+    "seed:gerar": "tsx scripts/gerar-seed.mts",
+    "test:e2e:producao": "playwright test --project=producao"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",

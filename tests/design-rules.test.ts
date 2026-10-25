@@ -3,7 +3,8 @@ import { join, relative, sep } from "node:path";
 import { describe, expect, test } from "vitest";
 import { INK_RGB, PAPER_RGB } from "@/features/books/lib/color";
 import { COVER_RADIUS_PX } from "@/features/books/lib/cover";
-import { durations, easing } from "@/lib/motion";
+import { spring } from "motion";
+import { durations, easing, springs } from "@/lib/motion";
 
 const root = join(__dirname, "..");
 const css = readFileSync(join(root, "app/globals.css"), "utf8");
@@ -151,5 +152,25 @@ describe("tintas da capa no CSS espelham features/books/lib/color.ts", () => {
   test("--ink e --paper", () => {
     expect(css).toContain(`--ink: ${hex(INK_RGB)};`);
     expect(css).toContain(`--paper: ${hex(PAPER_RGB)};`);
+  });
+});
+
+// A capa viaja entre páginas com CSS: a curva tem de ser a mola smooth
+describe("mola das transições entre páginas espelha lib/motion.ts", () => {
+  test("--spring-smooth e a duração vêm da mola smooth do Motion", () => {
+    const generated = spring({
+      keyframes: [0, 1],
+      ...springs.smooth,
+    }).toString();
+    const [duration, ...curve] = generated.split(" ");
+    // O Prettier quebra o linear() em várias linhas: compara sem os espaços
+    const flat = (text: string) =>
+      text
+        .replace(/\s+/g, " ")
+        .replace(/\(\s/g, "(")
+        .replace(/\s\)/g, ")")
+        .replace(/,\s\)/g, ")");
+    expect(css).toContain(`--spring-smooth-duration: ${duration};`);
+    expect(flat(css)).toContain(`--spring-smooth: ${flat(curve.join(" "))};`);
   });
 });

@@ -48,6 +48,9 @@ export function TopNav({ viewer, slots, preview = false }: TopNavProps) {
           "top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md",
           preview ? "relative" : "sticky",
         )}
+        // Fica parada nas navegações; as prévias do /dev não levam o nome,
+        // porque nome repetido cancela a transição inteira
+        style={preview ? undefined : { viewTransitionName: "site-header" }}
       >
         <div className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6">
           <Logo />

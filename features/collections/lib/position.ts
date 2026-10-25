@@ -57,3 +57,30 @@ export function planMove(
     ? rebalance()
     : { kind: "move", id: moving.id, position };
 }
+
+// A ordem do banco: posição byte a byte e, no empate, o id
+function byPosition<T extends { position: string }>(idOf: (item: T) => string) {
+  return (a: T, b: T) => {
+    if (a.position !== b.position) return a.position < b.position ? -1 : 1;
+    return idOf(a) < idOf(b) ? -1 : 1;
+  };
+}
+
+/** Os itens com as chaves do plano, já na nova ordem (para a UI otimista). */
+export function applyMovePlan<T extends { position: string }>(
+  items: readonly T[],
+  plan: MovePlan,
+  idOf: (item: T) => string,
+): T[] {
+  const positionOf = new Map(
+    plan.kind === "move"
+      ? [[plan.id, plan.position]]
+      : plan.order.map((id, i) => [id, plan.positions[i] ?? ""]),
+  );
+  return items
+    .map((item) => {
+      const position = positionOf.get(idOf(item));
+      return position ? { ...item, position } : item;
+    })
+    .sort(byPosition(idOf));
+}

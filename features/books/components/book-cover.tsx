@@ -165,6 +165,8 @@ export function BookCover({
               ref={hideUntilLoaded}
               src={book.coverUrl ?? ""}
               alt={`Capa de ${book.title}`}
+              // O arraste nativo da imagem atrapalharia a grade reordenável
+              draggable={false}
               fill
               sizes={sizes[size]}
               preload={preload}

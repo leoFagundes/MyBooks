@@ -1,6 +1,7 @@
 import { sampleBooks } from "@/features/books/sample-books";
 import type { BookVisual } from "@/features/books/types";
-import type { CollectionVisual, Person } from "./types";
+import { firstPositions } from "./lib/position";
+import type { CollectionItemVisual, CollectionVisual, Person } from "./types";
 
 // Coleções de exemplo para a vitrine, com os livros de sample-books.ts
 function book(id: string): BookVisual {
@@ -31,6 +32,29 @@ const classics = [
   "a-paixao-segundo-gh",
 ];
 const dystopias = ["1984", "ensaio-sobre-a-cegueira", "duna"];
+
+// Algumas notas de "por que está aqui"
+const notes: Record<string, string> = {
+  "dom-casmurro": "Capitu traiu ou não traiu? Cada releitura muda a resposta.",
+  "grande-sertao-veredas": "Para ler em voz alta, devagar.",
+  "quarto-de-despejo": "O diário que todo mundo devia ler na escola.",
+};
+
+function items(ids: string[]): CollectionItemVisual[] {
+  const positions = firstPositions(ids.length);
+  return ids.map((id, i) => ({
+    book: book(id),
+    position: positions[i] ?? "",
+    note: notes[id] ?? null,
+  }));
+}
+
+/** Os livros de cada coleção de exemplo, na ordem. */
+export const sampleCollectionItems: Record<string, CollectionItemVisual[]> = {
+  "classicos-brasileiros": items(classics),
+  "futuros-que-dao-medo": items(dystopias),
+  "para-ler-devagar": [],
+};
 
 export const sampleCollections: CollectionVisual[] = [
   {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  applyMovePlan,
   firstPositions,
   type MovePlan,
   planMove,
@@ -137,5 +138,38 @@ describe("planMove", () => {
       expect(items.every((item) => item.position.length <= 64)).toBe(true);
     }
     expect(rebalanced).toBe(true);
+  });
+});
+
+describe("applyMovePlan", () => {
+  type Book = { book: { id: string }; position: string; note: string };
+  const books: Book[] = firstPositions(3).map((position, i) => ({
+    book: { id: `livro-${i}` },
+    position,
+    note: `nota ${i}`,
+  }));
+  const idOf = (item: Book) => item.book.id;
+
+  test("um movimento muda só a chave do livro e reordena", () => {
+    const plan = planMove(
+      books.map((b) => ({ id: idOf(b), position: b.position })),
+      2,
+      0,
+    );
+    if (!plan) throw new Error("devia mover");
+    const moved = applyMovePlan(books, plan, idOf);
+    expect(moved.map(idOf)).toEqual(["livro-2", "livro-0", "livro-1"]);
+    expect(moved.map((b) => b.note)).toEqual(["nota 2", "nota 0", "nota 1"]);
+  });
+
+  test("a renumeração dá chaves novas na ordem do plano", () => {
+    const plan: MovePlan = {
+      kind: "rebalance",
+      order: ["livro-1", "livro-2", "livro-0"],
+      positions: firstPositions(3),
+    };
+    const moved = applyMovePlan(books, plan, idOf);
+    expect(moved.map(idOf)).toEqual(["livro-1", "livro-2", "livro-0"]);
+    expect(moved.map((b) => b.position)).toEqual(firstPositions(3));
   });
 });

@@ -27,3 +27,10 @@ export type CollectionVisual = {
   /** Até 5 capas, na ordem da coleção. */
   covers: BookVisual[];
 };
+
+/** Um livro dentro da coleção: o lugar na ordem e a nota opcional. */
+export type CollectionItemVisual = {
+  book: BookVisual;
+  position: string;
+  note: string | null;
+};

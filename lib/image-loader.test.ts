@@ -22,9 +22,7 @@ describe("imageLoader", () => {
   // Sem capa, a Open Library responde 200 com um GIF transparente de 1px, e o
   // onError nunca dispara; com default=false ela responde 404
   test("pede 404 quando não há capa, para a capa tipográfica entrar", () => {
-    expect(imageLoader({ src: cover, width: 96 })).toMatch(
-      /\?default=false$/,
-    );
+    expect(imageLoader({ src: cover, width: 96 })).toMatch(/\?default=false$/);
   });
 
   test("larguras do mesmo tamanho dão a mesma URL, para aproveitar o cache", () => {

@@ -10,10 +10,11 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 
 ## Estado
 
-- Fase 0 (plano) aprovada com as 6 propostas. Fase 1 (Fundação) entregue em 24/10/2026 na branch `fase-1-fundacao`, aguardando revisão.
+- Fase 0 (plano) aprovada com as 6 propostas. Fase 1 (Fundação) entregue em 24/10/2026 na branch `fase-1-fundacao`, com a revisão final corrigida, aguardando seu ok para o merge.
 - Já existe: tokens e fontes, tema claro/escuro, primitivos shadcn restilizados, presets de movimento, Lenis, barra superior, pílula do celular, paleta ⌘K, `BookCover`, `BookSpine`, `Shelf`, `ShelfViews`, `AnimatedNumber` e a vitrine `/dev` (fora da produção).
 - Ainda não existe: Supabase, login, banco, `<BookLink>` e as páginas além de `/` e `/dev`. Os links da navegação e das lombadas (`/inicio`, `/explorar`, `/entrar`, `/livro/[id]`) dão 404 até a fase de cada um. Os livros vêm de `features/books/sample-books.ts`.
-- Na Fase 3, troque os `Link` das lombadas, da grade e da lista por `<BookLink>` e tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem.
+- Na Fase 2, `cover_color` ganha CHECK `^#[0-9a-f]{6}$` no banco e no zod (o `bookColor` já descarta valor fora disso, porque a cor vai para o `style`).
+- Na Fase 3, troque os `Link` das lombadas, da grade e da lista por `<BookLink>`, tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem e dê `viewTransitionName: "site-header"` à barra superior junto com as transições entre rotas.
 - Próxima: Fase 2 (Supabase e conta). Atualize esta seção ao fim de cada fase.
 
 ## Comandos
@@ -51,7 +52,7 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Activity mantém até 3 rotas montadas e escondidas. Popover, menu, ⌘K e sheet fecham no cleanup de `useLayoutEffect`. Nenhuma página escreve variável CSS global. O logout usa `window.location.assign`.
 - Links para `/livro/[id]` em listas usam `<BookLink>` (prefetch completo por intenção); sem isso o morph da capa não acontece.
 - `usePathname` e `useSearchParams` em client components ficam dentro de `<Suspense>`; sem isso, com Cache Components, o build falha.
-- `next/image` usa o loader de `lib/image-loader.ts` (tamanhos S/M/L da Open Library, sem o otimizador da Vercel). `priority` foi descontinuado: use `preload` só na capa que é o LCP.
+- `next/image` usa o loader de `lib/image-loader.ts` (tamanhos S/M/L da Open Library, sem o otimizador da Vercel). Ele pede `default=false`: sem capa, a Open Library responde 404 (e não um GIF de 1px) e a capa tipográfica entra. `priority` foi descontinuado: use `preload` só na capa que é o LCP.
 
 ## Dados e segurança (Supabase)
 
@@ -74,9 +75,12 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Tipografia: `font-serif` (Instrument Serif) nos títulos de páginas e livros, `font-sans` (Geist) na interface, `font-mono` (Geist Mono) nos metadados (páginas, ano, ISBN, contadores).
 - Raios de 10px em controles, 14px em cards e 3px em capas. Grade de 4/8px. Ícones `lucide-react` com traço 1.5.
 - Capas sempre com `<BookCover>`. A imagem vinda do servidor nasce visível, para o LCP não esperar a hidratação; só a que ainda está chegando entra com fade (`data-loading`). Não volte a esconder a capa até o `onLoad`.
+- Texto sobre a cor do livro (lombada, capa tipográfica) usa `coverInk`, que garante 4,5:1 escolhendo a tinta e, se preciso, ajustando o fundo. Nada de opacidade nesse texto: ela derruba o contraste.
 - Tema: preferência em `localStorage["mybooks:tema"]`, lida por `useTheme()`. Para trocar, use `ThemeToggle` (ícone) ou `ThemeSelect` (Claro, Escuro e Sistema).
 - Todo componente tem os estados de carregando (skeleton com shimmer), vazio (ilustração em traço fino + uma ação), erro e sucesso, e funciona de 360px a 1920px.
 - Acessibilidade: navegação por teclado, foco visível, `aria-label` nos botões de ícone, contraste AA.
+- Foco: o `:focus-visible` global do `globals.css` desenha o contorno. Não ponha `outline-none` em elemento focável: no Tailwind 4 ele zera `--tw-outline-style` e o `focus-visible:outline-2` passa a desenhar nada (o design-rules barra a combinação). Dentro de algo que rola, use `focus-visible:-outline-offset-2`.
+- Item ativo de menu e paleta: fundo sutil mais a barra de acento à esquerda, que dá os 3:1 de que o teclado precisa.
 - Performance: Lighthouse ≥ 90 no celular, LCP < 2,5s, CLS perto de zero, 60fps num celular intermediário. Imagens sempre com `next/image` no tamanho certo.
 
 ## Movimento
@@ -85,10 +89,11 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Anime só `transform` e `opacity` (`filter` com moderação). Tamanho e posição mudam com `layout`/`layoutId`, nunca com width, height, top ou left.
 - Elementos interativos usam mola, nada é linear e nada aparece ou some de repente. Toda saída é mais rápida que a entrada.
 - `<MotionConfig reducedMotion="user">` fica na raiz. A versão reduzida de qualquer animação é só opacidade.
+- O servidor não sabe da preferência de movimento: nada que muda o HTML inicial (variantes, `initial`) pode depender de `useReducedMotion` no render, ou a hidratação não bate. O modo reduzido muda só a transição, como em `entranceTransition`.
 - Entre rotas, `<ViewTransition>` do React, com nomes únicos na página (`capa-<id>`, `titulo-<id>`). Dentro da mesma tela, Motion.
 - Capa que viaja na mesma tela: `<BookCover layoutId>` dentro de um `<LayoutGroup id>` próprio (veja `ShelfViews`). O raio vai no style em px (`COVER_RADIUS_PX`, espelho de `--radius-cover`), senão o Motion distorce os cantos.
 - Contadores usam `<AnimatedNumber>` (NumberFlow). Os dígitos ficam `aria-hidden` e o número formatado vai em texto para leitores de tela.
-- Lenis fica na raiz, guiado pelo `frame` do Motion. Áreas com scroll próprio levam `data-lenis-prevent`.
+- Lenis fica na raiz, guiado pelo `frame` do Motion. Ele sai do caminho quando a rolagem está travada (evento cancelado ou `body[data-scroll-locked]`, que o Radix põe com modal, gaveta, menu e paleta abertos) e deixa áreas com scroll próprio rolarem sozinhas (`allowNestedScroll`). `data-lenis-prevent` só para o que fugir disso.
 - three.js só no visualizador 3D, carregado com `next/dynamic` sem SSR.
 
 ## Dependências
@@ -99,7 +104,7 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 
 ## Testes
 
-- Vitest para utilitários puros, em `*.test.ts` ao lado do código. `tests/design-rules.test.ts` barra hex solto em TS/TSX e classes da paleta padrão do Tailwind, e confere que o CSS espelha `lib/motion.ts` e o raio da capa.
+- Vitest para utilitários puros, em `*.test.ts` ao lado do código. `tests/design-rules.test.ts` barra hex solto em TS/TSX, classes da paleta padrão do Tailwind e `outline-none` que apaga o foco, e confere que o CSS espelha `lib/motion.ts`, o raio da capa e as tintas `--ink`/`--paper`.
 - Playwright em `e2e/`, com seletores por papel (`getByRole`), porque o Activity deixa rotas escondidas no DOM. `e2e/helpers.ts` tem `trackPageErrors`, `presetTheme` e `openCommandPalette`.
 - O NumberFlow deixa o HTML do servidor fora da tela, no light DOM. Leia contadores com `toHaveText(texto, { useInnerText: true })`.
 

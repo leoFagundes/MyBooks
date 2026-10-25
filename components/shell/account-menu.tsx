@@ -2,6 +2,7 @@
 
 import { Library, LogOut, Settings, SunMoon } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -16,11 +17,18 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { signOut } from "@/features/auth/actions";
 import { initials } from "@/lib/initials";
 import { routes } from "@/lib/routes";
 import { parseThemePreference } from "@/lib/theme";
 import type { NavViewer } from "./nav-links";
 import { useTheme } from "./theme-provider";
+
+async function leave() {
+  const result = await signOut();
+  if (result.ok) window.location.assign(routes.home);
+  else toast.error(result.error);
+}
 
 export function AccountMenu({ viewer }: { viewer: NavViewer }) {
   const { preference, setPreference } = useTheme();
@@ -82,8 +90,8 @@ export function AccountMenu({ viewer }: { viewer: NavViewer }) {
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
-        {/* O logout de verdade chega com a conta (Fase 2), com recarga completa */}
-        <DropdownMenuItem variant="destructive">
+        {/* Recarga completa: nenhuma rota guardada pelo Activity fica com a conta */}
+        <DropdownMenuItem variant="destructive" onSelect={leave}>
           <LogOut />
           Sair
         </DropdownMenuItem>

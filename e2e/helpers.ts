@@ -1,7 +1,24 @@
-import type { Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 // A vitrine tem uma capa quebrada de propósito, para mostrar o fallback.
 const EXPECTED_BROKEN = ["/capas/nao-existe.jpg"];
+
+/**
+ * Espera o React hidratar o elemento. Antes disso a página é só HTML: o
+ * clique num card segue o link em vez de abrir a espiada, e botões ainda
+ * não respondem. Com a máquina ocupada, a hidratação do dev demora.
+ */
+export async function waitForHydration(target: Locator) {
+  await expect
+    .poll(
+      () =>
+        target.evaluate((element) =>
+          Object.keys(element).some((key) => key.startsWith("__reactFiber")),
+        ),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+}
 
 /** Junta erros de console e exceções da página para o teste conferir no fim. */
 export function trackPageErrors(page: Page) {

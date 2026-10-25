@@ -10,6 +10,7 @@ export const routes = {
   explorar: "/explorar" as Route,
   entrar: "/entrar" as Route,
   cadastro: "/cadastro" as Route,
+  onboarding: "/onboarding" as Route,
   configuracoes: "/configuracoes" as Route,
   profile: (username: string) => `/@${username}` as Route,
   profileTab: (username: string, tab: "colecoes" | "citacoes") =>

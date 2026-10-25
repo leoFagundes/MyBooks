@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { neighborShift } from "../lib/spine";
@@ -9,6 +10,8 @@ import { BookSpine } from "./book-spine";
 type ShelfProps = {
   books: BookVisual[];
   label?: string;
+  /** Para onde cada lombada leva (padrão: a página do livro). */
+  bookHref?: (book: BookVisual) => Route;
   className?: string;
 };
 
@@ -17,7 +20,12 @@ type ShelfProps = {
  * linha fina, quebrando em fileiras conforme a largura. Em destaque, a
  * lombada sobe e as vizinhas da mesma fileira se afastam.
  */
-export function Shelf({ books, label = "Prateleira", className }: ShelfProps) {
+export function Shelf({
+  books,
+  label = "Prateleira",
+  bookHref,
+  className,
+}: ShelfProps) {
   const [active, setActive] = useState<number | null>(null);
   const [rowTops, setRowTops] = useState<number[]>([]);
   const items = useRef<(HTMLLIElement | null)[]>([]);
@@ -52,6 +60,7 @@ export function Shelf({ books, label = "Prateleira", className }: ShelfProps) {
         >
           <BookSpine
             book={book}
+            href={bookHref?.(book)}
             lifted={active === index}
             shift={shiftOf(index)}
             onActivate={() => activate(index)}

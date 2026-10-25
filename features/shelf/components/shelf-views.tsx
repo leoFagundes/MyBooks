@@ -7,11 +7,14 @@ import {
   motion,
   type Variants,
 } from "motion/react";
-import Link from "next/link";
-import { useId, useState } from "react";
+import type { Route } from "next";
+import { useId, useState, ViewTransition } from "react";
 import type { SegmentedOption } from "@/components/ui/segmented-control";
 import { BookCover } from "@/features/books/components/book-cover";
+import { BookLink } from "@/features/books/components/book-link";
+import { useTransitionSource } from "@/features/books/components/cover-transition";
 import { Shelf } from "@/features/books/components/shelf";
+import { titleName } from "@/features/books/lib/transition-names";
 import type { BookVisual } from "@/features/books/types";
 import { formatNumber } from "@/lib/format";
 import { tweens } from "@/lib/motion";
@@ -46,9 +49,15 @@ const textVariants: Variants = {
   exit: { opacity: 0, transition: tweens.fast },
 };
 
+type BookHref = (book: BookVisual) => Route;
+
+const toBookPage: BookHref = (book) => routes.book(book.id);
+
 type ShelfViewsProps = {
   books: BookVisual[];
   view: ShelfView;
+  /** Para onde cada livro leva (padrão: a página do livro). */
+  bookHref?: BookHref;
   className?: string;
 };
 
@@ -57,7 +66,12 @@ type ShelfViewsProps = {
  * (capas) e Lista (tabela compacta), com transição entre elas (spec §3,
  * momento 2).
  */
-export function ShelfViews({ books, view, className }: ShelfViewsProps) {
+export function ShelfViews({
+  books,
+  view,
+  bookHref = toBookPage,
+  className,
+}: ShelfViewsProps) {
   const group = useId();
   const [current, setCurrent] = useState(view);
   const [previous, setPrevious] = useState<ShelfView | null>(null);
@@ -81,11 +95,11 @@ export function ShelfViews({ books, view, className }: ShelfViewsProps) {
             exit="exit"
           >
             {view === "estante" ? (
-              <Shelf books={books} label="Estante" />
+              <Shelf books={books} label="Estante" bookHref={bookHref} />
             ) : view === "grade" ? (
-              <CoverGrid books={books} />
+              <CoverGrid books={books} bookHref={bookHref} />
             ) : (
-              <BookTable books={books} />
+              <BookTable books={books} bookHref={bookHref} />
             )}
           </motion.div>
         </AnimatePresence>
@@ -94,7 +108,13 @@ export function ShelfViews({ books, view, className }: ShelfViewsProps) {
   );
 }
 
-function CoverGrid({ books }: { books: BookVisual[] }) {
+function CoverGrid({
+  books,
+  bookHref,
+}: {
+  books: BookVisual[];
+  bookHref: BookHref;
+}) {
   return (
     <ul
       aria-label="Grade de capas"
@@ -102,20 +122,27 @@ function CoverGrid({ books }: { books: BookVisual[] }) {
     >
       {books.map((book) => (
         <li key={book.id}>
-          <Link
-            href={routes.book(book.id)}
+          <BookLink
+            bookId={book.id}
+            href={bookHref(book)}
             aria-label={book.title}
             className="block rounded-cover"
           >
             <BookCover book={book} size="fill" layoutId={`capa-${book.id}`} />
-          </Link>
+          </BookLink>
         </li>
       ))}
     </ul>
   );
 }
 
-function BookTable({ books }: { books: BookVisual[] }) {
+function BookTable({
+  books,
+  bookHref,
+}: {
+  books: BookVisual[];
+  bookHref: BookHref;
+}) {
   // As linhas ficam nas células de texto, que esmaecem; a capa viaja sozinha.
   // Bordas separadas: coladas, quem pinta é a tabela, e elas não esmaeceriam.
   const cell = "border-b border-border py-3 group-last:border-b-0";
@@ -143,47 +170,87 @@ function BookTable({ books }: { books: BookVisual[] }) {
       </motion.thead>
       <tbody>
         {books.map((book) => (
-          <tr key={book.id} className="group">
-            <td className="py-2 pr-4 align-middle">
-              <BookCover
-                book={book}
-                size="xs"
-                tilt={false}
-                layoutId={`capa-${book.id}`}
-              />
-            </td>
-            <motion.td variants={textVariants} className={cn(cell, "pr-4")}>
-              <Link
-                href={routes.book(book.id)}
-                className="font-serif text-lg leading-tight text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4"
-              >
-                {book.title}
-              </Link>
-              <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                {book.authors.join(", ")}
-              </p>
-            </motion.td>
-            <motion.td
-              variants={textVariants}
-              className={cn(
-                cell,
-                "hidden pr-4 font-mono text-xs text-muted-foreground sm:table-cell",
-              )}
-            >
-              {book.publishedYear ?? "—"}
-            </motion.td>
-            <motion.td
-              variants={textVariants}
-              className={cn(
-                cell,
-                "text-right font-mono text-xs text-muted-foreground",
-              )}
-            >
-              {book.pageCount === null ? "—" : formatNumber(book.pageCount)}
-            </motion.td>
-          </tr>
+          <BookRow
+            key={book.id}
+            book={book}
+            href={bookHref(book)}
+            cell={cell}
+          />
         ))}
       </tbody>
     </table>
+  );
+}
+
+function BookRow({
+  book,
+  href,
+  cell,
+}: {
+  book: BookVisual;
+  href: Route;
+  cell: string;
+}) {
+  // Capa e título da linha são a mesma origem: os dois viajam juntos
+  const source = useTransitionSource(book.id);
+
+  return (
+    <tr className="group">
+      <td className="py-2 pr-4 align-middle">
+        {/* O título já é o link para leitores de tela e teclado */}
+        <BookLink
+          bookId={book.id}
+          href={href}
+          source={source}
+          tabIndex={-1}
+          aria-hidden
+          className="block rounded-cover"
+        >
+          <BookCover
+            book={book}
+            size="xs"
+            tilt={false}
+            layoutId={`capa-${book.id}`}
+          />
+        </BookLink>
+      </td>
+      <motion.td variants={textVariants} className={cn(cell, "pr-4")}>
+        <BookLink
+          bookId={book.id}
+          href={href}
+          source={source}
+          className="font-serif text-lg leading-tight text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4"
+        >
+          <ViewTransition
+            name={source.isSource ? titleName(book.id) : undefined}
+            share="titulo"
+            default="none"
+          >
+            <span>{book.title}</span>
+          </ViewTransition>
+        </BookLink>
+        <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+          {book.authors.join(", ")}
+        </p>
+      </motion.td>
+      <motion.td
+        variants={textVariants}
+        className={cn(
+          cell,
+          "hidden pr-4 font-mono text-xs text-muted-foreground sm:table-cell",
+        )}
+      >
+        {book.publishedYear ?? "—"}
+      </motion.td>
+      <motion.td
+        variants={textVariants}
+        className={cn(
+          cell,
+          "text-right font-mono text-xs text-muted-foreground",
+        )}
+      >
+        {book.pageCount === null ? "—" : formatNumber(book.pageCount)}
+      </motion.td>
+    </tr>
   );
 }

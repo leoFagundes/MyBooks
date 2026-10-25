@@ -8,13 +8,15 @@ import {
   useSpring,
 } from "motion/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, ViewTransition, type ViewTransitionClass } from "react";
 import { springs } from "@/lib/motion";
 import { CAN_HOVER, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 import { bookColor, coverInk } from "../lib/color";
 import { COVER_RADIUS_PX } from "../lib/cover";
+import { coverName } from "../lib/transition-names";
 import type { BookVisual } from "../types";
+import { useIsInsideSource } from "./cover-transition";
 
 const MAX_TILT = 6;
 
@@ -47,6 +49,13 @@ type BookCoverProps = {
   preload?: boolean;
   /** Capas com o mesmo layoutId viajam de um lugar para outro (Motion). */
   layoutId?: string;
+  /**
+   * Nome da viagem entre páginas (View Transitions). Dentro de um BookLink
+   * vem sozinho, só na capa apertada.
+   */
+  transitionName?: string;
+  /** Animação quando o par se forma (padrão: "capa"). */
+  transitionShare?: ViewTransitionClass;
   className?: string;
 };
 
@@ -61,8 +70,13 @@ export function BookCover({
   tilt = true,
   preload = false,
   layoutId,
+  transitionName,
+  transitionShare = "capa",
   className,
 }: BookCoverProps) {
+  const insideSource = useIsInsideSource();
+  const name =
+    transitionName ?? (insideSource ? coverName(book.id) : undefined);
   const [failed, setFailed] = useState(false);
   const reduced = useReducedMotion() ?? false;
   const canHover = useMediaQuery(CAN_HOVER);
@@ -111,6 +125,13 @@ export function BookCover({
     glareOpacity.set(0);
   }
 
+  // Antes da foto da transição: a capa apertada volta reta na hora
+  function onPointerDown() {
+    rotateX.jump(0);
+    rotateY.jump(0);
+    glareOpacity.jump(0);
+  }
+
   return (
     <div
       data-testid={`capa-${book.id}`}
@@ -123,40 +144,43 @@ export function BookCover({
         } as React.CSSProperties
       }
     >
-      <motion.div
-        layoutId={layoutId}
-        // Na troca de vista a capa nova assume na hora, sem esmaecer com a antiga
-        layoutCrossfade={false}
-        onPointerMove={onPointerMove}
-        onPointerLeave={onPointerLeave}
-        style={{ rotateX, rotateY, borderRadius: COVER_RADIUS_PX }}
-        className="book-cover relative aspect-2/3 overflow-hidden bg-(--cover)"
-      >
-        {showImage ? (
-          <Image
-            ref={hideUntilLoaded}
-            src={book.coverUrl ?? ""}
-            alt={`Capa de ${book.title}`}
-            fill
-            sizes={sizes[size]}
-            preload={preload}
-            onLoad={onLoad}
-            onError={() => setFailed(true)}
-            // Enquanto carrega, aparece a cor da capa; a imagem chega com fade
-            className="object-cover transition-opacity duration-400 data-loading:opacity-0"
-          />
-        ) : (
-          <GeneratedCover book={book} ink={readable.ink} />
-        )}
-        <span aria-hidden className="book-fold" />
-        {tiltOn ? (
-          <motion.span
-            aria-hidden
-            className="cover-glare"
-            style={{ opacity: glareOpacity, background: glare }}
-          />
-        ) : null}
-      </motion.div>
+      <ViewTransition name={name} share={transitionShare} default="none">
+        <motion.div
+          layoutId={layoutId}
+          // Na troca de vista a capa nova assume na hora, sem esmaecer com a antiga
+          layoutCrossfade={false}
+          onPointerMove={onPointerMove}
+          onPointerLeave={onPointerLeave}
+          onPointerDown={onPointerDown}
+          style={{ rotateX, rotateY, borderRadius: COVER_RADIUS_PX }}
+          className="book-cover relative aspect-2/3 overflow-hidden bg-(--cover)"
+        >
+          {showImage ? (
+            <Image
+              ref={hideUntilLoaded}
+              src={book.coverUrl ?? ""}
+              alt={`Capa de ${book.title}`}
+              fill
+              sizes={sizes[size]}
+              preload={preload}
+              onLoad={onLoad}
+              onError={() => setFailed(true)}
+              // Enquanto carrega, aparece a cor da capa; a imagem chega com fade
+              className="object-cover transition-opacity duration-400 data-loading:opacity-0"
+            />
+          ) : (
+            <GeneratedCover book={book} ink={readable.ink} />
+          )}
+          <span aria-hidden className="book-fold" />
+          {tiltOn ? (
+            <motion.span
+              aria-hidden
+              className="cover-glare"
+              style={{ opacity: glareOpacity, background: glare }}
+            />
+          ) : null}
+        </motion.div>
+      </ViewTransition>
     </div>
   );
 }

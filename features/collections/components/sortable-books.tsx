@@ -118,6 +118,9 @@ export function SortableBooks({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
+      // A página acompanha o livro na hora: com rolagem suave, as setas
+      // apertadas durante a animação miravam o lugar errado
+      scrollBehavior: "auto",
       keyboardCodes: {
         start: [KeyboardCode.Space],
         cancel: [KeyboardCode.Esc],

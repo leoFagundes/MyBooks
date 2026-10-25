@@ -10,6 +10,7 @@ import {
   sampleCollectionItems,
   sampleCollections,
 } from "@/features/collections/sample-collections";
+import { CollectionActionsDemo } from "../../_components/collection-actions-demo";
 import { CollectionBooksDemo } from "../../_components/collection-books-demo";
 
 export const metadata: Metadata = {
@@ -48,19 +49,9 @@ async function DevCollection({ params }: { params: Params }) {
           <ArrowLeft className="size-4" aria-hidden />
           Voltar para a vitrine
         </Link>
-        <header className="mb-10 flex flex-col gap-3">
-          <h1 className="flex items-center gap-3 font-serif text-4xl leading-[1.05] tracking-tight text-balance sm:text-5xl">
-            {collection.emoji ? (
-              <span aria-hidden>{collection.emoji}</span>
-            ) : null}
-            {collection.title}
-          </h1>
-          {collection.description ? (
-            <p className="max-w-prose text-pretty text-muted-foreground">
-              {collection.description}
-            </p>
-          ) : null}
-        </header>
+        <div className="mb-12">
+          <CollectionActionsDemo collection={collection} />
+        </div>
         <CollectionBooksDemo items={items} />
       </main>
     </PageTransition>

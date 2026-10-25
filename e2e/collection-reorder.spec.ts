@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { trackPageErrors } from "./helpers";
+import { trackPageErrors, waitForHydration } from "./helpers";
 
 const DEMO = "/dev/colecao/classicos-brasileiros";
 
@@ -38,11 +38,16 @@ async function drag(page: Page, from: Locator, to: Locator) {
 const announcement = (page: Page, text: string | RegExp) =>
   page.getByRole("status").filter({ hasText: text });
 
+async function openDemo(page: Page) {
+  await page.goto(DEMO);
+  await waitForHydration(grid(page));
+}
+
 test.describe("grade reordenável da coleção", () => {
   // A vizinha da esquerda fica ao lado nas duas larguras (5 e 2 colunas)
   test("arrastar com o mouse troca o livro de lugar", async ({ page }) => {
     const errors = trackPageErrors(page);
-    await page.goto(DEMO);
+    await openDemo(page);
     await expect(grid(page)).toBeVisible();
     expect((await order(page)).slice(0, 4)).toEqual([
       "Dom Casmurro",
@@ -73,7 +78,7 @@ test.describe("grade reordenável da coleção", () => {
   });
 
   test("pelo teclado, com anúncios em pt-BR", async ({ page }) => {
-    await page.goto(DEMO);
+    await openDemo(page);
     const handle = grid(page).getByRole("button", {
       name: "Mover Vidas Secas",
     });
@@ -96,7 +101,7 @@ test.describe("grade reordenável da coleção", () => {
   });
 
   test("Esc no meio do arraste devolve a ordem", async ({ page }) => {
-    await page.goto(DEMO);
+    await openDemo(page);
     const before = await order(page);
     await grid(page).getByRole("button", { name: "Mover Vidas Secas" }).focus();
     await page.keyboard.press("Space");
@@ -109,7 +114,7 @@ test.describe("grade reordenável da coleção", () => {
   });
 
   test("quem só visita não tem alças nem edita notas", async ({ page }) => {
-    await page.goto(DEMO);
+    await openDemo(page);
     await page
       .getByRole("radiogroup", { name: "Ver como" })
       .getByRole("radio", { name: "Visitante" })
@@ -128,7 +133,7 @@ test.describe("grade reordenável da coleção", () => {
   test("a nota se escreve com Enter, se cancela com Esc e tem limite", async ({
     page,
   }) => {
-    await page.goto(DEMO);
+    await openDemo(page);
     const item = grid(page).locator('li[data-title="Vidas Secas"]');
     await item.getByRole("button", { name: "Por que está aqui?" }).click();
     const field = item.getByRole("textbox", { name: "Nota sobre Vidas Secas" });

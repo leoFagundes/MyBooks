@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { describe, expect, test } from "vitest";
+import { INK_RGB, PAPER_RGB } from "@/features/books/lib/color";
 import { COVER_RADIUS_PX } from "@/features/books/lib/cover";
 import { durations, easing } from "@/lib/motion";
 
@@ -139,5 +140,16 @@ describe("foco visível (spec §8)", () => {
         .map(() => file),
     );
     expect(erased).toEqual([]);
+  });
+});
+
+// O contraste do texto sobre as capas é calculado com estas tintas
+describe("tintas da capa no CSS espelham features/books/lib/color.ts", () => {
+  const hex = (rgb: readonly number[]) =>
+    `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+
+  test("--ink e --paper", () => {
+    expect(css).toContain(`--ink: ${hex(INK_RGB)};`);
+    expect(css).toContain(`--paper: ${hex(PAPER_RGB)};`);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   bookColor,
   contrastRatio,
+  coverInk,
   generatedCoverColor,
   hslToHex,
   pickInk,
@@ -36,6 +37,42 @@ describe("pickInk", () => {
 
   test("fundo escuro pede tinta clara", () => {
     expect(pickInk("#1f2a44")).toBe("paper");
+  });
+});
+
+describe("coverInk", () => {
+  const inkOf = (ink: "ink" | "paper") => (ink === "ink" ? INK : PAPER);
+
+  test("mantém a cor quando uma das tintas já passa de 4,5:1", () => {
+    expect(coverInk("#1f2a44")).toEqual({
+      background: "#1f2a44",
+      ink: "paper",
+    });
+    expect(coverInk("#f5e6c8")).toEqual({ background: "#f5e6c8", ink: "ink" });
+  });
+
+  // Entre ~0,15 e ~0,20 de luminância, nem --ink nem --paper chegam a 4,5:1
+  test("quando nenhuma tinta chega a 4,5:1, mexe no fundo só o necessário", () => {
+    const { background, ink } = coverInk("#757575");
+    expect(background).not.toBe("#757575");
+    expect(contrastRatio(background, inkOf(ink))).toBeGreaterThanOrEqual(4.5);
+    expect(
+      Math.abs(relativeLuminance(background) - relativeLuminance("#757575")),
+    ).toBeLessThan(0.04);
+  });
+
+  test("qualquer cor de capa fica legível (varredura do RGB)", () => {
+    const steps = Array.from({ length: 16 }, (_, i) => i * 17);
+    const unreadable: string[] = [];
+    for (const r of steps)
+      for (const g of steps)
+        for (const b of steps) {
+          const color = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+          const { background, ink } = coverInk(color);
+          if (contrastRatio(background, inkOf(ink)) < 4.5)
+            unreadable.push(color);
+        }
+    expect(unreadable).toEqual([]);
   });
 });
 
@@ -77,6 +114,21 @@ describe("generatedCoverColor", () => {
 describe("bookColor", () => {
   test("usa a cor da capa quando existe", () => {
     expect(bookColor({ title: "Duna", coverColor: "#695e1b" })).toBe("#695e1b");
+  });
+
+  // A cor vai para o style (--cover): só passa um hex de 6 dígitos
+  test("ignora cor de capa que não é um hex de 6 dígitos", () => {
+    for (const coverColor of [
+      "red",
+      "#12",
+      "#gggggg",
+      "#123456; background: url(x)",
+      "",
+    ]) {
+      expect(bookColor({ title: "Duna", coverColor })).toBe(
+        generatedCoverColor("Duna"),
+      );
+    }
   });
 
   test("sem cor de capa, gera pelo título", () => {

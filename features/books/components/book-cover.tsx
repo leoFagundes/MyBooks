@@ -12,7 +12,7 @@ import { useState } from "react";
 import { springs } from "@/lib/motion";
 import { CAN_HOVER, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
-import { bookColor, pickInk } from "../lib/color";
+import { bookColor, coverInk } from "../lib/color";
 import { COVER_RADIUS_PX } from "../lib/cover";
 import type { BookVisual } from "../types";
 
@@ -76,6 +76,7 @@ export function BookCover({
   const glare = useMotionTemplate`radial-gradient(circle at ${glareX}% ${glareY}%, var(--glare-color), transparent 62%)`;
 
   const color = bookColor(book);
+  const readable = coverInk(color);
   const showImage = Boolean(book.coverUrl) && !failed;
   const coverKey = `${book.coverUrl}|${size}`;
 
@@ -115,7 +116,12 @@ export function BookCover({
       data-testid={`capa-${book.id}`}
       data-cover={showImage ? "image" : "generated"}
       className={cn("perspective-[900px]", widths[size], className)}
-      style={{ "--cover": color } as React.CSSProperties}
+      // Atrás da imagem, a cor da capa; na capa tipográfica, a versão legível
+      style={
+        {
+          "--cover": showImage ? color : readable.background,
+        } as React.CSSProperties
+      }
     >
       <motion.div
         layoutId={layoutId}
@@ -140,7 +146,7 @@ export function BookCover({
             className="object-cover transition-opacity duration-400 data-loading:opacity-0"
           />
         ) : (
-          <GeneratedCover book={book} color={color} />
+          <GeneratedCover book={book} ink={readable.ink} />
         )}
         <span aria-hidden className="book-fold" />
         {tiltOn ? (
@@ -156,20 +162,26 @@ export function BookCover({
 }
 
 /** Capa tipográfica: título em Instrument Serif, autor em Geist Mono. */
-function GeneratedCover({ book, color }: { book: BookVisual; color: string }) {
+function GeneratedCover({
+  book,
+  ink,
+}: {
+  book: BookVisual;
+  ink: "ink" | "paper";
+}) {
   return (
     <div
       role="img"
       aria-label={`Capa de ${book.title}`}
       className={cn(
         "@container absolute inset-0 flex flex-col justify-between p-[10%]",
-        pickInk(color) === "ink" ? "text-ink" : "text-paper",
+        ink === "ink" ? "text-ink" : "text-paper",
       )}
     >
       <p className="line-clamp-5 font-serif text-[13cqi] leading-[1.05] tracking-tight text-balance">
         {book.title}
       </p>
-      <p className="line-clamp-2 font-mono text-[6.5cqi] leading-snug tracking-wider uppercase opacity-80">
+      <p className="line-clamp-2 font-mono text-[6.5cqi] leading-snug tracking-wider uppercase">
         {book.authors.join(", ")}
       </p>
     </div>

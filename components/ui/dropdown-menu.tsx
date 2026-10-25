@@ -94,8 +94,10 @@ function DropdownMenuContent({
   );
 }
 
+// O fundo do item ativo fica perto de 1,1:1; a barra de acento à esquerda dá
+// os 3:1 que quem anda pelo teclado precisa (WCAG 1.4.11)
 const itemClasses =
-  "relative flex cursor-default items-center gap-2 rounded-[8px] px-2.5 py-2 text-sm outline-none select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-muted data-inset:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground";
+  "relative flex cursor-default items-center gap-2 rounded-[8px] px-2.5 py-2 text-sm outline-none select-none before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-ring before:opacity-0 data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-muted data-highlighted:before:opacity-100 data-inset:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground";
 
 function DropdownMenuItem({
   className,

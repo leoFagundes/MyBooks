@@ -1,4 +1,9 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+
+// Os testes criam e apagam contas pelo admin do Supabase (chave secreta só
+// no Node dos testes, nunca no navegador)
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 

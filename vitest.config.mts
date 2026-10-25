@@ -5,6 +5,12 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
-    exclude: ["node_modules/**", ".next/**", "e2e/**", ".superpowers/**"],
+    exclude: [
+      "node_modules/**",
+      ".next/**",
+      "e2e/**",
+      ".superpowers/**",
+      "tests/db/**",
+    ],
   },
 });

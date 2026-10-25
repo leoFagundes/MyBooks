@@ -32,10 +32,18 @@ async function openView(page: Page, view: "Estante" | "Grade" | "Lista") {
     .click();
 }
 
-// Passa o mouse, espera o prefetch e clica, como uma pessoa faria
+// Passa o mouse, espera o prefetch e clica, como uma pessoa faria. A
+// intenção pede o prefetch completo (Next-Router-Prefetch: 2), que pode sair
+// só depois da fila dos prefetches automáticos: esperar a rede parar não basta
 async function travel(page: Page, link: Locator, slug: string) {
   await link.scrollIntoViewIfNeeded();
+  const prefetch = page.waitForRequest(
+    (request) =>
+      request.url().includes(`/dev/livro/${slug}`) &&
+      request.headers()["next-router-prefetch"] === "2",
+  );
   await link.hover();
+  await prefetch;
   await waitForNetworkQuiet(page);
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/dev/livro/${slug}$`));

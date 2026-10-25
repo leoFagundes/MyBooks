@@ -32,9 +32,12 @@ async function openView(page: Page, view: "Estante" | "Grade" | "Lista") {
     .click();
 }
 
-// Passa o mouse, espera o prefetch e clica, como uma pessoa faria. A
-// intenção pede o prefetch completo (Next-Router-Prefetch: 2), que pode sair
-// só depois da fila dos prefetches automáticos: esperar a rede parar não basta
+// Passa o mouse, espera o prefetch e clica, como uma pessoa que hesita um
+// instante. A intenção pede o prefetch completo (Next-Router-Prefetch: 2),
+// que pode sair só depois da fila dos prefetches automáticos; depois dele, a
+// rede parada por 1s dá tempo de o roteador guardar a página, mesmo com a
+// máquina ocupada (sem isso, o clique às vezes chega antes e mostra o
+// skeleton, sem o par da capa)
 async function travel(page: Page, link: Locator, slug: string) {
   await link.scrollIntoViewIfNeeded();
   const prefetch = page.waitForRequest(
@@ -44,7 +47,7 @@ async function travel(page: Page, link: Locator, slug: string) {
   );
   await link.hover();
   await prefetch;
-  await waitForNetworkQuiet(page);
+  await waitForNetworkQuiet(page, 1000);
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/dev/livro/${slug}$`));
   await expect(

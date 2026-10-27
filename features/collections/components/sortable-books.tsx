@@ -28,14 +28,14 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable";
-import { GripVerticalIcon } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { GripVerticalIcon, XIcon } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import { type RefObject, useId, useRef, useState } from "react";
 import { BookCover } from "@/features/books/components/book-cover";
 import { BookLink } from "@/features/books/components/book-link";
 import type { BookVisual } from "@/features/books/types";
-import { durations, easing, springs } from "@/lib/motion";
+import { durations, easing, springs, tweens } from "@/lib/motion";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { type MovePlan, planMove } from "../lib/position";
@@ -76,6 +76,8 @@ type SortableBooksProps = {
   editable: boolean;
   onMove: (plan: MovePlan) => void;
   onNote: (bookId: string, note: string | null) => void;
+  /** Tirar da coleção (só para quem edita). */
+  onRemove?: (bookId: string) => void;
   bookHref?: (book: BookVisual) => Route;
 };
 
@@ -91,6 +93,7 @@ export function SortableBooks({
   editable,
   onMove,
   onNote,
+  onRemove,
   bookHref = (book) => routes.book(book.id),
 }: SortableBooksProps) {
   const id = useId();
@@ -206,20 +209,24 @@ export function SortableBooks({
           aria-label="Livros da coleção"
           className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
         >
-          {order.map((bookId) => {
-            const item = byId.get(bookId);
-            return item ? (
-              <SortableBook
-                key={bookId}
-                item={item}
-                editable={editable}
-                href={bookHref(item.book)}
-                reduced={reduced}
-                suppressClick={suppressClick}
-                onNote={onNote}
-              />
-            ) : null;
-          })}
+          {/* O livro tirado sai esmaecendo, e as vizinhas fecham o vão com mola */}
+          <AnimatePresence initial={false}>
+            {order.map((bookId) => {
+              const item = byId.get(bookId);
+              return item ? (
+                <SortableBook
+                  key={bookId}
+                  item={item}
+                  editable={editable}
+                  href={bookHref(item.book)}
+                  reduced={reduced}
+                  suppressClick={suppressClick}
+                  onNote={onNote}
+                  onRemove={onRemove}
+                />
+              ) : null;
+            })}
+          </AnimatePresence>
         </ul>
       </SortableContext>
       <DragOverlay dropAnimation={reduced ? null : dropAnimation}>
@@ -236,6 +243,7 @@ type SortableBookProps = {
   reduced: boolean;
   suppressClick: RefObject<boolean>;
   onNote: (bookId: string, note: string | null) => void;
+  onRemove?: (bookId: string) => void;
 };
 
 function SortableBook({
@@ -245,6 +253,7 @@ function SortableBook({
   reduced,
   suppressClick,
   onNote,
+  onRemove,
 }: SortableBookProps) {
   const { book } = item;
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } =
@@ -260,6 +269,7 @@ function SortableBook({
       data-title={book.title}
       layout={reduced ? false : "position"}
       transition={springs.snappy}
+      exit={{ opacity: 0, scale: reduced ? 1 : 0.96, transition: tweens.fast }}
       className="flex min-w-0 flex-col gap-2"
     >
       {/* O arraste começa na capa; a nota fica livre para selecionar texto */}
@@ -297,6 +307,16 @@ function SortableBook({
             className="absolute top-1.5 left-1.5 flex size-8 cursor-grab items-center justify-center rounded-control bg-surface/90 text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing pointer-coarse:opacity-100"
           >
             <GripVerticalIcon className="size-4" />
+          </button>
+        ) : null}
+        {editable && onRemove ? (
+          <button
+            type="button"
+            aria-label={`Tirar ${book.title} da coleção`}
+            onClick={() => onRemove(book.id)}
+            className="absolute top-1.5 right-1.5 flex size-8 cursor-pointer items-center justify-center rounded-control bg-surface/90 text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
+          >
+            <XIcon className="size-4" />
           </button>
         ) : null}
       </div>

@@ -627,6 +627,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_collection_positions: {
+        Args: { book_ids: string[]; positions: string[]; target: string }
+        Returns: number
+      }
       suggested_readers: {
         Args: { max_results?: number }
         Returns: {

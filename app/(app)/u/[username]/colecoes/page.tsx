@@ -4,6 +4,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CollectionsIllustration } from "@/components/ui/illustrations";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NewCollectionButton } from "@/features/collections/components/new-collection-button";
 import { PrivateProfileNotice } from "@/features/profile/components/private-profile-notice";
 import { getProfileFromParam, getProfileTab } from "@/features/profile/queries";
 
@@ -52,9 +53,10 @@ async function CollectionsTab({ params }: { params: Params }) {
         }
         description={
           relation === "self"
-            ? "Junte livros por tema, por humor ou por quem indicou. Já já dá para criar a primeira."
+            ? "Junte livros por tema, por humor ou por quem indicou."
             : "Quando aparecer uma, ela fica aqui."
         }
+        action={relation === "self" ? <NewCollectionButton /> : null}
       />
     </PageTransition>
   );

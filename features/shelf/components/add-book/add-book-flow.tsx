@@ -22,19 +22,38 @@ const stepMotion = {
   exit: { opacity: 0, transition: tweens.fast },
 };
 
-/** Os passos da paleta: buscar, cadastrar à mão e, por fim, status e nota. */
+/**
+ * Os passos da paleta: buscar, cadastrar à mão e, por fim, status e nota.
+ * No modo coleção (`onPick`), escolher põe o livro nela e volta à busca,
+ * que marca o que já entrou.
+ */
 export function AddBookFlow({
   initialBook,
   onSave,
+  onPick,
+  collectionTitle,
 }: {
   /** Livro já escolhido (a página do livro): começa no passo de status. */
   initialBook: ChosenBook | null;
   onSave: (book: ChosenBook, details: ShelfDetails) => void;
+  onPick?: (book: ChosenBook) => void;
+  collectionTitle?: string;
 }) {
   const [query, setQuery] = useState("");
   const [step, setStep] = useState<Step>(
     initialBook ? { name: "details", book: initialBook } : { name: "search" },
   );
+  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+
+  function choose(book: ChosenBook) {
+    if (!onPick) {
+      setStep({ name: "details", book });
+      return;
+    }
+    onPick(book);
+    setPicked((current) => new Set(current).add(book.visual.id));
+    setStep({ name: "search" });
+  }
 
   return (
     <AnimatePresence mode="popLayout" initial={false}>
@@ -43,8 +62,14 @@ export function AddBookFlow({
           <SearchStep
             query={query}
             onQueryChange={setQuery}
-            onChoose={(book) => setStep({ name: "details", book })}
+            onChoose={choose}
             onManual={() => setStep({ name: "manual" })}
+            picked={picked}
+            context={
+              collectionTitle
+                ? `Para a coleção “${collectionTitle}”`
+                : undefined
+            }
           />
         </motion.div>
       ) : step.name === "manual" ? (
@@ -52,7 +77,7 @@ export function AddBookFlow({
           <ManualStep
             initialTitle={query.trim()}
             onBack={() => setStep({ name: "search" })}
-            onCreated={(book) => setStep({ name: "details", book })}
+            onCreated={choose}
           />
         </motion.div>
       ) : (

@@ -58,3 +58,13 @@ export const itemNoteSchema = z
   .transform((note) => note || null);
 
 export const positionSchema = z.string().regex(POSITION_PATTERN);
+
+export const collectionIdSchema = z.uuid("Coleção inválida");
+export const collectionBookIdSchema = z.uuid("Livro inválido");
+
+/** Onde um livro tirado volta a ficar (o "Desfazer"). */
+export const itemPlacementSchema = z.object({
+  position: positionSchema,
+  note: itemNoteSchema.nullable(),
+});
+export type ItemPlacement = z.infer<typeof itemPlacementSchema>;

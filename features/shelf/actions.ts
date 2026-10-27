@@ -2,15 +2,13 @@
 
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import { ensureCatalogBook } from "@/features/books/lib/catalog";
-import { findExternalResult } from "@/features/books/queries";
+import { catalogIdFor } from "@/features/books/lib/catalog-ref";
 import { type ActionResult, fieldErrorsFrom } from "@/lib/action";
 import { requireViewer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AddBookInput,
   addBookSchema,
-  type BookRef,
   type QuoteInput,
   quoteSchema,
   reviewSchema,
@@ -18,35 +16,6 @@ import {
   type ShelfEntryUpdate,
   shelfEntryUpdateSchema,
 } from "./schemas";
-
-/** O id do livro no catálogo; um livro de fora entra nele agora. */
-async function catalogIdFor(
-  book: BookRef,
-  viewerId: string,
-): Promise<ActionResult<string>> {
-  if ("catalogId" in book) return { ok: true, data: book.catalogId };
-  const result = await findExternalResult(
-    book.query,
-    book.source,
-    book.sourceId,
-  );
-  if (!result) {
-    return {
-      ok: false,
-      error: "Não achamos esse livro agora. Busque de novo.",
-    };
-  }
-  try {
-    const id = await ensureCatalogBook(result, viewerId);
-    updateTag("catalog");
-    return { ok: true, data: id };
-  } catch {
-    return {
-      ok: false,
-      error: "Não deu para trazer esse livro. Tente de novo.",
-    };
-  }
-}
 
 /**
  * O livro escolhido na paleta vai para a estante, com status, nota e data.

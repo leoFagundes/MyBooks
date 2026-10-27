@@ -2,7 +2,13 @@
 
 import { Command } from "cmdk";
 import { useState } from "react";
-import { CornerDownLeft, LoaderCircle, PenLine, Search } from "lucide-react";
+import {
+  Check,
+  CornerDownLeft,
+  LoaderCircle,
+  PenLine,
+  Search,
+} from "lucide-react";
 import {
   commandGroupClasses,
   commandInputClasses,
@@ -48,11 +54,17 @@ export function SearchStep({
   onQueryChange,
   onChoose,
   onManual,
+  picked,
+  context,
 }: {
   query: string;
   onQueryChange: (query: string) => void;
   onChoose: (book: ChosenBook) => void;
   onManual: () => void;
+  /** Resultados que já foram para a coleção (modo coleção). */
+  picked?: ReadonlySet<string>;
+  /** Para onde vão os livros escolhidos, acima da busca. */
+  context?: string;
 }) {
   const search = useBookSearch(query);
   const nothingFound =
@@ -80,6 +92,11 @@ export function SearchStep({
       value={selected}
       onValueChange={setSelected}
     >
+      {context ? (
+        <p className="truncate border-b border-border px-4 py-2.5 font-mono text-xs text-muted-foreground">
+          {context}
+        </p>
+      ) : null}
       <div className="flex items-center gap-3 border-b border-border px-4">
         {search.externalPending && !search.idle ? (
           <LoaderCircle
@@ -131,6 +148,12 @@ export function SearchStep({
                       {byline(visual)}
                     </span>
                   </span>
+                  {picked?.has(resultKey(result)) ? (
+                    <span className="flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+                      <Check className="size-4" aria-hidden />
+                      na coleção
+                    </span>
+                  ) : null}
                 </Command.Item>
               );
             })}

@@ -10,15 +10,21 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { addBookToCollection } from "@/features/collections/actions";
 import { addBook, removeFromShelf } from "../../actions";
 import type { ShelfDetails } from "../../schemas";
 import { AddBookFlow } from "./add-book-flow";
 import type { ChosenBook } from "./chosen-book";
 
+/** A coleção que recebe os livros escolhidos na paleta. */
+export type CollectionTarget = { id: string; title: string };
+
 type AddBookContextValue = {
   open: () => void;
   /** Abre direto no passo de status e nota (a página do livro). */
   openWith: (book: ChosenBook) => void;
+  /** Escolher um livro o põe na coleção, e a busca segue aberta. */
+  openForCollection: (collection: CollectionTarget) => void;
   /** Há conta: o +, a tecla N e o item do ⌘K funcionam. */
   enabled: boolean;
 };
@@ -30,6 +36,7 @@ type Controls = {
   setOpen: (open: boolean) => void;
   setEnabled: (enabled: boolean) => void;
   setInitialBook: (book: ChosenBook | null) => void;
+  setCollection: (collection: CollectionTarget | null) => void;
 };
 const ControlsContext = createContext<Controls | null>(null);
 
@@ -41,6 +48,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [initialBook, setInitialBook] = useState<ChosenBook | null>(null);
+  const [collection, setCollection] = useState<CollectionTarget | null>(null);
   const [, startTransition] = useTransition();
   const returnFocus = useRef<HTMLElement | null>(null);
 
@@ -81,21 +89,55 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
+  function pick(book: ChosenBook, target: CollectionTarget) {
+    const title = book.visual.title;
+    const toastId = toast.loading("Pondo na coleção…", { description: title });
+    startTransition(async () => {
+      const result = await addBookToCollection(target.id, book.ref);
+      if (!result.ok) {
+        toast.error(result.error, {
+          id: toastId,
+          description: title,
+          action: {
+            label: "Tentar de novo",
+            onClick: () => pick(book, target),
+          },
+        });
+        return;
+      }
+      toast.success(
+        result.data.added
+          ? `Em ${target.title}`
+          : `Já estava em ${target.title}`,
+        { id: toastId, description: title },
+      );
+    });
+  }
+
   return (
     <AddBookContext
       value={{
         open: () => {
           setInitialBook(null);
+          setCollection(null);
           setOpen(true);
         },
         openWith: (book) => {
           setInitialBook(book);
+          setCollection(null);
+          setOpen(true);
+        },
+        openForCollection: (target) => {
+          setInitialBook(null);
+          setCollection(target);
           setOpen(true);
         },
         enabled,
       }}
     >
-      <ControlsContext value={{ setOpen, setEnabled, setInitialBook }}>
+      <ControlsContext
+        value={{ setOpen, setEnabled, setInitialBook, setCollection }}
+      >
         {children}
       </ControlsContext>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -114,8 +156,17 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
             returnFocus.current?.focus();
           }}
         >
-          <DialogTitle className="sr-only">Adicionar livro</DialogTitle>
-          <AddBookFlow initialBook={initialBook} onSave={save} />
+          <DialogTitle className="sr-only">
+            {collection
+              ? `Adicionar livro a ${collection.title}`
+              : "Adicionar livro"}
+          </DialogTitle>
+          <AddBookFlow
+            initialBook={initialBook}
+            onSave={save}
+            collectionTitle={collection?.title}
+            onPick={collection ? (book) => pick(book, collection) : undefined}
+          />
         </DialogContent>
       </Dialog>
     </AddBookContext>
@@ -144,7 +195,7 @@ export function AddBookShortcut() {
   const controls = use(ControlsContext);
   if (!controls)
     throw new Error("AddBookShortcut precisa do <AddBookProvider>");
-  const { setOpen, setEnabled, setInitialBook } = controls;
+  const { setOpen, setEnabled, setInitialBook, setCollection } = controls;
 
   useEffect(() => {
     setEnabled(true);
@@ -157,6 +208,7 @@ export function AddBookShortcut() {
       if (document.body.hasAttribute("data-scroll-locked")) return;
       event.preventDefault();
       setInitialBook(null);
+      setCollection(null);
       setOpen(true);
     }
     window.addEventListener("keydown", onKeyDown);
@@ -164,7 +216,7 @@ export function AddBookShortcut() {
       window.removeEventListener("keydown", onKeyDown);
       setEnabled(false);
     };
-  }, [setOpen, setEnabled, setInitialBook]);
+  }, [setOpen, setEnabled, setInitialBook, setCollection]);
 
   return null;
 }

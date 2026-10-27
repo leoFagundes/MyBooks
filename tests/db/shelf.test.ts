@@ -107,6 +107,8 @@ describe("catálogo", () => {
           `'${LIA}', 'OL1W'`,
           "manual com source_id",
         ),
+        // Livro de fora só entra pelo servidor; os checks valem para ele também
+        asAdmin(),
         rejects(
           `insert into public.books (title, source, created_by) values ('Livro', 'openlibrary', '${LIA}');`,
           "Open Library sem source_id",

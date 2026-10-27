@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Vibrant } from "node-vibrant/node";
 import { generatedCoverColor } from "../features/books/lib/color";
+import { pickCoverColor } from "../features/books/lib/cover-pipeline";
 import {
   SEED_BOOKS,
   SEED_COLLECTIONS,
@@ -132,9 +133,8 @@ async function coverColor(coverId: number | null, title: string) {
       `https://covers.openlibrary.org/b/id/${coverId}-M.jpg?default=false`,
     );
     if (image) {
-      const palette = await Vibrant.from(image).getPalette();
-      const swatch = palette.Vibrant ?? palette.Muted ?? palette.DarkVibrant;
-      if (swatch) return { color: swatch.hex.toLowerCase(), hasCover: true };
+      const color = pickCoverColor(await Vibrant.from(image).getPalette());
+      if (color) return { color, hasCover: true };
     }
   }
   return { color: generatedCoverColor(title), hasCover: false };

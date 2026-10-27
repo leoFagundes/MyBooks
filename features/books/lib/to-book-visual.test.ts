@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { toBookVisual } from "./to-book-visual";
 
 const row = {
@@ -31,6 +31,24 @@ describe("toBookVisual", () => {
         .coverColor,
     ).toBeNull();
     expect(toBookVisual({ ...row, cover_color: null }).coverColor).toBeNull();
+  });
+
+  test("capa no nosso bucket vira a pasta pública do livro (o loader escolhe a largura)", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_teste");
+    expect(
+      toBookVisual({ ...row, cover_url: `covers/${row.id}` }).coverUrl,
+    ).toBe(
+      `https://exemplo.supabase.co/storage/v1/object/public/covers/${row.id}`,
+    );
+    // A pasta de outro livro não serve
+    expect(
+      toBookVisual({
+        ...row,
+        cover_url: "covers/00000000-0000-4000-8000-000000000001",
+      }).coverUrl,
+    ).toBeNull();
+    vi.unstubAllEnvs();
   });
 
   test("sem autores, lista vazia; sem capa conhecida, capa tipográfica", () => {

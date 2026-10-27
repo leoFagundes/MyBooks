@@ -1,5 +1,7 @@
+import { getPublicEnv } from "@/lib/env";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { BookVisual } from "../types";
+import { OPEN_LIBRARY_COVER_URL } from "./cover";
 
 type BookRow = Pick<
   Tables<"books">,
@@ -13,10 +15,17 @@ type BookRow = Pick<
 >;
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/;
-// Por enquanto, só as capas da Open Library (seed e busca); as do nosso
-// bucket chegam com o catálogo da Fase 3
-const OPEN_LIBRARY_COVER =
-  /^https:\/\/covers\.openlibrary\.org\/b\/(?:id|isbn|olid)\/[A-Za-z0-9]+-[SML]\.jpg$/;
+
+function coverSrc(row: BookRow): string | null {
+  if (!row.cover_url) return null;
+  if (OPEN_LIBRARY_COVER_URL.test(row.cover_url)) return row.cover_url;
+  // A pasta do próprio livro no bucket; o loader do next/image escolhe a largura
+  if (row.cover_url === `covers/${row.id}`) {
+    const base = getPublicEnv().supabaseUrl.replace(/\/$/, "");
+    return `${base}/storage/v1/object/public/covers/${row.id}`;
+  }
+  return null;
+}
 
 /** A linha do catálogo no formato que capas e lombadas desenham. */
 export function toBookVisual(row: BookRow): BookVisual {
@@ -24,10 +33,7 @@ export function toBookVisual(row: BookRow): BookVisual {
     id: row.id,
     title: row.title,
     authors: row.authors,
-    coverUrl:
-      row.cover_url && OPEN_LIBRARY_COVER.test(row.cover_url)
-        ? row.cover_url
-        : null,
+    coverUrl: coverSrc(row),
     coverColor:
       row.cover_color && HEX_COLOR.test(row.cover_color)
         ? row.cover_color

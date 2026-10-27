@@ -49,7 +49,7 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
 const squish = (text: string) => text.replace(/\s+/g, " ").trim();
 
 /** Sem acento, minúsculo e só letras e números, para comparar grafias. */
-function plain(text: string) {
+export function plain(text: string) {
   return text
     .normalize("NFD")
     .replace(/\p{M}/gu, "")

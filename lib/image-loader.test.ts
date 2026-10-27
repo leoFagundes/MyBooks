@@ -53,6 +53,16 @@ describe("imageLoader", () => {
     );
   });
 
+  test("capas do nosso bucket: a menor das três larguras que cobre (S 96, M 240, L 480)", () => {
+    const folder =
+      "https://exemplo.supabase.co/storage/v1/object/public/covers/68c7e16e-6b1e-54f7-9662-e4122baaaf7a";
+    expect(imageLoader({ src: folder, width: 64 })).toBe(`${folder}/S.webp`);
+    expect(imageLoader({ src: folder, width: 96 })).toBe(`${folder}/S.webp`);
+    expect(imageLoader({ src: folder, width: 128 })).toBe(`${folder}/M.webp`);
+    expect(imageLoader({ src: folder, width: 256 })).toBe(`${folder}/L.webp`);
+    expect(imageLoader({ src: folder, width: 1080 })).toBe(`${folder}/L.webp`);
+  });
+
   test("outras imagens passam direto, só com a largura na URL", () => {
     expect(imageLoader({ src: "/capas/exemplo.jpg", width: 320 })).toBe(
       "/capas/exemplo.jpg?w=320",

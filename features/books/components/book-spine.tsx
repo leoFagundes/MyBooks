@@ -46,7 +46,7 @@ export function BookSpine({
   const width = spineWidth(book.pageCount);
   const author = book.authors[0] ?? "";
   const { source, props } = useBookLinkBehavior({
-    bookId: book.id,
+    book,
     variant: "spine",
     handlers: { onPointerEnter: onActivate, onFocus: onActivate },
   });

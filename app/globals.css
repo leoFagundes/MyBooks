@@ -368,9 +368,18 @@
 ::view-transition-group(.capa),
 ::view-transition-group(.vira-capa),
 ::view-transition-group(.vira-lombada),
-::view-transition-group(.titulo) {
+::view-transition-group(.titulo),
+::view-transition-group(.fica) {
   animation-duration: var(--spring-smooth-duration);
   animation-timing-function: var(--spring-smooth);
+}
+/* A página chegou depois do esqueleto, que já tinha capa e título no lugar:
+   o par só troca de foto, sem crossfade nem desfoque */
+::view-transition-old(.fica) {
+  display: none;
+}
+::view-transition-new(.fica) {
+  animation: none;
 }
 ::view-transition-old(.capa),
 ::view-transition-new(.capa),
@@ -531,7 +540,8 @@
   ::view-transition-group(.capa),
   ::view-transition-group(.vira-capa),
   ::view-transition-group(.vira-lombada),
-  ::view-transition-group(.titulo) {
+  ::view-transition-group(.titulo),
+  ::view-transition-group(.fica) {
     animation-duration: 0s;
     animation-delay: 0s;
   }

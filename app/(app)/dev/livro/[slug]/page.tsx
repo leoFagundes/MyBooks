@@ -26,7 +26,7 @@ export default function DevBookPage({ params }: { params: Params }) {
   if (process.env.VERCEL_ENV === "production") notFound();
 
   return (
-    <Suspense fallback={<BookPageSkeleton />}>
+    <Suspense fallback={<BookPageSkeleton param="slug" />}>
       <DevBook params={params} />
     </Suspense>
   );

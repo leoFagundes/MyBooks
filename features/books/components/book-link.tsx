@@ -3,6 +3,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
+import type { BookVisual } from "../types";
 import {
   InsideSource,
   type TransitionSource,
@@ -28,17 +29,17 @@ type Handlers = {
  * - marcar a origem já no apertar, antes de a navegação começar.
  */
 export function useBookLinkBehavior({
-  bookId,
+  book,
   variant = "cover",
   source: shared,
   handlers = {},
 }: {
-  bookId: string;
+  book: BookVisual;
   variant?: Variant;
   source?: TransitionSource;
   handlers?: Handlers;
 }) {
-  const own = useTransitionSource(bookId);
+  const own = useTransitionSource(book);
   const source = shared ?? own;
   const [intent, setIntent] = useState(false);
 
@@ -77,7 +78,8 @@ type BookLinkProps = Omit<
   "href" | "prefetch" | keyof Handlers
 > &
   Handlers & {
-    bookId: string;
+    /** O livro do link: a página dele já mostra a capa enquanto carrega. */
+    book: BookVisual;
     href: Route;
     variant?: Variant;
     /** Origem compartilhada: capa e título da mesma linha viajam juntos. */
@@ -86,7 +88,7 @@ type BookLinkProps = Omit<
 
 /** Link para a página do livro; a capa dentro dele viaja até o destino. */
 export function BookLink({
-  bookId,
+  book,
   href,
   variant,
   source,
@@ -99,7 +101,7 @@ export function BookLink({
   ...rest
 }: BookLinkProps) {
   const behavior = useBookLinkBehavior({
-    bookId,
+    book,
     variant,
     source,
     handlers: { onPointerEnter, onFocus, onPointerDown, onKeyDown, onClick },

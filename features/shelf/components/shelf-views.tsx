@@ -123,7 +123,7 @@ function CoverGrid({
       {books.map((book) => (
         <li key={book.id}>
           <BookLink
-            bookId={book.id}
+            book={book}
             href={bookHref(book)}
             aria-label={book.title}
             className="block rounded-cover"
@@ -192,14 +192,14 @@ function BookRow({
   cell: string;
 }) {
   // Capa e título da linha são a mesma origem: os dois viajam juntos
-  const source = useTransitionSource(book.id);
+  const source = useTransitionSource(book);
 
   return (
     <tr className="group">
       <td className="py-2 pr-4 align-middle">
         {/* O título já é o link para leitores de tela e teclado */}
         <BookLink
-          bookId={book.id}
+          book={book}
           href={href}
           source={source}
           tabIndex={-1}
@@ -216,7 +216,7 @@ function BookRow({
       </td>
       <motion.td variants={textVariants} className={cn(cell, "pr-4")}>
         <BookLink
-          bookId={book.id}
+          book={book}
           href={href}
           source={source}
           className="font-serif text-lg leading-tight tracking-tight"

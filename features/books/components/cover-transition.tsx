@@ -1,9 +1,11 @@
 "use client";
 
 import { createContext, use, useId, useState } from "react";
+import type { BookVisual } from "../types";
 
-// De onde a capa saiu: a página do livro usa para o "Voltar" levar a capa de volta
-type Source = { bookId: string; key: string; origin: string };
+// De onde a capa saiu: a página do livro usa para o "Voltar" levar a capa de
+// volta e, enquanto não chega do servidor, para já mostrar a capa no topo
+type Source = { book: BookVisual; key: string; origin: string };
 
 const SourceContext = createContext<{
   source: Source | null;
@@ -33,14 +35,15 @@ export function CoverTransitionProvider({
 export type TransitionSource = { isSource: boolean; markSource: () => void };
 
 /** Origem da viagem para um livro nesta posição da tela. */
-export function useTransitionSource(bookId: string): TransitionSource {
+export function useTransitionSource(book: BookVisual): TransitionSource {
   const context = use(SourceContext);
   const key = useId();
   return {
-    isSource: context?.source?.key === key && context.source.bookId === bookId,
+    isSource:
+      context?.source?.key === key && context.source.book.id === book.id,
     markSource: () =>
       context?.setSource({
-        bookId,
+        book,
         key,
         origin: `${window.location.pathname}${window.location.search}`,
       }),
@@ -63,7 +66,13 @@ export function InsideSource({
  */
 export function useBookOrigin(bookId: string): string | null {
   const source = use(SourceContext)?.source;
-  return source?.bookId === bookId ? source.origin : null;
+  return source?.book.id === bookId ? source.origin : null;
+}
+
+/** O livro cuja capa está viajando até esta página, se for este. */
+export function useTravelingBook(bookId: string | null): BookVisual | null {
+  const source = use(SourceContext)?.source;
+  return bookId && source?.book.id === bookId ? source.book : null;
 }
 
 /** Para a capa: estou dentro do BookLink que é a origem da viagem? */

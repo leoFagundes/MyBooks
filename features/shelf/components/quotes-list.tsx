@@ -21,7 +21,7 @@ export function QuotesList({ quotes }: { quotes: QuoteItem[] }) {
               </blockquote>
               <figcaption className="font-mono text-xs text-muted-foreground">
                 <BookLink
-                  bookId={quote.book.id}
+                  book={quote.book}
                   href={routes.book(quote.book.id)}
                   className="rounded-control text-foreground underline-offset-4 hover:underline"
                 >

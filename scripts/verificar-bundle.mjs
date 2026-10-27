@@ -7,9 +7,16 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * Arquivos de `dir` que contêm alguma das agulhas (vazias não contam).
+ * Uma chave secreta do Supabase inteira. Só o prefixo não conta: o próprio
+ * supabase-js confere o formato da chave com `startsWith("sb_secret_")`.
+ */
+export const SECRET_KEY_PATTERN = /sb_secret_[A-Za-z0-9_-]{20,}/;
+
+/**
+ * Arquivos de `dir` que contêm alguma das agulhas: texto exato ou padrão
+ * (vazias não contam).
  * @param {string} dir
- * @param {(string | undefined)[]} needles
+ * @param {(string | RegExp | undefined)[]} needles
  * @returns {Promise<string[]>}
  */
 export async function findLeaks(dir, needles) {
@@ -20,7 +27,10 @@ export async function findLeaks(dir, needles) {
     if (!entry.isFile()) continue;
     const file = path.join(entry.parentPath, entry.name);
     const text = await readFile(file, "utf8");
-    if (wanted.some((needle) => text.includes(needle))) leaks.push(file);
+    const found = wanted.some((needle) =>
+      typeof needle === "string" ? text.includes(needle) : needle.test(text),
+    );
+    if (found) leaks.push(file);
   }
   return leaks.sort();
 }
@@ -28,7 +38,7 @@ export async function findLeaks(dir, needles) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   if (existsSync(".env.local")) process.loadEnvFile(".env.local");
   const leaks = await findLeaks(path.join(".next", "static"), [
-    "sb_secret_",
+    SECRET_KEY_PATTERN,
     process.env.SUPABASE_SECRET_KEY,
     process.env.SUPABASE_ACCESS_TOKEN,
   ]);

@@ -12,6 +12,11 @@ const isShelfStatus = (value: string): value is ShelfStatus =>
 export type ShelfItem = {
   book: BookVisual;
   status: ShelfStatus;
+  rating: number | null;
+  /** Gêneros do catálogo (slugs), para o filtro da estante. */
+  genres: string[];
+  /** Quando a pessoa mexeu no livro por último (ordem "recentes"). */
+  updatedAt: string;
 };
 
 /**
@@ -29,13 +34,23 @@ export async function getShelf(userId: string): Promise<ShelfItem[]> {
   const { data, error } = await supabase
     .from("user_books")
     .select(
-      "status, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+      "status, rating, updated_at, book:books(id, title, authors, cover_url, cover_color, page_count, published_year, genres)",
     )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
   if (error) throw error;
-  return data.flatMap(({ status, book }) =>
-    book && isShelfStatus(status) ? [{ book: toBookVisual(book), status }] : [],
+  return data.flatMap(({ status, rating, updated_at, book }) =>
+    book && isShelfStatus(status)
+      ? [
+          {
+            book: toBookVisual(book),
+            status,
+            rating,
+            genres: book.genres,
+            updatedAt: updated_at,
+          },
+        ]
+      : [],
   );
 }
 

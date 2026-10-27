@@ -1,30 +1,75 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EmptyShelfIllustration } from "@/components/ui/illustrations";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import type { BookVisual } from "@/features/books/types";
+import {
+  EmptyShelfIllustration,
+  SearchIllustration,
+} from "@/components/ui/illustrations";
+import {
+  countByStatus,
+  decadeOptions,
+  filterShelf,
+  filtersFromParams,
+  filtersToParams,
+  genreOptions,
+  hasRefinements,
+  type ShelfFilters,
+  sortShelf,
+} from "../lib/filters";
+import type { ShelfItem } from "../queries";
+import type { ShelfStatus } from "../schemas";
 import { useAddBook } from "./add-book/add-book-provider";
-import { type ShelfView, ShelfViews, shelfViewOptions } from "./shelf-views";
+import { ShelfToolbar } from "./shelf-toolbar";
+import { ShelfViews } from "./shelf-views";
+
+const EMPTY_STATUS: Record<ShelfStatus, string> = {
+  read: "Nenhum livro lido por aqui",
+  reading: "Nada sendo lido agora",
+  want: "A fila de leitura está vazia",
+  abandoned: "Nenhum livro abandonado",
+};
 
 /**
- * A estante de alguém nas três visualizações. Vazia, convida quem é dono a
- * começar; nos outros, só conta que ainda não há livros.
+ * Aba Estante do perfil: status com contagens, busca, filtros, ordem e as
+ * três visualizações. Tudo fica na URL (?status=&q=&genero=&nota=&ano=&ordem=
+ * &vista=), sem ida ao servidor: a estante inteira já está aqui.
  */
 export function ProfileShelf({
-  books,
+  entries,
   owner,
 }: {
-  books: BookVisual[];
+  entries: ShelfItem[];
   /** Primeiro nome de quem é a estante; null quando é de quem está vendo. */
   owner: string | null;
 }) {
-  const [view, setView] = useState<ShelfView>("estante");
+  const searchParams = useSearchParams();
+  const filters = filtersFromParams(searchParams);
+  // A busca filtra a cada letra; a URL acompanha
+  const [query, setQuery] = useState(filters.q);
   const addBook = useAddBook();
 
-  if (books.length === 0) {
+  // replaceState conversa com o router do Next: useSearchParams acompanha sem
+  // pedir a página de novo ao servidor
+  function update(changes: Partial<ShelfFilters>) {
+    const search = filtersToParams({ ...filters, q: query, ...changes });
+    const url = `${window.location.pathname}${search.size > 0 ? `?${search}` : ""}`;
+    window.history.replaceState(null, "", url);
+  }
+
+  function changeQuery(value: string) {
+    setQuery(value);
+    update({ q: value });
+  }
+
+  function clearAll() {
+    setQuery("");
+    update({ q: "", status: null, genre: null, rating: null, decade: null });
+  }
+
+  if (entries.length === 0) {
     return owner === null ? (
       <EmptyState
         illustration={EmptyShelfIllustration}
@@ -41,16 +86,50 @@ export function ProfileShelf({
     );
   }
 
+  const current = { ...filters, q: query };
+  const counts = countByStatus(
+    filterShelf(entries, current, { ignoreStatus: true }),
+  );
+  const visible = sortShelf(filterShelf(entries, current), current.sort);
+
   return (
     <div className="flex flex-col gap-6">
-      <SegmentedControl
-        aria-label="Visualização"
-        value={view}
-        onValueChange={setView}
-        options={shelfViewOptions}
-        className="self-start"
+      <ShelfToolbar
+        filters={current}
+        query={query}
+        counts={counts}
+        genres={genreOptions(entries)}
+        decades={decadeOptions(entries)}
+        onQueryChange={changeQuery}
+        onChange={update}
       />
-      <ShelfViews books={books} view={view} />
+      {visible.length > 0 ? (
+        <ShelfViews
+          books={visible.map((entry) => entry.book)}
+          view={current.view}
+        />
+      ) : hasRefinements(current) || !current.status ? (
+        <EmptyState
+          illustration={SearchIllustration}
+          title="Nenhum livro com esses filtros"
+          description="Tente outra busca ou tire um dos filtros."
+          action={
+            <Button variant="outline" onClick={clearAll}>
+              Limpar filtros
+            </Button>
+          }
+        />
+      ) : (
+        <EmptyState
+          illustration={EmptyShelfIllustration}
+          title={EMPTY_STATUS[current.status]}
+          action={
+            <Button variant="outline" onClick={() => update({ status: null })}>
+              Ver todos
+            </Button>
+          }
+        />
+      )}
     </div>
   );
 }

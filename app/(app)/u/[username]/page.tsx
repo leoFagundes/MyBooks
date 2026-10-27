@@ -33,7 +33,7 @@ async function ShelfTab({ params }: { params: Params }) {
   return (
     <PageTransition>
       <ProfileShelf
-        books={shelf.map((item) => item.book)}
+        entries={shelf}
         owner={relation === "self" ? null : firstName(profile.displayName)}
       />
     </PageTransition>

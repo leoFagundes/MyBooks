@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import { useId } from "react";
+import { formatNumber } from "@/lib/format";
 import { springs } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,8 @@ export type SegmentedOption<T extends string> = {
   value: T;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
+  /** Número ao lado do rótulo, em mono (quantos livros em cada status). */
+  count?: number;
 };
 
 type SegmentedControlProps<T extends string> = {
@@ -74,6 +77,11 @@ export function SegmentedControl<T extends string>({
             <span className="relative flex items-center gap-1.5">
               {Icon ? <Icon className="size-4" /> : null}
               {option.label}
+              {option.count !== undefined ? (
+                <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                  {formatNumber(option.count)}
+                </span>
+              ) : null}
             </span>
           </RadioGroupPrimitive.Item>
         );

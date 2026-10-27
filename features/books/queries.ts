@@ -1,12 +1,16 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
+import { avatarSrc } from "@/features/profile/lib/avatar";
+import { getPublicEnv } from "@/lib/env";
 import { createPublicClient } from "@/lib/supabase/public";
+import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import { searchGoogleBooks } from "./lib/google-books";
 import { searchOpenLibrary } from "./lib/open-library";
 import { normalizeQuery } from "./lib/search-query";
 import { dedupeResults, type SearchResult } from "./lib/search-result";
 import { toBookVisual } from "./lib/to-book-visual";
+import type { BookVisual } from "./types";
 
 function catalogResult(row: Tables<"books">): SearchResult {
   const visual = toBookVisual(row);
@@ -117,4 +121,141 @@ export async function searchBooks(
   const answers = await Promise.all(sources);
   if (answers.every((answer) => answer === null)) return null;
   return dedupeResults(answers.flatMap((answer) => answer ?? [])).slice(0, 20);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+export type BookDetails = BookVisual & {
+  subtitle: string | null;
+  description: string | null;
+  isbn13: string | null;
+  language: string | null;
+  genres: string[];
+};
+
+/** O livro do catálogo, para a página dele. Id fora do formato: null (404). */
+export async function getBook(id: string): Promise<BookDetails | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`book:${id}`);
+  if (!UUID.test(id)) return null;
+
+  const { data, error } = await createPublicClient()
+    .from("books")
+    .select(
+      "id, title, subtitle, authors, description, page_count, published_year, isbn_13, language, genres, cover_url, cover_color",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    ...toBookVisual(data),
+    subtitle: data.subtitle,
+    description: data.description,
+    isbn13: data.isbn_13,
+    language: data.language,
+    genres: data.genres,
+  };
+}
+
+export type CommunityReader = {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+};
+
+export type CommunityReview = CommunityReader & {
+  rating: number | null;
+  review: string;
+};
+
+export type CommunityCollection = {
+  id: string;
+  title: string;
+  emoji: string | null;
+  owner: CommunityReader;
+};
+
+export type BookCommunity = {
+  readers: CommunityReader[];
+  readersCount: number;
+  reviews: CommunityReview[];
+  collections: CommunityCollection[];
+};
+
+/**
+ * Quem leu, as resenhas e as coleções com o livro. Lê com a sessão: a RLS
+ * esconde quem tem perfil privado e não é seguido por quem está vendo.
+ */
+export async function getBookCommunity(bookId: string): Promise<BookCommunity> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`book:${bookId}`);
+
+  const supabase = await createClient();
+  const { supabaseUrl } = getPublicEnv();
+  const person = (profile: {
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  }): CommunityReader => ({
+    username: profile.username,
+    displayName: profile.display_name?.trim() || profile.username,
+    avatarUrl: avatarSrc(profile.avatar_url, supabaseUrl),
+  });
+
+  const [readers, reviews, collections] = await Promise.all([
+    supabase
+      .from("user_books")
+      .select(
+        "profile:profiles!user_books_user_id_fkey(username, display_name, avatar_url)",
+        { count: "exact" },
+      )
+      .eq("book_id", bookId)
+      .in("status", ["read", "reading"])
+      .order("updated_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("user_books")
+      .select(
+        "rating, review, profile:profiles!user_books_user_id_fkey(username, display_name, avatar_url)",
+      )
+      .eq("book_id", bookId)
+      .not("review", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("collection_items")
+      .select(
+        "collection:collections(id, title, emoji, owner:profiles!collections_owner_id_fkey(username, display_name, avatar_url))",
+      )
+      .eq("book_id", bookId)
+      .limit(6),
+  ]);
+  if (readers.error) throw readers.error;
+  if (reviews.error) throw reviews.error;
+  if (collections.error) throw collections.error;
+
+  return {
+    readers: readers.data.flatMap(({ profile }) =>
+      profile ? [person(profile)] : [],
+    ),
+    readersCount: readers.count ?? readers.data.length,
+    reviews: reviews.data.flatMap(({ rating, review, profile }) =>
+      profile && review ? [{ ...person(profile), rating, review }] : [],
+    ),
+    collections: collections.data.flatMap(({ collection }) =>
+      collection?.owner
+        ? [
+            {
+              id: collection.id,
+              title: collection.title,
+              emoji: collection.emoji,
+              owner: person(collection.owner),
+            },
+          ]
+        : [],
+    ),
+  };
 }

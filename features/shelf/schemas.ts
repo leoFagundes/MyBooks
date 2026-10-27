@@ -27,50 +27,101 @@ const daySchema = z.iso
   .date({ error: "Data inválida" })
   .refine((day) => day <= latestDay(), "Essa data ainda não chegou");
 
+const detailsShape = {
+  status: statusSchema,
+  rating: ratingSchema.nullable(),
+  startedAt: daySchema.nullable(),
+  finishedAt: daySchema.nullable(),
+};
+
+type DetailsValues = {
+  status: ShelfStatus;
+  rating: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+// Quero ler não tem nota nem datas; lendo não tem fim; o fim vem depois
+function coherentDetails(details: DetailsValues, ctx: z.RefinementCtx) {
+  if (details.status === "want") {
+    if (details.rating !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["rating"],
+        message: "Livro que você quer ler ainda não tem nota",
+      });
+    }
+    if (details.startedAt !== null || details.finishedAt !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["startedAt"],
+        message: "Livro que você quer ler ainda não tem datas",
+      });
+    }
+  }
+  if (details.status === "reading" && details.finishedAt !== null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["finishedAt"],
+      message: "Quem está lendo ainda não terminou",
+    });
+  }
+  if (
+    details.startedAt &&
+    details.finishedAt &&
+    details.finishedAt < details.startedAt
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["finishedAt"],
+      message: "O fim vem depois do começo",
+    });
+  }
+}
+
 /** Status, nota e datas de um livro na estante, coerentes entre si. */
 export const shelfDetailsSchema = z
+  .object(detailsShape)
+  .superRefine(coherentDetails);
+
+/** O bloco da página do livro: o mesmo, mais a página em que a pessoa está. */
+export const shelfEntryUpdateSchema = z
   .object({
-    status: statusSchema,
-    rating: ratingSchema.nullable(),
-    startedAt: daySchema.nullable(),
-    finishedAt: daySchema.nullable(),
+    ...detailsShape,
+    currentPage: z
+      .number({ error: "Página inválida" })
+      .int("Página inválida")
+      .min(0, "Página inválida")
+      .max(20_000, "Página inválida")
+      .nullable(),
   })
-  .superRefine((details, ctx) => {
-    if (details.status === "want") {
-      if (details.rating !== null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["rating"],
-          message: "Livro que você quer ler ainda não tem nota",
-        });
-      }
-      if (details.startedAt !== null || details.finishedAt !== null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["startedAt"],
-          message: "Livro que você quer ler ainda não tem datas",
-        });
-      }
-    }
-    if (details.status === "reading" && details.finishedAt !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["finishedAt"],
-        message: "Quem está lendo ainda não terminou",
-      });
-    }
-    if (
-      details.startedAt &&
-      details.finishedAt &&
-      details.finishedAt < details.startedAt
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["finishedAt"],
-        message: "O fim vem depois do começo",
-      });
-    }
-  });
+  .superRefine(coherentDetails);
+
+export type ShelfEntryUpdate = z.input<typeof shelfEntryUpdateSchema>;
+
+/** Resenha: até 10 mil caracteres; vazia apaga. */
+export const reviewSchema = z
+  .string()
+  .trim()
+  .max(10_000, "Até 10 mil caracteres")
+  .transform((review) => review || null);
+
+/** Citação: o trecho (até mil caracteres) e, se a pessoa quiser, a página. */
+export const quoteSchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1, "Escreva o trecho")
+    .max(1000, "Até mil caracteres"),
+  page: z
+    .number({ error: "Página inválida" })
+    .int("Página inválida")
+    .min(1, "Página inválida")
+    .max(20_000, "Página inválida")
+    .nullable(),
+});
+
+export type QuoteInput = z.input<typeof quoteSchema>;
 
 export type ShelfDetails = z.infer<typeof shelfDetailsSchema>;
 

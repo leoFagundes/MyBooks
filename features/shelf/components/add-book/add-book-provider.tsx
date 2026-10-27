@@ -17,6 +17,8 @@ import type { ChosenBook } from "./chosen-book";
 
 type AddBookContextValue = {
   open: () => void;
+  /** Abre direto no passo de status e nota (a página do livro). */
+  openWith: (book: ChosenBook) => void;
   /** Há conta: o +, a tecla N e o item do ⌘K funcionam. */
   enabled: boolean;
 };
@@ -27,6 +29,7 @@ const AddBookContext = createContext<AddBookContextValue | null>(null);
 type Controls = {
   setOpen: (open: boolean) => void;
   setEnabled: (enabled: boolean) => void;
+  setInitialBook: (book: ChosenBook | null) => void;
 };
 const ControlsContext = createContext<Controls | null>(null);
 
@@ -37,6 +40,7 @@ const ControlsContext = createContext<Controls | null>(null);
 export function AddBookProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
+  const [initialBook, setInitialBook] = useState<ChosenBook | null>(null);
   const [, startTransition] = useTransition();
   const returnFocus = useRef<HTMLElement | null>(null);
 
@@ -78,8 +82,20 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AddBookContext value={{ open: () => setOpen(true), enabled }}>
-      <ControlsContext value={{ setOpen, setEnabled }}>
+    <AddBookContext
+      value={{
+        open: () => {
+          setInitialBook(null);
+          setOpen(true);
+        },
+        openWith: (book) => {
+          setInitialBook(book);
+          setOpen(true);
+        },
+        enabled,
+      }}
+    >
+      <ControlsContext value={{ setOpen, setEnabled, setInitialBook }}>
         {children}
       </ControlsContext>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -99,7 +115,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           }}
         >
           <DialogTitle className="sr-only">Adicionar livro</DialogTitle>
-          <AddBookFlow onSave={save} />
+          <AddBookFlow initialBook={initialBook} onSave={save} />
         </DialogContent>
       </Dialog>
     </AddBookContext>
@@ -128,7 +144,7 @@ export function AddBookShortcut() {
   const controls = use(ControlsContext);
   if (!controls)
     throw new Error("AddBookShortcut precisa do <AddBookProvider>");
-  const { setOpen, setEnabled } = controls;
+  const { setOpen, setEnabled, setInitialBook } = controls;
 
   useEffect(() => {
     setEnabled(true);
@@ -140,6 +156,7 @@ export function AddBookShortcut() {
       // Modal, gaveta, menu ou paleta abertos travam a rolagem do body
       if (document.body.hasAttribute("data-scroll-locked")) return;
       event.preventDefault();
+      setInitialBook(null);
       setOpen(true);
     }
     window.addEventListener("keydown", onKeyDown);
@@ -147,7 +164,7 @@ export function AddBookShortcut() {
       window.removeEventListener("keydown", onKeyDown);
       setEnabled(false);
     };
-  }, [setOpen, setEnabled]);
+  }, [setOpen, setEnabled, setInitialBook]);
 
   return null;
 }

@@ -1,16 +1,18 @@
 import type { Route } from "next";
 
 // URLs do app num lugar só. Com typedRoutes, só as páginas que já existem
-// são rotas válidas: as que chegam nas próximas fases levam `as Route` e o
-// perfil sempre leva, porque /@usuario é um rewrite para app/(app)/u/[username].
+// são rotas válidas: as que chegam nas próximas fases levam `as Route`. O
+// perfil sempre leva (/@usuario é um rewrite para app/(app)/u/[username]), e
+// as dinâmicas também, porque o typedRoutes não aceita uma string qualquer
+// como segmento.
 export const routes = {
   home: "/" as const satisfies Route,
   dev: "/dev" as const satisfies Route,
-  inicio: "/inicio" as Route,
+  inicio: "/inicio" as const satisfies Route,
   explorar: "/explorar" as Route,
-  entrar: "/entrar" as Route,
-  cadastro: "/cadastro" as Route,
-  onboarding: "/onboarding" as Route,
+  entrar: "/entrar" as const satisfies Route,
+  cadastro: "/cadastro" as const satisfies Route,
+  onboarding: "/onboarding" as const satisfies Route,
   configuracoes: "/configuracoes" as Route,
   profile: (username: string) => `/@${username}` as Route,
   profileTab: (username: string, tab: "colecoes" | "citacoes") =>

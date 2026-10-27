@@ -83,3 +83,57 @@ export async function getQuotes(userId: string): Promise<QuoteItem[]> {
     book ? [{ id, text, page, book: toBookVisual(book) }] : [],
   );
 }
+
+export type ShelfEntryDetails = {
+  status: ShelfStatus;
+  rating: number | null;
+  review: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  currentPage: number | null;
+};
+
+export type BookQuote = { id: string; text: string; page: number | null };
+
+/** O livro na estante de quem está vendo, com as citações dele, ou null. */
+export async function getMyBookEntry(
+  userId: string,
+  bookId: string,
+): Promise<{ entry: ShelfEntryDetails | null; quotes: BookQuote[] }> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`shelf:${userId}`);
+
+  const supabase = await createClient();
+  const [entry, quotes] = await Promise.all([
+    supabase
+      .from("user_books")
+      .select("status, rating, review, started_at, finished_at, current_page")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .maybeSingle(),
+    supabase
+      .from("quotes")
+      .select("id, text, page")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .order("created_at", { ascending: true }),
+  ]);
+  if (entry.error) throw entry.error;
+  if (quotes.error) throw quotes.error;
+  const row = entry.data;
+  return {
+    entry:
+      row && isShelfStatus(row.status)
+        ? {
+            status: row.status,
+            rating: row.rating,
+            review: row.review,
+            startedAt: row.started_at,
+            finishedAt: row.finished_at,
+            currentPage: row.current_page,
+          }
+        : null,
+    quotes: quotes.data,
+  };
+}

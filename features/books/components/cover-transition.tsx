@@ -2,7 +2,8 @@
 
 import { createContext, use, useId, useState } from "react";
 
-type Source = { bookId: string; key: string };
+// De onde a capa saiu: a página do livro usa para o "Voltar" levar a capa de volta
+type Source = { bookId: string; key: string; origin: string };
 
 const SourceContext = createContext<{
   source: Source | null;
@@ -37,7 +38,12 @@ export function useTransitionSource(bookId: string): TransitionSource {
   const key = useId();
   return {
     isSource: context?.source?.key === key && context.source.bookId === bookId,
-    markSource: () => context?.setSource({ bookId, key }),
+    markSource: () =>
+      context?.setSource({
+        bookId,
+        key,
+        origin: `${window.location.pathname}${window.location.search}`,
+      }),
   };
 }
 
@@ -49,6 +55,15 @@ export function InsideSource({
   children: React.ReactNode;
 }) {
   return <InsideSourceContext value={value}>{children}</InsideSourceContext>;
+}
+
+/**
+ * Onde estava a capa que trouxe a pessoa até este livro, ou null (chegou por
+ * outro caminho). O voltar do navegador não anima; este link anima.
+ */
+export function useBookOrigin(bookId: string): string | null {
+  const source = use(SourceContext)?.source;
+  return source?.bookId === bookId ? source.origin : null;
 }
 
 /** Para a capa: estou dentro do BookLink que é a origem da viagem? */

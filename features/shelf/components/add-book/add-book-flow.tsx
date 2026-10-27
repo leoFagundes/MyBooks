@@ -24,12 +24,17 @@ const stepMotion = {
 
 /** Os passos da paleta: buscar, cadastrar à mão e, por fim, status e nota. */
 export function AddBookFlow({
+  initialBook,
   onSave,
 }: {
+  /** Livro já escolhido (a página do livro): começa no passo de status. */
+  initialBook: ChosenBook | null;
   onSave: (book: ChosenBook, details: ShelfDetails) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [step, setStep] = useState<Step>({ name: "search" });
+  const [step, setStep] = useState<Step>(
+    initialBook ? { name: "details", book: initialBook } : { name: "search" },
+  );
 
   return (
     <AnimatePresence mode="popLayout" initial={false}>

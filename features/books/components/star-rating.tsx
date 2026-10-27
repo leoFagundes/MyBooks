@@ -107,3 +107,45 @@ export function StarRating({
     </div>
   );
 }
+
+/** A nota só para ler (resenhas da comunidade), em estrelas pequenas. */
+export function StarRatingDisplay({
+  value,
+  className,
+}: {
+  value: number;
+  className?: string;
+}) {
+  return (
+    <span
+      role="img"
+      aria-label={ratingLabel(value)}
+      className={cn("inline-flex items-center gap-0.5", className)}
+    >
+      {STARS.map((star) => {
+        const fill = Math.max(0, Math.min(1, value - (star - 1)));
+        return (
+          <span key={star} aria-hidden className="relative size-3.5">
+            <Star
+              strokeWidth={1.5}
+              className="absolute inset-0 size-3.5 text-border-strong"
+            />
+            {fill > 0 ? (
+              <span
+                className="absolute inset-0 overflow-hidden"
+                style={{
+                  clipPath: fill < 1 ? "inset(0 50% 0 0)" : undefined,
+                }}
+              >
+                <Star
+                  strokeWidth={1.5}
+                  className="size-3.5 fill-current text-foreground"
+                />
+              </span>
+            ) : null}
+          </span>
+        );
+      })}
+    </span>
+  );
+}

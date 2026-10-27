@@ -111,7 +111,7 @@ export function ReadersStep({
 }: {
   genres: GenreSlug[];
   follows: Record<string, FollowState>;
-  onChange: (follows: Record<string, FollowState>) => void;
+  onChange: React.Dispatch<React.SetStateAction<Record<string, FollowState>>>;
   onBack: () => void;
 }) {
   const suggestions = useSuggestions();
@@ -209,7 +209,10 @@ export function ReadersStep({
                     reader={reader}
                     state={follows[reader.id] ?? "none"}
                     onChange={(state) =>
-                      onChange({ ...follows, [reader.id]: state })
+                      onChange((current) => ({
+                        ...current,
+                        [reader.id]: state,
+                      }))
                     }
                   />
                 </li>

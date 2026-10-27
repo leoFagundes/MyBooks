@@ -174,3 +174,37 @@ test("dá para fazer o onboarding só com o teclado", async ({
     await deleteTestUser(user.id);
   }
 });
+
+test("dois livros adicionados em seguida ficam os dois na estante", async ({
+  page,
+  baseURL,
+}) => {
+  const user = await createTestUser();
+  try {
+    const name = await openOnboarding(page, user, baseURL);
+    await name.fill("Leitora Apressada");
+    await page.getByRole("button", { name: "Continuar" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Do que você gosta de ler?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Continuar" }).click();
+
+    await page.getByLabel("Buscar no catálogo").fill("machado");
+    const results = page.getByRole("list", { name: "Resultados" });
+    const dom = results
+      .getByRole("listitem")
+      .filter({ hasText: "Dom Casmurro" });
+    const bras = results
+      .getByRole("listitem")
+      .filter({ hasText: "Memórias Póstumas" });
+    // Os dois cliques antes de a primeira resposta chegar
+    await dom.getByRole("button", { name: "Quero ler" }).click();
+    await bras.getByRole("button", { name: "Quero ler" }).click();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
+    await expect(dom.getByText("Na estante")).toBeVisible();
+    await expect(bras.getByText("Na estante")).toBeVisible();
+  } finally {
+    await deleteTestUser(user.id);
+  }
+});

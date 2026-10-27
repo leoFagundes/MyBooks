@@ -80,7 +80,7 @@ export function BooksStep({
   onDone,
 }: {
   added: Record<string, ShelfStatus>;
-  onChange: (added: Record<string, ShelfStatus>) => void;
+  onChange: React.Dispatch<React.SetStateAction<Record<string, ShelfStatus>>>;
   onBack: () => void;
   onDone: () => void;
 }) {
@@ -89,23 +89,30 @@ export function BooksStep({
   const search = useCatalogSearch(query);
   const [, startTransition] = useTransition();
   // A estante muda na hora; se a action falhar, volta sozinha
-  const [shelf, setOptimisticShelf] = useOptimistic(added);
+  const [shelf, setOptimisticShelf] = useOptimistic(
+    added,
+    (current, change: { bookId: string; status: ShelfStatus | null }) =>
+      change.status
+        ? { ...current, [change.bookId]: change.status }
+        : without(current, change.bookId),
+  );
   const count = Object.keys(shelf).length;
 
   function add(bookId: string, status: ShelfStatus) {
     startTransition(async () => {
-      setOptimisticShelf({ ...shelf, [bookId]: status });
+      setOptimisticShelf({ bookId, status });
       const result = await addToShelf(bookId, status);
-      if (result.ok) onChange({ ...added, [bookId]: status });
+      // Atualização funcional: dois cliques seguidos não se sobrescrevem
+      if (result.ok) onChange((current) => ({ ...current, [bookId]: status }));
       else toast.error(result.error);
     });
   }
 
   function remove(bookId: string) {
     startTransition(async () => {
-      setOptimisticShelf(without(shelf, bookId));
+      setOptimisticShelf({ bookId, status: null });
       const result = await removeFromShelf(bookId);
-      if (result.ok) onChange(without(added, bookId));
+      if (result.ok) onChange((current) => without(current, bookId));
       else toast.error(result.error);
     });
   }

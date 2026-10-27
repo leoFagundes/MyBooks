@@ -1,16 +1,12 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useState, useTransition } from "react";
 import { SwapText } from "@/components/motion/swap-text";
 import { Button } from "@/components/ui/button";
-import { pressScale, springs } from "@/lib/motion";
-import { cn } from "@/lib/utils";
 import { saveGenres } from "../../actions";
-import { GENRES, type GenreSlug } from "../../genres";
+import type { GenreSlug } from "../../genres";
+import { GenreChips } from "../genre-chips";
 import { StepFrame } from "./step-frame";
-
-const MAX = 10;
 
 export function GenresStep({
   value,
@@ -25,17 +21,6 @@ export function GenresStep({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
-  const full = value.length >= MAX;
-
-  function toggle(slug: GenreSlug) {
-    onChange(
-      value.includes(slug)
-        ? value.filter((genre) => genre !== slug)
-        : full
-          ? value
-          : [...value, slug],
-    );
-  }
 
   function save() {
     setError(null);
@@ -69,35 +54,7 @@ export function GenresStep({
       }
     >
       <div className="flex flex-col gap-4">
-        <ul aria-label="Gêneros" className="flex flex-wrap gap-2">
-          {GENRES.map((genre) => {
-            const selected = value.includes(genre.slug);
-            return (
-              <li key={genre.slug}>
-                <motion.button
-                  type="button"
-                  aria-pressed={selected}
-                  disabled={!selected && full}
-                  onClick={() => toggle(genre.slug)}
-                  whileTap={{ scale: pressScale }}
-                  transition={springs.snappy}
-                  className={cn(
-                    "h-9 cursor-pointer rounded-full border px-4 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    selected
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-surface text-foreground hover:bg-muted",
-                  )}
-                >
-                  {genre.label}
-                </motion.button>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="font-mono text-xs text-muted-foreground">
-          {value.length} de {MAX}
-          {full ? " · chegou ao limite" : ""}
-        </p>
+        <GenreChips value={value} onChange={onChange} />
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}

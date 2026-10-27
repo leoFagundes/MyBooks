@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { genresSchema, profileStepSchema, usernameSchema } from "./schemas";
+import {
+  editProfileSchema,
+  genresSchema,
+  profileStepSchema,
+  usernameSchema,
+} from "./schemas";
 
 const message = (result: { error?: { issues: { message: string }[] } }) =>
   result.error?.issues[0]?.message;
@@ -95,5 +100,42 @@ describe("gêneros", () => {
         ]),
       ),
     ).toBe("Escolha até 10");
+  });
+});
+
+describe("editar perfil", () => {
+  const edit = (overrides: Record<string, unknown>) =>
+    editProfileSchema.safeParse({
+      displayName: "Ana Souza",
+      bio: "",
+      avatarPath: null,
+      genres: [],
+      isPrivate: false,
+      ...overrides,
+    });
+
+  test("bio aparada, até 160 caracteres; vazia vira null", () => {
+    expect(edit({ bio: "  Machado no ônibus.  " }).data?.bio).toBe(
+      "Machado no ônibus.",
+    );
+    expect(edit({ bio: "   " }).data?.bio).toBeNull();
+    expect(message(edit({ bio: "a".repeat(161) }))).toBe("Até 160 caracteres");
+  });
+
+  test("nome obrigatório, gêneros conhecidos e privacidade sim ou não", () => {
+    expect(message(edit({ displayName: " " }))).toBe("Diga seu nome");
+    expect(
+      edit({ genres: ["poesia", "poesia", "contos"] }).data?.genres,
+    ).toEqual(["poesia", "contos"]);
+    expect(edit({ genres: ["sertanejo"] }).success).toBe(false);
+    expect(edit({ isPrivate: "sim" }).success).toBe(false);
+    expect(edit({ isPrivate: true }).data?.isPrivate).toBe(true);
+  });
+
+  test("a foto nova é um caminho do bucket de avatares", () => {
+    expect(edit({ avatarPath: AVATAR }).success).toBe(true);
+    expect(edit({ avatarPath: "https://exemplo.com/eu.png" }).success).toBe(
+      false,
+    );
   });
 });

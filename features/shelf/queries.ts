@@ -38,3 +38,33 @@ export async function getShelf(userId: string): Promise<ShelfItem[]> {
     book && isShelfStatus(status) ? [{ book: toBookVisual(book), status }] : [],
   );
 }
+
+export type QuoteItem = {
+  id: string;
+  text: string;
+  page: number | null;
+  book: BookVisual;
+};
+
+/**
+ * As citações de alguém, da mais nova à mais antiga. Mesma regra da estante:
+ * a RLS esconde as de perfil privado de quem não segue.
+ */
+export async function getQuotes(userId: string): Promise<QuoteItem[]> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`shelf:${userId}`);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select(
+      "id, text, page, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.flatMap(({ id, text, page, book }) =>
+    book ? [{ id, text, page, book: toBookVisual(book) }] : [],
+  );
+}

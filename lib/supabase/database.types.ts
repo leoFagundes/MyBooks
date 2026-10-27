@@ -590,6 +590,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      profile_counts: {
+        Args: { profile_id: string }
+        Returns: {
+          books: number
+          collections: number
+          followers: number
+          following: number
+        }[]
+      }
       search_catalog: {
         Args: { max_results?: number; q: string }
         Returns: {

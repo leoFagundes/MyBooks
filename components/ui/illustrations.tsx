@@ -43,3 +43,38 @@ export function QuietBellIllustration(props: IllustrationProps) {
     </svg>
   );
 }
+
+export function LockedShelfIllustration(props: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 120 80" aria-hidden {...props}>
+      <path d="M8 68h104" {...stroke} />
+      <rect x="22" y="34" width="10" height="34" rx="1.5" {...stroke} />
+      <rect x="34" y="28" width="9" height="40" rx="1.5" {...stroke} />
+      <rect x="68" y="40" width="26" height="20" rx="3" {...stroke} />
+      <path d="M73 40v-6a8 8 0 0116 0v6" {...stroke} />
+      <path d="M81 48v4" {...stroke} />
+    </svg>
+  );
+}
+
+export function QuoteIllustration(props: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 120 80" aria-hidden {...props}>
+      <path d="M34 30c-6 2-10 7-10 14v6h12v-12h-6c0-4 2-6 6-7" {...stroke} />
+      <path d="M58 30c-6 2-10 7-10 14v6h12v-12h-6c0-4 2-6 6-7" {...stroke} />
+      <path d="M72 38h28M72 46h22M72 54h26" strokeDasharray="2 4" {...stroke} />
+      <path d="M20 68h80" {...stroke} />
+    </svg>
+  );
+}
+
+export function CollectionsIllustration(props: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 120 80" aria-hidden {...props}>
+      <path d="M44 22l-8 40 22 4 8-40z" {...stroke} />
+      <rect x="52" y="16" width="22" height="42" rx="2" {...stroke} />
+      <path d="M80 20l12 38-21 7" {...stroke} />
+      <path d="M20 70h80" {...stroke} />
+    </svg>
+  );
+}

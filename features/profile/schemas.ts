@@ -37,3 +37,18 @@ export const genresSchema = z
       .array(z.enum(GENRE_SLUGS as [GenreSlug, ...GenreSlug[]]))
       .max(10, "Escolha até 10"),
   );
+
+/** O que a gaveta "Editar perfil" muda (o @ fica para as configurações). */
+export const editProfileSchema = z.object({
+  displayName: profileStepSchema.shape.displayName,
+  bio: z
+    .string()
+    .trim()
+    .max(160, "Até 160 caracteres")
+    .transform((bio) => bio || null),
+  avatarPath: profileStepSchema.shape.avatarPath,
+  genres: genresSchema,
+  isPrivate: z.boolean({ error: "Privacidade inválida" }),
+});
+
+export type EditProfileValues = z.input<typeof editProfileSchema>;

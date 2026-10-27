@@ -7,6 +7,8 @@ import { requireViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import {
+  type EditProfileValues,
+  editProfileSchema,
   genresSchema,
   profileStepSchema,
   type ProfileStepValues,
@@ -92,4 +94,40 @@ export async function finishOnboarding(): Promise<ActionResult> {
     return { ok: false, error: "Não deu para concluir agora. Tente de novo." };
   updateTag(`profile:${viewer.username}`);
   redirect(routes.inicio);
+}
+
+/** Nome, bio, foto, gêneros e privacidade, pela gaveta "Editar perfil". */
+export async function updateProfile(
+  input: EditProfileValues,
+): Promise<ActionResult> {
+  const parsed = editProfileSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Confira os campos destacados.",
+      fieldErrors: fieldErrorsFrom(parsed.error),
+    };
+  }
+  const viewer = await requireViewer();
+  const { displayName, bio, avatarPath, genres, isPrivate } = parsed.data;
+  if (avatarPath && !avatarPath.startsWith(`avatars/${viewer.id}/`)) {
+    return { ok: false, error: "Essa foto não é sua." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      display_name: displayName,
+      bio,
+      favorite_genres: genres,
+      is_private: isPrivate,
+      ...(avatarPath ? { avatar_url: avatarPath } : {}),
+    })
+    .eq("id", viewer.id);
+  if (error)
+    return { ok: false, error: "Não deu para salvar agora. Tente de novo." };
+
+  updateTag(`profile:${viewer.username}`);
+  return { ok: true, data: undefined };
 }

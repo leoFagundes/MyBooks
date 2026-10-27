@@ -58,8 +58,10 @@ export function planMove(
     : { kind: "move", id: moving.id, position };
 }
 
-// A ordem do banco: posição byte a byte e, no empate, o id
-function byPosition<T extends { position: string }>(idOf: (item: T) => string) {
+/** A ordem do banco: posição byte a byte e, no empate, o id. */
+export function byPosition<T extends { position: string }>(
+  idOf: (item: T) => string,
+) {
   return (a: T, b: T) => {
     if (a.position !== b.position) return a.position < b.position ? -1 : 1;
     return idOf(a) < idOf(b) ? -1 : 1;

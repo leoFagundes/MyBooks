@@ -8,7 +8,7 @@ export function CollectionPageSkeleton() {
       aria-label="Carregando a coleção"
       className="mx-auto max-w-5xl px-6 pt-8 pb-32"
     >
-      <Skeleton className="mb-8 h-4 w-24" />
+      <Skeleton className="mb-8 h-5 w-32" />
       <div className="mb-10 flex flex-col gap-3">
         <Skeleton className="h-10 w-2/3 max-w-md" />
         <Skeleton className="h-4 w-full max-w-prose" />

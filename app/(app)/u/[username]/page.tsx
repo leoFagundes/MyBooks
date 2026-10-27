@@ -8,6 +8,11 @@ import { getShelf } from "@/features/shelf/queries";
 
 type Params = PageProps<"/u/[username]">["params"];
 
+// A volta da página do livro só anima se a estante estiver pronta no clique.
+// Por 5 minutos o roteador reaproveita estes dados (inclusive os da primeira
+// carga) em vez de buscá-los de novo e mostrar o esqueleto, sem a lombada
+export const unstable_dynamicStaleTime = 300;
+
 const firstName = (name: string) => name.split(/\s+/)[0] || name;
 
 /** Aba Estante: os livros da pessoa nas três visualizações. */

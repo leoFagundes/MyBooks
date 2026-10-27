@@ -11,6 +11,10 @@ import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = { title: "Início" };
 
+// A capa volta da página do livro até a estante só se ela estiver pronta no
+// clique: o roteador reaproveita estes dados por 5 minutos (ver o perfil)
+export const unstable_dynamicStaleTime = 300;
+
 // Provisório: o feed e o "Lendo agora" chegam na Fase 5
 export default function HomePage() {
   return (

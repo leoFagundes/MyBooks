@@ -203,7 +203,7 @@ export function ShelfToolbar({
               ) : null}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="flex w-80 flex-col gap-5">
+          <PopoverContent align="end" className="w-80 gap-5 sm:w-96">
             <ChoiceGroup
               legend="Gênero"
               options={genres}

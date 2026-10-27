@@ -49,6 +49,7 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 8,
+  collisionPadding = 16,
   children,
   ...props
 }: Omit<
@@ -67,6 +68,7 @@ function PopoverContent({
             forceMount
             align={align}
             sideOffset={sideOffset}
+            collisionPadding={collisionPadding}
             {...props}
           >
             <motion.div
@@ -79,8 +81,10 @@ function PopoverContent({
                 transformOrigin:
                   "var(--radix-popover-content-transform-origin)",
               }}
+              // O Radix vira o card para o lado com mais espaço, mas não o
+              // encolhe: a altura para no que cabe na tela e o resto rola
               className={cn(
-                "z-50 flex w-72 flex-col gap-3 rounded-card border border-border bg-popover p-4 text-sm text-popover-foreground outline-none",
+                "z-50 flex max-h-(--radix-popover-content-available-height) w-72 flex-col gap-3 overflow-y-auto overscroll-contain rounded-card border border-border bg-popover p-4 text-sm text-popover-foreground outline-none",
                 className,
               )}
             >

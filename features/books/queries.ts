@@ -73,6 +73,24 @@ async function externalResults(query: string): Promise<SearchResult[] | null> {
 }
 
 /**
+ * O resultado de fora que a paleta mostrou, achado de novo na mesma busca da
+ * mesma fonte (que está no cache). É o que vai para o catálogo: os dados do
+ * livro nunca vêm do cliente.
+ */
+export async function findExternalResult(
+  rawQuery: string,
+  source: "openlibrary" | "google",
+  sourceId: string,
+): Promise<SearchResult | null> {
+  const query = normalizeQuery(rawQuery);
+  if (query.length < 2) return null;
+  const results = await (
+    source === "openlibrary" ? openLibraryResults(query) : googleResults(query)
+  ).catch(() => null);
+  return results?.find((result) => result.sourceId === sourceId) ?? null;
+}
+
+/**
  * De onde a busca traz livros. O catálogo responde em milissegundos e a Open
  * Library pode levar segundos: a paleta pede os dois em separado, para mostrar
  * o catálogo na hora.

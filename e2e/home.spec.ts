@@ -120,7 +120,11 @@ test.describe("início", () => {
     try {
       await signInAs(page, user, baseURL);
       await page.goto("/inicio");
-      await expect(page.getByText("Sua estante está esperando")).toBeVisible();
+      // No main: por uns 200ms o streaming do React ainda guarda uma cópia
+      // escondida (div#S:n[hidden]) do conteúdo que já apareceu
+      await expect(
+        page.getByRole("main").getByText("Sua estante está esperando"),
+      ).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Procurar um livro" }),
       ).toBeVisible();

@@ -4,9 +4,12 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AddBookShortcut,
+  useAddBook,
+} from "@/features/shelf/components/add-book/add-book-provider";
 import { routes } from "@/lib/routes";
 import { AccountMenu } from "./account-menu";
-import { useCommandPalette } from "./command-palette";
 import type { NavViewer } from "./nav-links";
 import { NotificationsButton } from "./notifications-button";
 import { ThemeToggle } from "./theme-toggle";
@@ -20,7 +23,7 @@ export function AccountActions({
 }: {
   viewer: NavViewer | null | undefined;
 }) {
-  const palette = useCommandPalette();
+  const addBook = useAddBook();
 
   if (viewer === undefined) {
     return <Skeleton className="ml-1 size-8 rounded-full" />;
@@ -37,11 +40,13 @@ export function AccountActions({
   }
   return (
     <>
+      <AddBookShortcut />
       <Button
         variant="ghost"
         size="icon"
         aria-label="Adicionar livro"
-        onClick={palette.toggle}
+        aria-keyshortcuts="N"
+        onClick={addBook.open}
         className="hidden md:inline-flex"
       >
         <Plus />

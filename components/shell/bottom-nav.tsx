@@ -1,10 +1,12 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useId } from "react";
 import { Button } from "@/components/ui/button";
+import { useAddBook } from "@/features/shelf/components/add-book/add-book-provider";
+import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { useCommandPalette } from "./command-palette";
 import { EstanteLink } from "./estante-link";
 import {
   mainNavItems,
@@ -31,7 +33,8 @@ export function BottomNav({
   preview = false,
 }: BottomNavProps) {
   const indicatorId = useId();
-  const palette = useCommandPalette();
+  const router = useRouter();
+  const addBook = useAddBook();
   const [inicio, explorar] = mainNavItems(null);
 
   return (
@@ -54,7 +57,10 @@ export function BottomNav({
           <Button
             size="icon"
             aria-label="Adicionar livro"
-            onClick={palette.toggle}
+            // Sem conta, o + leva para entrar
+            onClick={() =>
+              addBook.enabled ? addBook.open() : router.push(routes.entrar)
+            }
             className="mx-1 size-11 rounded-full"
           >
             <Plus className="size-5" />

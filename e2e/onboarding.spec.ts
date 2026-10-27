@@ -69,10 +69,12 @@ test("os quatro passos levam ao /inicio, com foto, gêneros, livro e quem seguir
     await page.getByRole("button", { name: "Continuar" }).click();
 
     // 3. Primeiros livros
-    await page.getByLabel("Buscar no catálogo").fill("sertao");
+    await page.getByLabel("Buscar livros").fill("sertao");
+    // O do catálogo vem primeiro; edições da Open Library podem vir embaixo
     const book = page
       .getByRole("listitem")
-      .filter({ hasText: "Grande Sertão: Veredas" });
+      .filter({ hasText: "Grande Sertão: Veredas" })
+      .first();
     await book.getByRole("button", { name: "Quero ler" }).click();
     await expect(book.getByText("Na estante")).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
@@ -155,9 +157,12 @@ test("dá para fazer o onboarding só com o teclado", async ({
       page.getByRole("heading", { name: "Seus primeiros livros" }),
     ).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(page.getByLabel("Buscar no catálogo")).toBeFocused();
+    await expect(page.getByLabel("Buscar livros")).toBeFocused();
     await page.keyboard.type("hobbit");
-    const book = page.getByRole("listitem").filter({ hasText: "O Hobbit" });
+    const book = page
+      .getByRole("listitem")
+      .filter({ hasText: "O Hobbit" })
+      .first();
     await tabTo(page, book.getByRole("button", { name: "Já li" }));
     await page.keyboard.press("Enter");
     await expect(book.getByText("Na estante")).toBeVisible();
@@ -189,14 +194,16 @@ test("dois livros adicionados em seguida ficam os dois na estante", async ({
     ).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
 
-    await page.getByLabel("Buscar no catálogo").fill("machado");
+    await page.getByLabel("Buscar livros").fill("machado");
     const results = page.getByRole("list", { name: "Resultados" });
     const dom = results
       .getByRole("listitem")
-      .filter({ hasText: "Dom Casmurro" });
+      .filter({ hasText: "Dom Casmurro" })
+      .first();
     const bras = results
       .getByRole("listitem")
-      .filter({ hasText: "Memórias Póstumas" });
+      .filter({ hasText: "Memórias Póstumas" })
+      .first();
     // Os dois cliques antes de a primeira resposta chegar
     await dom.getByRole("button", { name: "Quero ler" }).click();
     await bras.getByRole("button", { name: "Quero ler" }).click();

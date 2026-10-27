@@ -1,11 +1,24 @@
 "use client";
 
 import { Command } from "cmdk";
-import { CornerDownLeft, House, Search, Shapes, SunMoon } from "lucide-react";
+import {
+  BookPlus,
+  CornerDownLeft,
+  House,
+  Search,
+  Shapes,
+  SunMoon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState } from "react";
+import {
+  commandGroupClasses as groupClasses,
+  commandInputClasses,
+  commandItemClasses as itemClasses,
+} from "@/components/ui/command-styles";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
+import { useAddBook } from "@/features/shelf/components/add-book/add-book-provider";
 import { routes } from "@/lib/routes";
 import { useTheme } from "./theme-provider";
 
@@ -53,13 +66,6 @@ export function useCommandPalette() {
   return context;
 }
 
-// Mesmo sinal dos menus: fundo sutil mais a barra de acento, que tem 3:1
-const itemClasses =
-  "relative flex cursor-pointer items-center gap-3 rounded-[8px] px-3 py-2.5 text-sm text-foreground select-none before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-ring before:opacity-0 data-[selected=true]:bg-muted data-[selected=true]:before:opacity-100 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground";
-
-const groupClasses =
-  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:uppercase";
-
 function CommandPalette({
   open,
   onOpenChange,
@@ -69,6 +75,7 @@ function CommandPalette({
 }) {
   const router = useRouter();
   const { resolved, setPreference } = useTheme();
+  const addBook = useAddBook();
   const returnFocus = useRef<HTMLElement | null>(null);
 
   function run(action: () => void) {
@@ -102,7 +109,7 @@ function CommandPalette({
             />
             <Command.Input
               placeholder="Buscar livros, pessoas e coleções…"
-              className="h-13 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className={commandInputClasses}
             />
             <Kbd>Esc</Kbd>
           </div>
@@ -112,6 +119,16 @@ function CommandPalette({
               em breve.
             </Command.Empty>
             <Command.Group heading="Ações" className={groupClasses}>
+              {addBook.enabled ? (
+                <Command.Item
+                  className={itemClasses}
+                  onSelect={() => run(addBook.open)}
+                >
+                  <BookPlus />
+                  Adicionar livro
+                  <Kbd className="ml-auto">N</Kbd>
+                </Command.Item>
+              ) : null}
               <Command.Item
                 className={itemClasses}
                 onSelect={() =>

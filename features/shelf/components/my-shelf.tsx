@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useCommandPalette } from "@/components/shell/command-palette";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmptyShelfIllustration } from "@/components/ui/illustrations";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { BookVisual } from "@/features/books/types";
+import { useAddBook } from "./add-book/add-book-provider";
 import { type ShelfView, ShelfViews, shelfViewOptions } from "./shelf-views";
 
 /** A estante de quem está vendo, nas três visualizações. */
 export function MyShelf({ books }: { books: BookVisual[] }) {
   const [view, setView] = useState<ShelfView>("estante");
-  const palette = useCommandPalette();
+  const addBook = useAddBook();
 
   if (books.length === 0) {
     return (
@@ -20,7 +20,7 @@ export function MyShelf({ books }: { books: BookVisual[] }) {
         illustration={EmptyShelfIllustration}
         title="Sua estante está esperando"
         description="Procure um livro que você leu ou quer ler e comece por ele."
-        action={<Button onClick={palette.toggle}>Procurar um livro</Button>}
+        action={<Button onClick={addBook.open}>Procurar um livro</Button>}
       />
     );
   }

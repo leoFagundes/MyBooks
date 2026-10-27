@@ -279,7 +279,7 @@ function SortableBook({
       >
         <div className={cn(isDragging && "opacity-0")}>
           <BookLink
-            bookId={book.id}
+            book={book}
             href={href}
             variant="cover"
             draggable={false}

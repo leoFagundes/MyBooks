@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MyShelf } from "@/features/shelf/components/my-shelf";
 import { getShelf } from "@/features/shelf/queries";
@@ -13,11 +14,13 @@ export const metadata: Metadata = { title: "Início" };
 // Provisório: o feed e o "Lendo agora" chegam na Fase 5
 export default function HomePage() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
-      <Suspense fallback={<HomeSkeleton />}>
-        <Home />
-      </Suspense>
-    </main>
+    <PageTransition>
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
+        <Suspense fallback={<HomeSkeleton />}>
+          <Home />
+        </Suspense>
+      </main>
+    </PageTransition>
   );
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { PageTransition } from "@/components/motion/page-transition";
 import { Logo } from "@/components/shell/logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OnboardingWizard } from "@/features/profile/components/onboarding/onboarding-wizard";
@@ -13,14 +14,14 @@ export const metadata: Metadata = { title: "Boas-vindas" };
 
 export default function OnboardingPage() {
   return (
-    <div className="flex min-h-dvh flex-col items-center px-4 py-10 sm:py-16">
+    <PageTransition className="flex min-h-dvh flex-col items-center px-4 py-10 sm:py-16">
       <Logo className="mb-10" />
       <main className="w-full max-w-lg">
         <Suspense fallback={<OnboardingSkeleton />}>
           <Onboarding />
         </Suspense>
       </main>
-    </div>
+    </PageTransition>
   );
 }
 

@@ -24,12 +24,13 @@ const parts = (transition: RecordedTransition, name: string) =>
 const fontSize = (locator: Locator) =>
   locator.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
 
+// Sem carregar a página já com o hash: no Next 16.4.3, com partes dinâmicas
+// no layout, o link de volta para o mesmo hash dobra o hash na URL
 async function openView(page: Page, view: "Estante" | "Grade" | "Lista") {
-  await page.goto("/dev#visualizacoes");
-  await page
-    .getByRole("radiogroup", { name: "Visualização" })
-    .getByRole("radio", { name: view })
-    .click();
+  await page.goto("/dev");
+  const views = page.getByRole("radiogroup", { name: "Visualização" });
+  await views.scrollIntoViewIfNeeded();
+  await views.getByRole("radio", { name: view }).click();
 }
 
 // Passa o mouse, espera o prefetch e clica, como uma pessoa que hesita um

@@ -10,19 +10,26 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 
 ## Estado
 
-- Fase 0 (plano) aprovada com as 6 propostas. Fase 1 (Fundação) entregue em 24/10/2026 na branch `fase-1-fundacao`, com a revisão final corrigida, aguardando seu ok para o merge.
-- Já existe: tokens e fontes, tema claro/escuro, primitivos shadcn restilizados, presets de movimento, Lenis, barra superior, pílula do celular, paleta ⌘K, `BookCover`, `BookSpine`, `Shelf`, `ShelfViews`, `AnimatedNumber` e a vitrine `/dev` (fora da produção).
-- Ainda não existe: Supabase, login, banco, `<BookLink>` e as páginas além de `/` e `/dev`. Os links da navegação e das lombadas (`/inicio`, `/explorar`, `/entrar`, `/livro/[id]`) dão 404 até a fase de cada um. Os livros vêm de `features/books/sample-books.ts`.
-- Na Fase 2, `cover_color` ganha CHECK `^#[0-9a-f]{6}$` no banco e no zod (o `bookColor` já descarta valor fora disso, porque a cor vai para o `style`).
+- Fase 0 (plano) aprovada com as 6 propostas. Fase 1 (Fundação) entregue em 24/10/2026 e integrada à `master` em 25/10/2026.
+- Fase 2 (Supabase e conta) entregue em 27/10/2026 na branch `fase-2-supabase-e-conta`, aguardando seu ok para o merge.
+  - Banco de desenvolvimento: projeto `djehboxlhvjtlrvmdiis` (supabase-cerulean-yacht, na organização da Vercel). O `pdlxsimtcamwadfbjyjm` ficou de fora porque o token da conta não o alcança; as chaves dele estão em `.env.local.pdlxsim` (fora do git).
+  - Já existe: schema com RLS (perfis, catálogo, estante, citações, follows, coleções, atividades e notificações por trigger), Storage (avatares e capas), seed (8 leitores, 44 livros, coleções), tipos gerados, entrar e cadastrar (e-mail e senha, link mágico, Google), sair, barra com a conta, `/inicio` provisório e onboarding em 4 passos.
+  - E-mails: saem com o modelo padrão do Supabase, em inglês (o plano gratuito com o e-mail padrão não aceita modelos próprios), e só chegam a quem é da equipe do projeto, 2 por hora. Os links voltam por `/auth/callback` e precisam abrir no mesmo navegador. Os modelos em pt-BR de `supabase/templates` entram com o SMTP próprio, na Fase 8.
+  - Google: falta criar o cliente OAuth no Google Cloud, com o retorno `https://djehboxlhvjtlrvmdiis.supabase.co/auth/v1/callback`, e ligar o provedor no Supabase. Até lá, o botão avisa que o login com Google ainda não está ligado.
+- Ainda não existem as páginas além de `/`, `/dev`, `/entrar`, `/cadastro`, `/onboarding` e `/inicio`: os links da navegação e das lombadas (`/explorar`, `/@usuario`, `/livro/[id]`) dão 404 até a fase de cada um. As demos do `/dev` usam `features/books/sample-books.ts`, com os mesmos slugs do seed (`seedId` de `scripts/seed-ids.ts` dá o id).
 - Na Fase 3, troque os `Link` das lombadas, da grade e da lista por `<BookLink>`, tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem e dê `viewTransitionName: "site-header"` à barra superior junto com as transições entre rotas.
-- Próxima: Fase 2 (Supabase e conta). Atualize esta seção ao fim de cada fase.
+- Próxima: Fase 3 (Estante), com o rebase da branch `fase-3-estante` sobre esta. Atualize esta seção ao fim de cada fase.
 
 ## Comandos
 
 - `npm run dev` · `npm run build` · `npm run lint` (`next lint` não existe mais; `next build` não roda lint)
 - `npm run typecheck` (`next typegen && tsc --noEmit`) · `npm test` (Vitest) · `npm run test:e2e` (Playwright) · `npm run format` / `format:check`
 - O Playwright usa o `next dev` da porta 3000 (sobe um se não houver) e roda com 1 worker local: no Windows, vários Chromium headless travam as requisições ao localhost. Na primeira vez, `npx playwright install chromium`.
-- O projeto está no OneDrive, e o `next dev` às vezes perde o aviso de que um arquivo mudou (o `globals.css` principalmente). Se uma mudança não aparecer, salve o arquivo de novo ou reinicie o dev.
+- Banco (CLI do Supabase pelo `.env.local`): `npm run db:link` uma vez; `npm run db:push -- --yes` aplica as migrations; `npm run db:seed -- --yes` aplica também o `supabase/seed.sql`; `npm run db:types` gera `lib/supabase/database.types.ts`. `npm run seed:gerar` refaz o `seed.sql` a partir de `scripts/seed-data.ts` (busca cada obra uma vez na Open Library, com cache em disco).
+- `npm run test:db`: testes de banco, em SQL de verdade, pela API de gestão; precisam do `SUPABASE_ACCESS_TOKEN`.
+- `npm run build` termina com `scripts/verificar-bundle.mjs` (postbuild): chave secreta no bundle do navegador derruba o build.
+- O projeto mora em `C:\Users\Adm\Dev\mybooks`, fora do OneDrive, e não deve voltar para uma pasta sincronizada: o OneDrive transforma arquivos em marcadores de nuvem, o `next dev` perde avisos de mudança e o `next build` falha com EPERM.
+- O repositório não tem remoto: o histórico existe só nesta máquina.
 - Fim de fase: typecheck, lint, testes e build sem erros → resumo do que testar manualmente → commit.
 
 ## Idioma e texto
@@ -52,6 +59,8 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Activity mantém até 3 rotas montadas e escondidas. Popover, menu, ⌘K e sheet fecham no cleanup de `useLayoutEffect`. Nenhuma página escreve variável CSS global. O logout usa `window.location.assign`.
 - Links para `/livro/[id]` em listas usam `<BookLink>` (prefetch completo por intenção); sem isso o morph da capa não acontece.
 - `usePathname` e `useSearchParams` em client components ficam dentro de `<Suspense>`; sem isso, com Cache Components, o build falha.
+- As barras do app são estáticas: só o que depende da conta (o canto da conta e o "Minha estante") chega em slots com `<Suspense>` (`TopNav slots`, `BottomNav estante`). Barra inteira num Suspense é trocada no meio de um clique e briga com o `aria-hidden` dos modais do Radix.
+- O `error.tsx` recebe `{ error: unknown, retry }` (no Next 16.4, `retry` no lugar de `reset`).
 - `next/image` usa o loader de `lib/image-loader.ts` (tamanhos S/M/L da Open Library, sem o otimizador da Vercel). Ele pede `default=false`: sem capa, a Open Library responde 404 (e não um GIF de 1px) e a capa tipográfica entra. `priority` foi descontinuado: use `preload` só na capa que é o LCP.
 
 ## Dados e segurança (Supabase)
@@ -63,7 +72,11 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
   - `proxy.ts`: `updateSession`, chamado pelo `proxy.ts` da raiz.
 - Variáveis: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` podem ir para o cliente. `SUPABASE_SECRET_KEY` fica só em código com `import 'server-only'` ou em scripts. Toda variável nova é documentada em `.env.example`.
 - Autorização sempre com `supabase.auth.getClaims()`, via `getViewer()` e `requireViewer()` de `lib/auth.ts`. Nunca confie em `getSession()` no servidor.
-- RLS em todas as tabelas. Migrations ficam em `supabase/migrations/`; os tipos gerados ficam em `lib/supabase/database.types.ts` e não são editados à mão.
+- RLS em todas as tabelas. Migrations ficam em `supabase/migrations/`; os tipos gerados ficam em `lib/supabase/database.types.ts` e não são editados à mão. Funções internas ficam no schema `private` (fora da API), com `search_path = ''`.
+- Leituras de quem está vendo (`getViewer`, `getShelf`, `getOwnProfile`) usam `'use cache: private'` com `cacheLife` e tag (`profile:<username>`, `shelf:<userId>`). Leitura com a sessão fora de cache faz o dev acusar `Date.now()` no pré-render.
+- Leituras e buscas do cliente vão por Route Handler GET: `/api/books/search`, `/api/usernames/availability` e `/api/readers/suggestions`.
+- Avatar no banco: o caminho no bucket (`avatars/<id>/<arquivo>`) ou a URL do Google; `avatarSrc` (`features/profile/lib/avatar.ts`) monta a URL. Capa no catálogo: a URL da Open Library ou `covers/<id do livro>`, e só o servidor grava no bucket `covers`.
+- Os @ reservados existem em dois lugares, `private.reserved_usernames()` e `RESERVED_USERNAMES` (`features/profile/lib/username.ts`); `tests/db/usernames.test.ts` confere que são iguais.
 - Toda Server Action segue a sequência zod → `requireViewer()` → escrita → `updateTag()` → `ActionResult` (`{ ok: true, data } | { ok: false, error }`). Erro esperado nunca vira exceção. A UI aplica `useOptimistic` antes da resposta.
 - A Open Library só é chamada pelo servidor, com `User-Agent` identificado e cache. Nada de download em massa.
 
@@ -105,7 +118,10 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 ## Testes
 
 - Vitest para utilitários puros, em `*.test.ts` ao lado do código. `tests/design-rules.test.ts` barra hex solto em TS/TSX, classes da paleta padrão do Tailwind e `outline-none` que apaga o foco, e confere que o CSS espelha `lib/motion.ts`, o raio da capa e as tintas `--ink`/`--paper`.
-- Playwright em `e2e/`, com seletores por papel (`getByRole`), porque o Activity deixa rotas escondidas no DOM. `e2e/helpers.ts` tem `trackPageErrors`, `presetTheme` e `openCommandPalette`.
+- Playwright em `e2e/`, com seletores por papel (`getByRole`), porque o Activity deixa rotas escondidas no DOM. `e2e/helpers.ts` tem `trackPageErrors`, `presetTheme`, `openCommandPalette` e `waitForHydration` (use logo depois do `goto` quando a interação depende de JS: antes de hidratar, um link segue o HTML e um botão não responde).
+- Testes de banco em `tests/db/`: SQL dentro de `begin … rollback` (`tests/db/sql.ts`: `createUser`, `asUser`, `asAnon`, `asAdmin`, `check`, `rejects`). Um `update` que a RLS filtra não dá erro, só afeta 0 linhas: confira com `check` depois. O seed está no banco: conte só o que o teste criou.
+- E2E com conta: `e2e/support/supabase-admin.ts` cria e apaga contas pelo admin (`createTestUser`, `deleteTestUser`, que também apaga os avatares) e monta os cookies de sessão (`sessionCookies`; com `expired`, o proxy precisa renovar). Nenhum E2E manda e-mail: o link mágico vem do `generateLink`, aberto em `/auth/confirm`.
+- O anunciador de rotas do Next também tem `role="alert"`: ao procurar o alerta de um formulário, exclua `#__next-route-announcer__`.
 - O NumberFlow deixa o HTML do servidor fora da tela, no light DOM. Leia contadores com `toHaveText(texto, { useInnerText: true })`.
 
 ## Git

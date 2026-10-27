@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookCover } from "@/features/books/components/book-cover";
+import type { SearchResult } from "@/features/books/lib/search-result";
 import type { BookVisual } from "@/features/books/types";
 import { addToShelf, removeFromShelf } from "@/features/shelf/actions";
 import type { ShelfStatus } from "@/features/shelf/schemas";
@@ -25,6 +26,26 @@ type Search =
   | { state: "idle" }
   | { state: "done"; query: string; results: BookVisual[] }
   | { state: "error"; query: string };
+
+// Por enquanto o onboarding só oferece livros que já estão no catálogo; os de
+// fora entram com a paleta de adicionar livro
+function catalogBooks(results: SearchResult[]): BookVisual[] {
+  return results.flatMap((result) =>
+    result.catalogId
+      ? [
+          {
+            id: result.catalogId,
+            title: result.title,
+            authors: result.authors,
+            coverUrl: result.coverUrl,
+            coverColor: result.coverColor ?? null,
+            pageCount: result.pageCount,
+            publishedYear: result.publishedYear,
+          },
+        ]
+      : [],
+  );
+}
 
 /** Busca no catálogo com debounce; a anterior é cancelada a cada letra. */
 function useCatalogSearch(query: string): Search | { state: "loading" } {
@@ -37,14 +58,18 @@ function useCatalogSearch(query: string): Search | { state: "loading" } {
     const timer = setTimeout(async () => {
       try {
         const response = await fetch(
-          `/api/books/search?q=${encodeURIComponent(trimmed)}`,
+          `/api/books/search?q=${encodeURIComponent(trimmed)}&scope=catalog`,
           { signal: controller.signal },
         );
         if (!response.ok) throw new Error(String(response.status));
         const { results } = (await response.json()) as {
-          results: BookVisual[];
+          results: SearchResult[];
         };
-        setSearch({ state: "done", query: trimmed, results });
+        setSearch({
+          state: "done",
+          query: trimmed,
+          results: catalogBooks(results),
+        });
       } catch {
         // Cancelada pela próxima letra, ou a busca falhou de verdade
         if (!controller.signal.aborted) {

@@ -3,7 +3,8 @@
  * Google Books e o nosso catálogo) e já limpo para caber nas colunas de books.
  */
 export type SearchResult = {
-  source: "openlibrary" | "google";
+  /** "manual" só vem do catálogo, e aí sourceId é o id do catálogo. */
+  source: "openlibrary" | "google" | "manual";
   sourceId: string;
   title: string;
   subtitle: string | null;
@@ -19,6 +20,8 @@ export type SearchResult = {
   coverUrl: string | null;
   /** Presente quando o livro já está no catálogo. */
   catalogId?: string;
+  /** Cor da capa, quando o livro já está no catálogo. */
+  coverColor?: string | null;
 };
 
 /** Limites das colunas de books: a migration do catálogo usa os mesmos. */
@@ -33,6 +36,12 @@ export const BOOK_LIMITS = {
   minYear: 1,
   maxYear: 2100,
 } as const;
+
+/**
+ * Quanto a busca espera por uma fonte de fora. A Open Library às vezes leva
+ * 20s ou nem responde; depois disso ela conta como falha e a busca segue.
+ */
+export const SOURCE_TIMEOUT_MS = 10_000;
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

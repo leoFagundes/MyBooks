@@ -5,6 +5,7 @@ import {
   dedupeResults,
   isRecord,
   pickIsbns,
+  SOURCE_TIMEOUT_MS,
   type SearchResult,
   toLanguage,
   toPageCount,
@@ -94,23 +95,28 @@ const waitTurn = createThrottle(1000);
 
 /**
  * Busca na Open Library (só pelo servidor). Devolve os resultados normalizados
- * e sem duplicatas, ou null quando ela falha, para a busca tentar o Google.
+ * e sem duplicatas, ou null quando ela falha ou passa de `timeoutMs`, para a
+ * busca tentar o Google.
  */
 export async function searchOpenLibrary(
   query: string,
   fetcher: typeof fetch = fetch,
+  timeoutMs = SOURCE_TIMEOUT_MS,
 ): Promise<SearchResult[] | null> {
   const url = new URL(SEARCH_URL);
   url.searchParams.set("q", query);
   url.searchParams.set("fields", FIELDS);
   url.searchParams.set("limit", "20");
   await waitTurn();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetcher(url, {
       headers: {
         "User-Agent": OPEN_LIBRARY_USER_AGENT,
         Accept: "application/json",
       },
+      signal: controller.signal,
     });
     if (!response.ok) return null;
     const body: unknown = await response.json();
@@ -120,5 +126,7 @@ export async function searchOpenLibrary(
     );
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

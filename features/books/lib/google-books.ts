@@ -5,6 +5,7 @@ import {
   dedupeResults,
   isRecord,
   pickIsbns,
+  SOURCE_TIMEOUT_MS,
   type SearchResult,
   toLanguage,
   toPageCount,
@@ -65,12 +66,13 @@ export function normalizeGoogleVolume(volume: unknown): SearchResult | null {
 /**
  * Busca no Google Books (só pelo servidor), a alternativa quando a Open
  * Library falha ou não acha nada. Sem chave de API nem tenta: a cota anônima
- * do Google é zero. Devolve null quando não há resposta útil.
+ * do Google é zero. Devolve null quando não há resposta útil a tempo.
  */
 export async function searchGoogleBooks(
   query: string,
   apiKey: string | undefined,
   fetcher: typeof fetch = fetch,
+  timeoutMs = SOURCE_TIMEOUT_MS,
 ): Promise<SearchResult[] | null> {
   if (!apiKey) return null;
   const url = new URL(VOLUMES_URL);
@@ -78,9 +80,12 @@ export async function searchGoogleBooks(
   url.searchParams.set("printType", "books");
   url.searchParams.set("maxResults", "20");
   url.searchParams.set("key", apiKey);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetcher(url, {
       headers: { Accept: "application/json" },
+      signal: controller.signal,
     });
     if (!response.ok) return null;
     const body: unknown = await response.json();
@@ -90,5 +95,7 @@ export async function searchGoogleBooks(
     );
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

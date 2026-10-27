@@ -100,4 +100,28 @@ describe("searchGoogleBooks", () => {
     });
     expect(await searchGoogleBooks("x", "chave", offline)).toBeNull();
   });
+
+  test("Google lento vira null em 10s", async () => {
+    vi.useFakeTimers();
+    try {
+      const hanging = vi.fn<typeof fetch>(
+        (_input, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(init.signal?.reason),
+            );
+          }),
+      );
+      let settled = false;
+      const search = searchGoogleBooks("x", "chave", hanging).finally(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(search).resolves.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

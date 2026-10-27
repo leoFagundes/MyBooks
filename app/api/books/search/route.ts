@@ -1,17 +1,19 @@
 import type { NextRequest } from "next/server";
-import { toBookVisual } from "@/features/books/lib/to-book-visual";
-import { createPublicClient } from "@/lib/supabase/public";
+import { searchBooks, type SearchScope } from "@/features/books/queries";
 
-// Busca do catálogo (o onboarding procura entre os livros do seed); a Open
-// Library e o Google Books entram na Fase 3. Menos de 2 letras: lista vazia
+const SCOPES: readonly string[] = ["all", "catalog", "external"];
+const isScope = (value: string | null): value is SearchScope =>
+  value !== null && SCOPES.includes(value);
+
+// Leitura por GET (o cliente despacha Server Actions uma por vez); o cache
+// fica dentro do searchBooks, por consulta
 export async function GET(request: NextRequest) {
-  const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
-  if (q.length < 2) return Response.json({ results: [] });
-
-  const { data, error } = await createPublicClient().rpc("search_catalog", {
-    q,
-    max_results: 8,
-  });
-  if (error) return Response.json({ results: [] }, { status: 502 });
-  return Response.json({ results: data.map(toBookVisual) });
+  const params = request.nextUrl.searchParams;
+  const scope = params.get("scope");
+  const results = await searchBooks(
+    params.get("q") ?? "",
+    isScope(scope) ? scope : "all",
+  );
+  if (results === null) return Response.json({ results: [] }, { status: 502 });
+  return Response.json({ results });
 }

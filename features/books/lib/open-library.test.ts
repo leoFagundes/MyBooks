@@ -193,4 +193,24 @@ describe("searchOpenLibrary", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
     await expect(Promise.all([first, second])).resolves.toEqual([[], []]);
   });
+
+  test("Open Library lenta vira null em 10s, para a busca não travar", async () => {
+    vi.setSystemTime(new Date("2026-10-25T14:00:00Z"));
+    const hanging = vi.fn<typeof fetch>(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason),
+          );
+        }),
+    );
+    let settled = false;
+    const search = searchOpenLibrary("sertao", hanging).finally(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(search).resolves.toBeNull();
+  });
 });

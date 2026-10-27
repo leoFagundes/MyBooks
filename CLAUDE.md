@@ -16,10 +16,13 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
   - Já existe: schema com RLS (perfis, catálogo, estante, citações, follows, coleções, atividades e notificações por trigger), Storage (avatares e capas), seed (8 leitores, 44 livros, coleções), tipos gerados, entrar e cadastrar (e-mail e senha, link mágico, Google), sair, barra com a conta, `/inicio` provisório e onboarding em 4 passos.
   - E-mails: saem com o modelo padrão do Supabase, em inglês (o plano gratuito com o e-mail padrão não aceita modelos próprios), e só chegam a quem é da equipe do projeto, 2 por hora. Os links voltam por `/auth/callback` e precisam abrir no mesmo navegador. Os modelos em pt-BR de `supabase/templates` entram com o SMTP próprio, na Fase 8.
   - Google: falta criar o cliente OAuth no Google Cloud, com o retorno `https://djehboxlhvjtlrvmdiis.supabase.co/auth/v1/callback`, e ligar o provedor no Supabase. Até lá, o botão avisa que o login com Google ainda não está ligado.
-- Fase 3 (Estante), branch `fase-3-estante`, rebaseada sobre a fase 2 terminada: transições entre páginas, `<BookLink>`, topo da página do livro com a viagem da capa (demonstração em `/dev/livro/[slug]`) e normalização da Open Library e do Google Books (`features/books/lib/search-result.ts`). Faltam as Tasks 5–12.
-- Ainda não existem as páginas além de `/`, `/dev`, `/dev/livro/[slug]`, `/entrar`, `/cadastro`, `/onboarding` e `/inicio`: os links da navegação e das lombadas (`/explorar`, `/@usuario`, `/livro/[id]`) dão 404 até a fase de cada um. As demos do `/dev` usam `features/books/sample-books.ts`, com os mesmos slugs do seed (`seedId` de `scripts/seed-ids.ts` dá o id). Tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem.
+- Fase 3 (Estante) entregue em 27/10/2026 na branch `fase-3-estante` (rebaseada sobre a fase 2), aguardando seu ok para o merge.
+  - Já existe: transições entre páginas e a viagem da capa; busca no catálogo e na Open Library (Google Books de reserva); livro novo no catálogo com cor e capas em três larguras; paleta de adicionar livro (+, tecla N e ⌘K) com cadastro manual; perfil `/@usuario` com cabeçalho, contadores, abas, edição e perfil privado; aba Estante com status, busca, filtros, ordem e vista na URL; página `/livro/[id]` com o bloco da pessoa (resenha que salva sozinha, citações) e a comunidade.
+  - Testes que ficaram para depois, a pedido do usuário (para economizar): unitários dos filtros, E2E da aba Estante, da página do livro e da viagem da capa entre as páginas reais.
+- Fase 4 (Coleções): a parte sem banco (Tasks 1–5) está na branch `fase-4-colecoes`, cortada da fase 3 antiga; ela é rebaseada sobre a fase 3 terminada quando a fase 4 começar. Trabalhamos uma fase por vez: ao fim de cada uma, o usuário confere antes da próxima.
+- Páginas que existem: `/`, `/dev`, `/dev/livro/[slug]`, `/entrar`, `/cadastro`, `/onboarding`, `/inicio`, `/@usuario` (com `/colecoes` e `/citacoes`) e `/livro/[id]`. Dão 404 até a fase de cada uma: `/explorar` (5), `/colecao/[id]` (4) e `/configuracoes`. As demos do `/dev` usam `features/books/sample-books.ts`, com os mesmos slugs do seed (`seedId` de `scripts/seed-ids.ts` dá o id). Tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem (as dinâmicas e o perfil continuam com ele).
 - O catálogo segue `BOOK_LIMITS` (`search-result.ts`) nos checks do banco, e o `source_id` da Open Library é o id da obra sem `/works/`.
-- O Google Books só responde com `GOOGLE_BOOKS_API_KEY` (a cota anônima é zero); ela entra na busca da Task 5.
+- O Google Books só responde com `GOOGLE_BOOKS_API_KEY` (opcional, no `.env.example`; a cota anônima é zero).
 - Atualize esta seção ao fim de cada fase.
 
 ## Comandos
@@ -51,18 +54,22 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - `cn` (em `lib/utils.ts`) vem do pacote `cn` com os tokens próprios registrados (raios `control`/`card`/`cover`, curva `standard`, `shimmer`). Token novo de tema que vira classe entra ali também, ou o merge de classes descarta a classe errada.
 - Números exibidos passam por `formatNumber` de `lib/format.ts` (pt-BR, `1.204`).
 - O perfil tem URL pública `/@usuario`, servida por `app/(app)/u/[username]` via rewrite. Monte URLs sempre com `lib/routes.ts`; com `typedRoutes`, um `/@...` escrito à mão não compila.
+- Adicionar livro: `useAddBook().open()` abre a paleta na busca e `openWith(livro)` já no passo de status. A tecla N e o + da pílula só funcionam com conta (`AddBookShortcut`, montado pela barra).
 
 ## Next.js 16: o que mais pega
 
 - Middleware agora se chama `proxy.ts` (função `proxy`, runtime Node).
 - Cache Components está ligado. `cookies()`, `headers()`, `params` e `searchParams` só podem ser lidos dentro de `<Suspense>` (com skeleton) ou de uma função `'use cache: private'`. Nunca leia a sessão no topo de um layout.
-- Todo `'use cache'` leva `cacheLife(...)` e `cacheTag(...)`. Tags: `book:<id>`, `profile:<username>`, `shelf:<userId>`, `collection:<id>`.
+- Todo `'use cache'` leva `cacheLife(...)` e `cacheTag(...)`. Tags: `book:<id>` (o livro e a comunidade dele), `profile:<username>` (perfil, contadores e a relação com quem vê), `shelf:<userId>` (estante e citações), `collection:<id>` e `catalog` (a busca no catálogo).
 - Depois de uma mutação, chame `updateTag(tag)` dentro da Server Action. `revalidateTag` exige dois argumentos: `revalidateTag(tag, 'max')`.
 - O cliente despacha Server Actions uma por vez. Nunca use uma para leitura ou busca; use um Route Handler GET.
 - Activity mantém até 3 rotas montadas e escondidas. Popover, menu, ⌘K e sheet fecham no cleanup de `useLayoutEffect`. Nenhuma página escreve variável CSS global. O logout usa `window.location.assign`.
 - Links para `/livro/[id]` em listas usam `<BookLink>` (prefetch completo por intenção); sem isso o morph da capa não acontece. O prefetch da intenção (`Next-Router-Prefetch: 2`) pode esperar a fila dos prefetches automáticos: nos testes, espere esse pedido antes do clique.
 - O voltar e o avançar do navegador nunca animam: o Next restaura a rota guardada de forma síncrona. A volta animada é um link da própria página.
 - `usePathname` e `useSearchParams` em client components ficam dentro de `<Suspense>`; sem isso, com Cache Components, o build falha.
+- Aba ativa num layout vem de `useSelectedLayoutSegment`, não do `usePathname`: com o rewrite de `/@usuario`, o pathname do servidor e o do navegador não batem.
+- `generateMetadata` que lê `params` precisa de conteúdo dinâmico (em Suspense) no segmento da própria página; senão, com o Partial Prefetching, o dev acusa "URL data in `generateMetadata()`". Por isso cada aba do perfil confere a privacidade sozinha, em vez de o layout esconder a página.
+- Filtro guardado na URL sem ida ao servidor: `window.history.replaceState` (o Next acompanha no `useSearchParams`). Veja a aba Estante (`features/shelf/lib/filters.ts`).
 - As barras do app são estáticas: só o que depende da conta (o canto da conta e o "Minha estante") chega em slots com `<Suspense>` (`TopNav slots`, `BottomNav estante`). Barra inteira num Suspense é trocada no meio de um clique e briga com o `aria-hidden` dos modais do Radix.
 - O `error.tsx` recebe `{ error: unknown, retry }` (no Next 16.4, `retry` no lugar de `reset`).
 - `next/image` usa o loader de `lib/image-loader.ts` (tamanhos S/M/L da Open Library, sem o otimizador da Vercel). Ele pede `default=false`: sem capa, a Open Library responde 404 (e não um GIF de 1px) e a capa tipográfica entra. `priority` foi descontinuado: use `preload` só na capa que é o LCP.
@@ -78,7 +85,9 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Autorização sempre com `supabase.auth.getClaims()`, via `getViewer()` e `requireViewer()` de `lib/auth.ts`. Nunca confie em `getSession()` no servidor.
 - RLS em todas as tabelas. Migrations ficam em `supabase/migrations/`; os tipos gerados ficam em `lib/supabase/database.types.ts` e não são editados à mão. Funções internas ficam no schema `private` (fora da API), com `search_path = ''`.
 - Leituras de quem está vendo (`getViewer`, `getShelf`, `getOwnProfile`) usam `'use cache: private'` com `cacheLife` e tag (`profile:<username>`, `shelf:<userId>`). Leitura com a sessão fora de cache faz o dev acusar `Date.now()` no pré-render.
-- Leituras e buscas do cliente vão por Route Handler GET: `/api/books/search`, `/api/usernames/availability` e `/api/readers/suggestions`.
+- Leituras e buscas do cliente vão por Route Handler GET: `/api/books/search`, `/api/usernames/availability` e `/api/readers/suggestions`. No cliente, só a busca da paleta usa React Query (`components/shell/query-provider.tsx`).
+- Busca de livros: `/api/books/search?q=&scope=all|catalog|external`. A paleta pede o catálogo (na hora) e as fontes de fora (Open Library, depois Google Books) em separado. Cada fonte de fora desiste em 10s, e falha não fica no cache (a função em cache lança erro).
+- Livro de fora só entra no catálogo pelo servidor: `ensureCatalogBook` (`features/books/lib/catalog.ts`, com a chave secreta de `lib/supabase/admin.ts`) acha pela obra ou pelo ISBN-13; se for novo, baixa a capa uma vez, tira a cor, grava `covers/<id>/S|M|L.webp` (96, 240 e 480) e traduz os assuntos para os gêneros do MyBooks (`toGenreSlugs`). Quem está logado só insere livro manual (RLS). O `addBook` nunca recebe dados do livro do cliente: refaz a busca, do cache, com `findExternalResult`.
 - Avatar no banco: o caminho no bucket (`avatars/<id>/<arquivo>`) ou a URL do Google; `avatarSrc` (`features/profile/lib/avatar.ts`) monta a URL. Capa no catálogo: a URL da Open Library ou `covers/<id do livro>`, e só o servidor grava no bucket `covers`.
 - Os @ reservados existem em dois lugares, `private.reserved_usernames()` e `RESERVED_USERNAMES` (`features/profile/lib/username.ts`); `tests/db/usernames.test.ts` confere que são iguais.
 - Toda Server Action segue a sequência zod → `requireViewer()` → escrita → `updateTag()` → `ActionResult` (`{ ok: true, data } | { ok: false, error }`). Erro esperado nunca vira exceção. A UI aplica `useOptimistic` antes da resposta.
@@ -128,6 +137,7 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - E2E com conta: `e2e/support/supabase-admin.ts` cria e apaga contas pelo admin (`createTestUser`, `deleteTestUser`, que também apaga os avatares) e monta os cookies de sessão (`sessionCookies`; com `expired`, o proxy precisa renovar). Nenhum E2E manda e-mail: o link mágico vem do `generateLink`, aberto em `/auth/confirm`.
 - O anunciador de rotas do Next também tem `role="alert"`: ao procurar o alerta de um formulário, exclua `#__next-route-announcer__`.
 - O NumberFlow deixa o HTML do servidor fora da tela, no light DOM. Leia contadores com `toHaveText(texto, { useInnerText: true })`.
+- Texto que chega por streaming fica uns 200ms também numa cópia escondida (`div#S:n[hidden]`), e o Activity guarda abas escondidas com o mesmo texto: procure dentro de um landmark (`getByRole("main")`), por papel, ou com `.filter({ visible: true })`.
 
 ## Git
 

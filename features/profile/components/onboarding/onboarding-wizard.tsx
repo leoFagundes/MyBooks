@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
 import { BooksStep } from "./books-step";
 import { GenresStep } from "./genres-step";
 import { type ProfileDraft, ProfileStep } from "./profile-step";
-import { type FollowState, ReadersStep } from "./readers-step";
+import type { FollowState } from "@/features/social/types";
+import { ReadersStep } from "./readers-step";
 
 const TOTAL = 4;
 

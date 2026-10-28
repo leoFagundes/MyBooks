@@ -16,6 +16,8 @@ import {
   getProfileFromParam,
   getProfileRelation,
 } from "@/features/profile/queries";
+import { FollowButton } from "@/features/social/components/follow-button";
+import { relationToState } from "@/features/social/lib/follow-state";
 import { routes } from "@/lib/routes";
 
 type Params = LayoutProps<"/u/[username]">["params"];
@@ -78,7 +80,18 @@ async function ProfileTop({ params }: { params: Params }) {
         profile={profile}
         counts={counts}
         action={
-          relation === "self" ? <EditProfileSheet profile={profile} /> : null
+          relation === "self" ? (
+            <EditProfileSheet profile={profile} />
+          ) : (
+            <FollowButton
+              reader={{
+                id: profile.id,
+                username: profile.username,
+                isPrivate: profile.isPrivate,
+              }}
+              state={relationToState(relation)}
+            />
+          )
         }
       />
       <ProfileTabs username={profile.username} />

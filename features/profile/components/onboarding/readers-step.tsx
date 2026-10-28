@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useOptimistic, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useEffect, useState, useTransition } from "react";
 import { SwapText } from "@/components/motion/swap-text";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { followReader, unfollowReader } from "@/features/social/actions";
-import type { SuggestedReader } from "@/features/social/types";
+import { FollowButton } from "@/features/social/components/follow-button";
+import type { FollowState, SuggestedReader } from "@/features/social/types";
 import { initials } from "@/lib/initials";
 import { finishOnboarding } from "../../actions";
 import { genreLabel, type GenreSlug } from "../../genres";
 import { StepFrame } from "./step-frame";
 
-export type FollowState = "none" | "accepted" | "pending";
 
 type Suggestions =
   | { state: "loading" }
@@ -53,54 +51,6 @@ function tasteLine(reader: SuggestedReader, genres: GenreSlug[]) {
     .filter((label): label is string => label !== null);
   if (labels.length === 0) return null;
   return `${shared.length > 0 ? "Também lê" : "Lê"} ${list.format(labels)}`;
-}
-
-function FollowButton({
-  reader,
-  state,
-  onChange,
-}: {
-  reader: SuggestedReader;
-  state: FollowState;
-  onChange: (state: FollowState) => void;
-}) {
-  const [optimistic, setOptimistic] = useOptimistic(state);
-  const [, startTransition] = useTransition();
-
-  function toggle() {
-    startTransition(async () => {
-      if (optimistic === "none") {
-        setOptimistic(reader.isPrivate ? "pending" : "accepted");
-        const result = await followReader(reader.id);
-        if (result.ok) onChange(result.data.status);
-        else toast.error(result.error);
-        return;
-      }
-      setOptimistic("none");
-      const result = await unfollowReader(reader.id);
-      if (result.ok) onChange("none");
-      else toast.error(result.error);
-    });
-  }
-
-  const label =
-    optimistic === "accepted"
-      ? "Seguindo"
-      : optimistic === "pending"
-        ? "Solicitado"
-        : "Seguir";
-  return (
-    <Button
-      type="button"
-      size="sm"
-      variant={optimistic === "none" ? "primary" : "outline"}
-      onClick={toggle}
-      aria-label={`${label} @${reader.username}`}
-      className="min-w-24"
-    >
-      <SwapText text={label} />
-    </Button>
-  );
 }
 
 export function ReadersStep({
@@ -207,6 +157,7 @@ export function ReadersStep({
                   </div>
                   <FollowButton
                     reader={reader}
+                    size="sm"
                     state={follows[reader.id] ?? "none"}
                     onChange={(state) =>
                       onChange((current) => ({

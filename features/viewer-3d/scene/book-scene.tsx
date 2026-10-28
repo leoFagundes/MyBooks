@@ -1,11 +1,15 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
-import { type Group, NeutralToneMapping, PerspectiveCamera } from "three";
-import { bookColor } from "@/features/books/lib/color";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { type Group, PerspectiveCamera } from "three";
 import { CAMERA_FOV } from "../lib/framing";
 import type { PoseValues, SceneProps } from "../lib/types";
+import { BookModel } from "./book-model";
+import { Studio } from "./studio";
+
+// O livro flutua um pouco acima do chão, onde fica a sombra
+const FLOAT = 0.3;
 
 /**
  * A cena do visualizador (spec §5.7). É o único ponto de entrada de three,
@@ -14,6 +18,7 @@ import type { PoseValues, SceneProps } from "../lib/types";
  */
 export default function BookScene({
   book,
+  description,
   dims,
   framing,
   pose,
@@ -23,24 +28,27 @@ export default function BookScene({
     <Canvas
       frameloop="demand"
       dpr={[1, 2]}
+      // Sem tone mapping: as cores da capa saem como na imagem, e o crossfade
+      // do clone 2D para o 3D não muda de cor
+      flat
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       camera={{ fov: CAMERA_FOV, near: 0.1, far: 100 }}
-      // O Neutral guarda as cores da capa: no crossfade, o 3D bate com o 2D
-      onCreated={({ gl }) => {
-        gl.toneMapping = NeutralToneMapping;
-      }}
     >
       <CameraRig dims={dims} framing={framing} pose={pose} />
       <ContextLossGuard />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[3, 4, 6]} intensity={1.6} />
+      <Studio floorY={-dims.height / 2 - FLOAT} />
       <PoseGroup pose={pose}>
-        <mesh>
-          <boxGeometry args={[dims.width, dims.height, dims.depth]} />
-          <meshStandardMaterial color={bookColor(book)} roughness={0.7} />
-        </mesh>
+        {/* As texturas carregam aqui dentro: o sinal de pronto só sai com o livro inteiro */}
+        <Suspense fallback={null}>
+          <BookModel
+            book={book}
+            description={description}
+            dims={dims}
+            pose={pose}
+          />
+          <ReadySignal onReady={onReady} />
+        </Suspense>
       </PoseGroup>
-      <ReadySignal onReady={onReady} />
     </Canvas>
   );
 }

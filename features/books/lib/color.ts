@@ -26,7 +26,8 @@ function toChannel(linearValue: number) {
   return Math.round(Math.min(1, Math.max(0, c)) * 255);
 }
 
-function toHex(rgb: readonly number[]) {
+/** Canais de 0 a 255 em hex: a única forma de cor que o código monta. */
+export function toHex(rgb: readonly number[]) {
   return `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 

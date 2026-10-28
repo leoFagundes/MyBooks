@@ -28,7 +28,7 @@ import type { BookVisual } from "@/features/books/types";
 import { durations, springs, tweens } from "@/lib/motion";
 import { bookDimensions } from "../lib/dimensions";
 import { frameBook, type Rect, type Size } from "../lib/framing";
-import type { PoseValues } from "../lib/types";
+import { type PoseValues, SETTLE_POSE } from "../lib/types";
 import { ViewerPill } from "./viewer-pill";
 
 // three, R3F e drei só chegam quando o visualizador abre (spec §5.7)
@@ -165,9 +165,19 @@ export function BookViewer({
   }, [landed, ready, failed]);
 
   // A cena desenhou a capa 3D exatamente onde o clone está: troca um pelo outro
+  // e, depois, o livro gira para a pose de 3/4: é quando ele vira 3D. Com
+  // movimento reduzido, o livro já entra girado, só com opacidade
   const reveal = useEffectEvent(() => {
+    if (reduced) {
+      pose.yaw.jump(SETTLE_POSE.yaw);
+      pose.pitch.jump(SETTLE_POSE.pitch);
+    }
     animate(sceneOpacity, 1, tweens.base);
-    animate(cloneOpacity, 0, tweens.base);
+    animate(cloneOpacity, 0, tweens.base).then(() => {
+      if (reduced || closingRef.current) return;
+      animate(pose.yaw, SETTLE_POSE.yaw, springs.gentle);
+      animate(pose.pitch, SETTLE_POSE.pitch, springs.gentle);
+    });
   });
 
   useEffect(() => {
@@ -178,7 +188,11 @@ export function BookViewer({
   // volta para a capa da página, enquanto o fundo some
   const leave = useEffectEvent(async () => {
     await Promise.all([
-      animate(pose.yaw, Math.round(pose.yaw.get() / TURN) * TURN, springs.snappy),
+      animate(
+        pose.yaw,
+        Math.round(pose.yaw.get() / TURN) * TURN,
+        springs.snappy,
+      ),
       animate(pose.pitch, 0, springs.snappy),
       animate(pose.zoom, 1, springs.snappy),
       animate(pose.open, 0, springs.snappy),
@@ -231,7 +245,7 @@ export function BookViewer({
         {/* O fundo é o Overlay: é nele que o Radix trava a rolagem da página */}
         <DialogPrimitive.Overlay asChild>
           <motion.div
-            className="fixed inset-0 z-50 isolate bg-background"
+            className="fixed inset-0 isolate z-50 bg-background"
             style={{ opacity: chrome }}
           >
             <AmbientGlow color={bookColor(book)} />

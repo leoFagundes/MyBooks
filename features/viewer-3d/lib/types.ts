@@ -17,6 +17,13 @@ export type PoseValues = {
   tiltPitch: MotionValue<number>;
 };
 
+/**
+ * Pose de 3/4 depois da chegada: a lombada à vista e um pouco do topo. A
+ * câmera fica na altura do meio do livro, então o topo só aparece com o
+ * livro inclinado mais de uns 10°.
+ */
+export const SETTLE_POSE = { yaw: 0.5, pitch: 0.28 } as const;
+
 /** O que a cena 3D recebe do visualizador. */
 export type SceneProps = {
   book: BookVisual;

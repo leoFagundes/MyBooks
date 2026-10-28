@@ -587,10 +587,65 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      trending_books: {
+        Row: {
+          book_id: string | null
+          total_adds: number | null
+          week_adds: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       copy_collection: { Args: { source: string }; Returns: string }
+      feed_activities: {
+        Args: { before_at?: string; before_id?: string; max_rows?: number }
+        Returns: {
+          actor_id: string
+          book_id: string | null
+          collection_id: string | null
+          created_at: string
+          id: string
+          target_user_id: string | null
+          type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "activities"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      popular_collections: {
+        Args: { max_results?: number }
+        Returns: {
+          copied_from_id: string | null
+          copied_from_owner_id: string | null
+          created_at: string
+          description: string | null
+          emoji: string | null
+          id: string
+          is_collaborative: boolean
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "collections"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       profile_counts: {
         Args: { profile_id: string }
         Returns: {
@@ -598,6 +653,26 @@ export type Database = {
           collections: number
           followers: number
           following: number
+        }[]
+      }
+      readers_by_affinity: {
+        Args: { max_results?: number }
+        Returns: {
+          avatar_url: string
+          common_books: number
+          display_name: string
+          favorite_genres: string[]
+          id: string
+          is_private: boolean
+          score: number
+          username: string
+        }[]
+      }
+      reading_affinity: {
+        Args: { a: string; b: string }
+        Returns: {
+          common_books: number
+          score: number
         }[]
       }
       search_catalog: {
@@ -624,6 +699,49 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "books"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      search_collections: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          copied_from_id: string | null
+          copied_from_owner_id: string | null
+          created_at: string
+          description: string | null
+          emoji: string | null
+          id: string
+          is_collaborative: boolean
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "collections"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      search_readers: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          favorite_genres: string[]
+          id: string
+          is_private: boolean
+          onboarded_at: string | null
+          updated_at: string
+          username: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
           isOneToOne: false
           isSetofReturn: true
         }

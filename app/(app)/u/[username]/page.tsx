@@ -49,6 +49,7 @@ async function ShelfTab({ params }: { params: Params }) {
       <ProfileShelf
         entries={shelf}
         owner={relation === "self" ? null : firstName(profile.displayName)}
+        ownerId={profile.id}
         ownedIds={ownedIds}
       />
     </PageTransition>

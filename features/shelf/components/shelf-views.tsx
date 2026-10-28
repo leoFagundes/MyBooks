@@ -53,11 +53,22 @@ type BookHref = (book: BookVisual) => Route;
 
 const toBookPage: BookHref = (book) => routes.book(book.id);
 
+/**
+ * O que acompanha cada livro na estante de outra pessoa (o Copiar ou o selo
+ * "Na sua estante"). `active`: na Estante, a lombada em destaque.
+ */
+export type BookAction = (
+  book: BookVisual,
+  place: ShelfView,
+  active: boolean,
+) => React.ReactNode;
+
 type ShelfViewsProps = {
   books: BookVisual[];
   view: ShelfView;
   /** Para onde cada livro leva (padrão: a página do livro). */
   bookHref?: BookHref;
+  bookAction?: BookAction;
   className?: string;
 };
 
@@ -70,6 +81,7 @@ export function ShelfViews({
   books,
   view,
   bookHref = toBookPage,
+  bookAction,
   className,
 }: ShelfViewsProps) {
   const group = useId();
@@ -95,11 +107,28 @@ export function ShelfViews({
             exit="exit"
           >
             {view === "estante" ? (
-              <Shelf books={books} label="Estante" bookHref={bookHref} />
+              <Shelf
+                books={books}
+                label="Estante"
+                bookHref={bookHref}
+                accessory={
+                  bookAction
+                    ? (book, active) => bookAction(book, "estante", active)
+                    : undefined
+                }
+              />
             ) : view === "grade" ? (
-              <CoverGrid books={books} bookHref={bookHref} />
+              <CoverGrid
+                books={books}
+                bookHref={bookHref}
+                bookAction={bookAction}
+              />
             ) : (
-              <BookTable books={books} bookHref={bookHref} />
+              <BookTable
+                books={books}
+                bookHref={bookHref}
+                bookAction={bookAction}
+              />
             )}
           </motion.div>
         </AnimatePresence>
@@ -111,9 +140,11 @@ export function ShelfViews({
 function CoverGrid({
   books,
   bookHref,
+  bookAction,
 }: {
   books: BookVisual[];
   bookHref: BookHref;
+  bookAction?: BookAction;
 }) {
   return (
     <ul
@@ -121,15 +152,25 @@ function CoverGrid({
       className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6"
     >
       {books.map((book) => (
-        <li key={book.id}>
+        <li
+          key={book.id}
+          data-copy-item={bookAction ? "" : undefined}
+          className="group/livro relative"
+        >
           <BookLink
             book={book}
             href={bookHref(book)}
             aria-label={book.title}
+            data-copy-source
             className="block rounded-cover"
           >
             <BookCover book={book} size="fill" layoutId={`capa-${book.id}`} />
           </BookLink>
+          {bookAction ? (
+            <div className="absolute top-1.5 right-1.5">
+              {bookAction(book, "grade", false)}
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -139,9 +180,11 @@ function CoverGrid({
 function BookTable({
   books,
   bookHref,
+  bookAction,
 }: {
   books: BookVisual[];
   bookHref: BookHref;
+  bookAction?: BookAction;
 }) {
   // As linhas ficam nas células de texto, que esmaecem; a capa viaja sozinha.
   // Bordas separadas: coladas, quem pinta é a tabela, e elas não esmaeceriam.
@@ -175,6 +218,7 @@ function BookTable({
             book={book}
             href={bookHref(book)}
             cell={cell}
+            action={bookAction?.(book, "lista", false)}
           />
         ))}
       </tbody>
@@ -186,16 +230,18 @@ function BookRow({
   book,
   href,
   cell,
+  action,
 }: {
   book: BookVisual;
   href: Route;
   cell: string;
+  action?: React.ReactNode;
 }) {
   // Capa e título da linha são a mesma origem: os dois viajam juntos
   const source = useTransitionSource(book);
 
   return (
-    <tr className="group">
+    <tr data-copy-item={action ? "" : undefined} className="group group/livro">
       <td className="py-2 pr-4 align-middle">
         {/* O título já é o link para leitores de tela e teclado */}
         <BookLink
@@ -204,6 +250,7 @@ function BookRow({
           source={source}
           tabIndex={-1}
           aria-hidden
+          data-copy-source
           className="block rounded-cover"
         >
           <BookCover
@@ -215,26 +262,31 @@ function BookRow({
         </BookLink>
       </td>
       <motion.td variants={textVariants} className={cn(cell, "pr-4")}>
-        <BookLink
-          book={book}
-          href={href}
-          source={source}
-          className="font-serif text-lg leading-tight tracking-tight"
-        >
-          {/* Uma caixa só, do tamanho do texto, como o título do topo */}
-          <ViewTransition
-            name={source.isSource ? titleName(book.id) : undefined}
-            share="titulo"
-            default="none"
-          >
-            <span className="inline-block text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4">
-              {book.title}
-            </span>
-          </ViewTransition>
-        </BookLink>
-        <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-          {book.authors.join(", ")}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <BookLink
+              book={book}
+              href={href}
+              source={source}
+              className="font-serif text-lg leading-tight tracking-tight"
+            >
+              {/* Uma caixa só, do tamanho do texto, como o título do topo */}
+              <ViewTransition
+                name={source.isSource ? titleName(book.id) : undefined}
+                share="titulo"
+                default="none"
+              >
+                <span className="inline-block text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4">
+                  {book.title}
+                </span>
+              </ViewTransition>
+            </BookLink>
+            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+              {book.authors.join(", ")}
+            </p>
+          </div>
+          {action}
+        </div>
       </motion.td>
       <motion.td
         variants={textVariants}

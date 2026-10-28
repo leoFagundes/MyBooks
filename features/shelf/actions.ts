@@ -3,12 +3,18 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { catalogIdFor } from "@/features/books/lib/catalog-ref";
+import {
+  addBookToCollection,
+  removeFromCollection,
+} from "@/features/collections/actions";
 import { type ActionResult, fieldErrorsFrom } from "@/lib/action";
 import { requireViewer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AddBookInput,
   addBookSchema,
+  type CopyBookInput,
+  copyBookSchema,
   type QuoteInput,
   quoteSchema,
   reviewSchema,
@@ -55,6 +61,72 @@ export async function addBook(
   updateTag(`shelf:${viewer.id}`);
   updateTag(`book:${bookId.data}`);
   return { ok: true, data: { bookId: bookId.data } };
+}
+
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * Copia o livro da estante de outra pessoa (spec §5.4), guardando de quem
+ * veio. Livro que já está na estante fica como está (`added: false`). A
+ * coleção é opcional; se ela falhar, o livro continua copiado.
+ */
+export async function copyBook(input: CopyBookInput): Promise<
+  ActionResult<{
+    added: boolean;
+    addedToCollection: boolean;
+    collectionError: string | null;
+    shelfCount: number;
+  }>
+> {
+  const parsed = copyBookSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Esse livro não deu certo." };
+  const viewer = await requireViewer();
+  const { bookId, status, collectionId, fromUserId } = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.from("user_books").insert({
+    user_id: viewer.id,
+    book_id: bookId,
+    status,
+    copied_from_user_id: fromUserId === viewer.id ? null : fromUserId,
+  });
+  if (error && error.code !== UNIQUE_VIOLATION) {
+    return { ok: false, error: "Não deu para copiar agora. Tente de novo." };
+  }
+  const added = !error;
+  const inCollection =
+    added && collectionId
+      ? await addBookToCollection(collectionId, { catalogId: bookId })
+      : null;
+  const { count } = await supabase
+    .from("user_books")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", viewer.id);
+  updateTag(`shelf:${viewer.id}`);
+  updateTag(`book:${bookId}`);
+  return {
+    ok: true,
+    data: {
+      added,
+      addedToCollection: Boolean(inCollection?.ok && inCollection.data.added),
+      collectionError:
+        inCollection && !inCollection.ok ? inCollection.error : null,
+      shelfCount: count ?? 0,
+    },
+  };
+}
+
+/** O Desfazer do toast: tira da estante e, se a cópia pôs, da coleção. */
+export async function undoCopy(
+  bookId: string,
+  collectionId: string | null,
+): Promise<ActionResult> {
+  const removed = await removeFromShelf(bookId);
+  if (!removed.ok) return removed;
+  if (collectionId) {
+    const result = await removeFromCollection(collectionId, bookId);
+    if (!result.ok) return { ok: false, error: result.error };
+  }
+  return { ok: true, data: undefined };
 }
 
 export async function removeFromShelf(bookId: string): Promise<ActionResult> {

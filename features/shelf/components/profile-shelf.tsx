@@ -22,8 +22,9 @@ import {
 import type { ShelfItem } from "../queries";
 import type { ShelfStatus } from "../schemas";
 import { useAddBook } from "./add-book/add-book-provider";
+import { BookShelfAction, CopyBookScope } from "./copy-book";
 import { ShelfToolbar } from "./shelf-toolbar";
-import { ShelfViews } from "./shelf-views";
+import { type BookAction, ShelfViews } from "./shelf-views";
 
 const EMPTY_STATUS: Record<ShelfStatus, string> = {
   read: "Nenhum livro lido por aqui",
@@ -40,11 +41,14 @@ const EMPTY_STATUS: Record<ShelfStatus, string> = {
 export function ProfileShelf({
   entries,
   owner,
+  ownerId,
   ownedIds,
 }: {
   entries: ShelfItem[];
   /** Primeiro nome de quem é a estante; null quando é de quem está vendo. */
   owner: string | null;
+  /** De quem é a estante (a origem do que se copia daqui). */
+  ownerId: string;
   /**
    * Os livros que quem vê tem na própria estante (perfil de outra pessoa,
    * com conta); null no próprio perfil e para visitante.
@@ -110,8 +114,20 @@ export function ProfileShelf({
     filterShelf(entries, current, { ownedIds: owned }),
     current.sort,
   );
+  // Na estante dos outros, cada livro tem o Copiar ou o selo "Na sua estante"
+  const bookAction: BookAction | undefined = owned
+    ? (book, place, active) => (
+        <BookShelfAction
+          book={book}
+          fromUserId={ownerId}
+          owned={owned.has(book.id)}
+          place={place}
+          active={active}
+        />
+      )
+    : undefined;
 
-  return (
+  const shelf = (
     <div className="flex flex-col gap-6">
       <ShelfToolbar
         filters={current}
@@ -126,6 +142,7 @@ export function ProfileShelf({
         <ShelfViews
           books={visible.map((entry) => entry.book)}
           view={current.view}
+          bookAction={bookAction}
         />
       ) : hasRefinements(current) || !current.status ? (
         <EmptyState
@@ -151,4 +168,6 @@ export function ProfileShelf({
       )}
     </div>
   );
+
+  return owned ? <CopyBookScope>{shelf}</CopyBookScope> : shelf;
 }

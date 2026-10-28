@@ -13,6 +13,10 @@ import {
   type ShelfStatus,
   shelfDetailsSchema,
 } from "../../schemas";
+import {
+  EDITABLE_COLLECTIONS_KEY,
+  fetchEditableCollections,
+} from "@/features/collections/lib/editable-collections";
 import { byline, type ChosenBook } from "./chosen-book";
 
 const STATUS_OPTIONS = [
@@ -44,17 +48,6 @@ function submitOnEnter(event: React.KeyboardEvent<HTMLFormElement>) {
   event.currentTarget.requestSubmit();
 }
 
-type EditableCollection = { id: string; title: string; emoji: string | null };
-
-// As coleções em que a pessoa pode pôr livros (as dela e as colaborativas)
-async function fetchEditableCollections(): Promise<EditableCollection[]> {
-  const response = await fetch("/api/collections/editable");
-  if (!response.ok) return [];
-  const body = (await response.json()) as {
-    collections?: EditableCollection[];
-  };
-  return body.collections ?? [];
-}
 
 /** O passo compacto: status, nota, data e, se houver, a coleção. Enter salva. */
 export function DetailsStep({
@@ -75,7 +68,7 @@ export function DetailsStep({
   const [collectionId, setCollectionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const { data: collections = [] } = useQuery({
-    queryKey: ["colecoes-editaveis"],
+    queryKey: EDITABLE_COLLECTIONS_KEY,
     queryFn: fetchEditableCollections,
     // Uma coleção criada agora há pouco já aparece
     staleTime: 0,

@@ -5,6 +5,12 @@
 
 /* O script do tema põe data-theme no <html> antes da primeira pintura. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Mouse de verdade: o que só aparece no hover fica sempre visível no toque */
+@custom-variant can-hover {
+  @media (hover: hover) and (pointer: fine) {
+    @slot;
+  }
+}
 
 /* Só existem as cores do MyBooks: a paleta padrão do Tailwind fica desligada. */
 @theme {

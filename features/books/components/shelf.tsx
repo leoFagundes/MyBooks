@@ -12,6 +12,12 @@ type ShelfProps = {
   label?: string;
   /** Para onde cada lombada leva (padrão: a página do livro). */
   bookHref?: (book: BookVisual) => Route;
+  /**
+   * O que fica logo abaixo da linha, sob cada lombada (o Copiar, na estante
+   * de outra pessoa). Com ele, o destaque segue o ponteiro e o foco no item
+   * inteiro, para dar tempo de chegar ao que está embaixo.
+   */
+  accessory?: (book: BookVisual, active: boolean) => React.ReactNode;
   className?: string;
 };
 
@@ -24,6 +30,7 @@ export function Shelf({
   books,
   label = "Prateleira",
   bookHref,
+  accessory,
   className,
 }: ShelfProps) {
   const [active, setActive] = useState<number | null>(null);
@@ -56,7 +63,29 @@ export function Shelf({
           ref={(node) => {
             items.current[index] = node;
           }}
-          className="flex h-(--shelf-row) items-end"
+          data-copy-item={accessory ? "" : undefined}
+          className={cn(
+            "flex h-(--shelf-row) items-end",
+            accessory && "relative",
+          )}
+          onFocus={accessory ? () => activate(index) : undefined}
+          onBlur={
+            accessory
+              ? (event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget))
+                    deactivate(index);
+                }
+              : undefined
+          }
+          onPointerLeave={
+            accessory
+              ? (event) => {
+                  // O foco no chip segura o destaque
+                  if (!event.currentTarget.contains(document.activeElement))
+                    deactivate(index);
+                }
+              : undefined
+          }
         >
           <BookSpine
             book={book}
@@ -64,8 +93,13 @@ export function Shelf({
             lifted={active === index}
             shift={shiftOf(index)}
             onActivate={() => activate(index)}
-            onDeactivate={() => deactivate(index)}
+            onDeactivate={accessory ? undefined : () => deactivate(index)}
           />
+          {accessory ? (
+            <div className="absolute top-full left-1/2 z-10 flex -translate-x-1/2 justify-center pt-1.5">
+              {accessory(book, active === index)}
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

@@ -6,6 +6,19 @@ export type ShelfStatus = (typeof SHELF_STATUSES)[number];
 
 const statusSchema = z.enum(SHELF_STATUSES, { error: "Status inválido" });
 
+/** Copiar de outra pessoa: Abandonado não faz sentido numa cópia. */
+export const COPY_STATUSES = ["want", "reading", "read"] as const;
+export type CopyStatus = (typeof COPY_STATUSES)[number];
+
+export const copyBookSchema = z.object({
+  bookId: z.uuid("Livro inválido"),
+  status: z.enum(COPY_STATUSES, { error: "Status inválido" }),
+  collectionId: z.uuid().nullable(),
+  /** De quem é a estante de onde o livro saiu. */
+  fromUserId: z.uuid(),
+});
+export type CopyBookInput = z.infer<typeof copyBookSchema>;
+
 export const shelfEntrySchema = z.object({
   bookId: z.uuid("Livro inválido"),
   status: statusSchema,

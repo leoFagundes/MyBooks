@@ -2,7 +2,9 @@ import { Lock } from "lucide-react";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AffinityLine } from "@/features/social/components/affinity-line";
 import { FollowListButton } from "@/features/social/components/follow-list";
+import type { Affinity } from "@/features/social/types";
 import { initials } from "@/lib/initials";
 import { genreLabel } from "../genres";
 import type { ProfileCounts, ProfileSummary } from "../queries";
@@ -44,6 +46,7 @@ export function ProfileHeader({
   action,
   lists = false,
   isSelf = false,
+  affinity = null,
 }: {
   profile: ProfileSummary;
   counts: ProfileCounts | null;
@@ -52,6 +55,8 @@ export function ProfileHeader({
   /** Seguidores e seguindo abrem a lista (quem vê pode ver o perfil). */
   lists?: boolean;
   isSelf?: boolean;
+  /** Com quem vê, no perfil dos outros que ela pode ver. */
+  affinity?: Affinity | null;
 }) {
   const genres = profile.favoriteGenres.flatMap((slug) => {
     const label = genreLabel(slug);
@@ -139,6 +144,10 @@ export function ProfileHeader({
               );
             })}
           </ul>
+        ) : null}
+
+        {affinity ? (
+          <AffinityLine affinity={affinity} username={profile.username} />
         ) : null}
       </div>
     </header>

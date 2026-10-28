@@ -5,6 +5,7 @@ import { PrivateProfileNotice } from "@/features/profile/components/private-prof
 import { getProfileTab } from "@/features/profile/queries";
 import { ProfileShelf } from "@/features/shelf/components/profile-shelf";
 import { getShelf } from "@/features/shelf/queries";
+import { getViewer } from "@/lib/auth";
 
 type Params = PageProps<"/u/[username]">["params"];
 
@@ -33,13 +34,22 @@ async function ShelfTab({ params }: { params: Params }) {
   if (!tab.visible) {
     return <PrivateProfileNotice profile={profile} relation={relation} />;
   }
-  const shelf = await getShelf(profile.id);
+  const [shelf, viewer] = await Promise.all([
+    getShelf(profile.id),
+    getViewer(),
+  ]);
+  // Na estante dos outros, quem vê compara com a própria
+  const ownedIds =
+    viewer && relation !== "self"
+      ? (await getShelf(viewer.id)).map((item) => item.book.id)
+      : null;
 
   return (
     <PageTransition>
       <ProfileShelf
         entries={shelf}
         owner={relation === "self" ? null : firstName(profile.displayName)}
+        ownedIds={ownedIds}
       />
     </PageTransition>
   );

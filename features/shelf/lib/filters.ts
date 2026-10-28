@@ -6,6 +6,7 @@ import type { ShelfStatus } from "../schemas";
 /** O mínimo que filtro e ordenação leem de cada livro da estante. */
 export type ShelfEntry = {
   book: {
+    id: string;
     title: string;
     authors: string[];
     publishedYear: number | null;
@@ -54,6 +55,8 @@ export type ShelfFilters = {
   rating: RatingFilter | null;
   /** Início da década: 1990 vale de 1990 a 1999. */
   decade: number | null;
+  /** Só os livros que quem vê também tem (perfil de outra pessoa). */
+  common: boolean;
   sort: ShelfSort;
   view: ShelfView;
 };
@@ -64,6 +67,7 @@ export const DEFAULT_FILTERS: ShelfFilters = {
   genre: null,
   rating: null,
   decade: null,
+  common: false,
   sort: "recentes",
   view: "estante",
 };
@@ -96,6 +100,7 @@ export function filtersFromParams(params: URLSearchParams): ShelfFilters {
       Number.isInteger(decade) && decade % 10 === 0 && decade > 0
         ? decade
         : null,
+    common: params.get("comum") === "1",
     sort: oneOf(SHELF_SORTS, params.get("ordem")) ?? DEFAULT_FILTERS.sort,
     view: oneOf(VIEWS, params.get("vista")) ?? DEFAULT_FILTERS.view,
   };
@@ -109,15 +114,20 @@ export function filtersToParams(filters: ShelfFilters): URLSearchParams {
   if (filters.genre) params.set("genero", filters.genre);
   if (filters.rating) params.set("nota", filters.rating);
   if (filters.decade) params.set("ano", String(filters.decade));
+  if (filters.common) params.set("comum", "1");
   if (filters.sort !== DEFAULT_FILTERS.sort) params.set("ordem", filters.sort);
   if (filters.view !== DEFAULT_FILTERS.view) params.set("vista", filters.view);
   return params;
 }
 
-/** Busca, gênero, nota ou década ligados (o status tem controle próprio). */
+/** Busca, gênero, nota, década ou "em comum" ligados (o status tem controle próprio). */
 export function hasRefinements(filters: ShelfFilters) {
   return Boolean(
-    filters.q.trim() || filters.genre || filters.rating || filters.decade,
+    filters.q.trim() ||
+      filters.genre ||
+      filters.rating ||
+      filters.decade ||
+      filters.common,
   );
 }
 
@@ -131,17 +141,24 @@ function matchesRating(rating: number | null, filter: RatingFilter) {
 
 /**
  * Busca sem acento por título e autoria (cada palavra precisa aparecer),
- * gênero, faixa de nota e década. `ignoreStatus` serve às contagens do
- * controle de status, que mostram quantos há em cada um com o resto aplicado.
+ * gênero, faixa de nota, década e os livros em comum com quem vê (`ownedIds`;
+ * sem eles, o filtro "em comum" não vale). `ignoreStatus` serve às contagens
+ * do controle de status, que mostram quantos há em cada um com o resto
+ * aplicado.
  */
 export function filterShelf<T extends ShelfEntry>(
   entries: readonly T[],
   filters: ShelfFilters,
-  { ignoreStatus = false }: { ignoreStatus?: boolean } = {},
+  {
+    ignoreStatus = false,
+    ownedIds,
+  }: { ignoreStatus?: boolean; ownedIds?: ReadonlySet<string> } = {},
 ): T[] {
   const words = plain(filters.q).split(" ").filter(Boolean);
   return entries.filter((entry) => {
     if (!ignoreStatus && filters.status && entry.status !== filters.status)
+      return false;
+    if (filters.common && ownedIds && !ownedIds.has(entry.book.id))
       return false;
     if (filters.genre && !entry.genres.includes(filters.genre)) return false;
     if (filters.rating && !matchesRating(entry.rating, filters.rating))

@@ -1,8 +1,10 @@
 import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { avatarSrc } from "@/features/profile/lib/avatar";
 import { getPublicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  Affinity,
   FollowState,
   NotificationItem,
   NotificationsPayload,
@@ -223,4 +225,24 @@ export async function readNotifications(
       ];
     }),
   };
+}
+
+/**
+ * A afinidade de quem está vendo com outro perfil (reading_affinity, no
+ * banco). Null quando um dos lados ainda não tem livro nem gênero favorito.
+ */
+export async function getAffinity(
+  viewerId: string,
+  profile: { id: string },
+): Promise<Affinity | null> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`shelf:${viewerId}`, `shelf:${profile.id}`);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("reading_affinity", { a: viewerId, b: profile.id })
+    .maybeSingle();
+  if (error || !data) return null;
+  return { score: data.score, commonBooks: data.common_books };
 }

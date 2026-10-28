@@ -19,6 +19,8 @@ import {
 } from "@/features/profile/queries";
 import { FollowButton } from "@/features/social/components/follow-button";
 import { relationToState } from "@/features/social/lib/follow-state";
+import { getAffinity } from "@/features/social/queries";
+import { getViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 
 type Params = LayoutProps<"/u/[username]">["params"];
@@ -70,18 +72,26 @@ export default function ProfileLayout({
 async function ProfileTop({ params }: { params: Params }) {
   const profile = await getProfileFromParam((await params).username);
   if (!profile) notFound();
-  const [counts, relation] = await Promise.all([
+  const [counts, relation, viewer] = await Promise.all([
     getProfileCounts(profile),
     getProfileRelation(profile),
+    getViewer(),
   ]);
+  const visible = canSeeContent(profile, relation);
+  // A afinidade é com quem vê, no perfil dos outros que ela pode ver
+  const affinity =
+    viewer && relation !== "self" && visible
+      ? await getAffinity(viewer.id, profile)
+      : null;
 
   return (
     <div className="flex flex-col gap-8">
       <ProfileHeader
         profile={profile}
         counts={counts}
-        lists={canSeeContent(profile, relation)}
+        lists={visible}
         isSelf={relation === "self"}
+        affinity={affinity}
         action={
           relation === "self" ? (
             <EditProfileSheet profile={profile} />

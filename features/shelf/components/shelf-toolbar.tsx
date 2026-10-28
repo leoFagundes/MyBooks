@@ -156,6 +156,13 @@ export function ShelfToolbar({
       clear: { decade: null },
     });
   }
+  if (filters.common) {
+    chips.push({
+      key: "comum",
+      label: "Em comum com você",
+      clear: { common: false },
+    });
+  }
 
   function clearChip(clear: Partial<ShelfFilters>) {
     if ("q" in clear) onQueryChange("");
@@ -298,7 +305,13 @@ export function ShelfToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  clearChip({ q: "", genre: null, rating: null, decade: null })
+                  clearChip({
+                    q: "",
+                    genre: null,
+                    rating: null,
+                    decade: null,
+                    common: false,
+                  })
                 }
               >
                 Limpar filtros

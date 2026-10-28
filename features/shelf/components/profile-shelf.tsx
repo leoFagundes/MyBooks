@@ -40,13 +40,22 @@ const EMPTY_STATUS: Record<ShelfStatus, string> = {
 export function ProfileShelf({
   entries,
   owner,
+  ownedIds,
 }: {
   entries: ShelfItem[];
   /** Primeiro nome de quem é a estante; null quando é de quem está vendo. */
   owner: string | null;
+  /**
+   * Os livros que quem vê tem na própria estante (perfil de outra pessoa,
+   * com conta); null no próprio perfil e para visitante.
+   */
+  ownedIds: string[] | null;
 }) {
   const searchParams = useSearchParams();
   const filters = filtersFromParams(searchParams);
+  const owned = ownedIds ? new Set(ownedIds) : undefined;
+  // "Em comum" só vale para quem tem uma estante para comparar
+  if (!owned) filters.common = false;
   // A busca filtra a cada letra; a URL acompanha
   const [query, setQuery] = useState(filters.q);
   const addBook = useAddBook();
@@ -66,7 +75,14 @@ export function ProfileShelf({
 
   function clearAll() {
     setQuery("");
-    update({ q: "", status: null, genre: null, rating: null, decade: null });
+    update({
+      q: "",
+      status: null,
+      genre: null,
+      rating: null,
+      decade: null,
+      common: false,
+    });
   }
 
   if (entries.length === 0) {
@@ -88,9 +104,12 @@ export function ProfileShelf({
 
   const current = { ...filters, q: query };
   const counts = countByStatus(
-    filterShelf(entries, current, { ignoreStatus: true }),
+    filterShelf(entries, current, { ignoreStatus: true, ownedIds: owned }),
   );
-  const visible = sortShelf(filterShelf(entries, current), current.sort);
+  const visible = sortShelf(
+    filterShelf(entries, current, { ownedIds: owned }),
+    current.sort,
+  );
 
   return (
     <div className="flex flex-col gap-6">

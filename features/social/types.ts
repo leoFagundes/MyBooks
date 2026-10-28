@@ -43,3 +43,6 @@ export type NotificationsPayload = {
   requests: FollowRequest[];
   items: NotificationItem[];
 };
+
+/** Afinidade literária (reading_affinity): de 0 a 100 e os livros em comum. */
+export type Affinity = { score: number; commonBooks: number };

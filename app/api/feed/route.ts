@@ -7,15 +7,16 @@ const cursorSchema = z.object({
   id: z.uuid(),
 });
 
-// As próximas páginas do feed (o scroll infinito do Início). Leitura por
-// GET, não por Server Action: o cliente despacha actions uma por vez
+// As páginas do feed (o scroll infinito do Início); sem cursor, a primeira,
+// que o React Query pede de novo quando o dado envelhece. Leitura por GET,
+// não por Server Action: o cliente despacha actions uma por vez
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
-  const cursor = cursorSchema.safeParse({
-    at: params.get("antes"),
-    id: params.get("id"),
-  });
-  if (!cursor.success) {
+  const first = !params.has("antes") && !params.has("id");
+  const cursor = first
+    ? null
+    : cursorSchema.safeParse({ at: params.get("antes"), id: params.get("id") });
+  if (cursor && !cursor.success) {
     return Response.json({ groups: [], next: null }, { status: 400 });
   }
   const supabase = await createClient();
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     return Response.json({ groups: [], next: null }, { status: 401 });
   }
   try {
-    return Response.json(await readFeedPage(supabase, cursor.data), {
+    return Response.json(await readFeedPage(supabase, cursor?.data ?? null), {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch {

@@ -47,10 +47,12 @@ function FeedItem({
   );
 }
 
+// Sem cursor, a primeira página (quando o React Query a busca de novo)
 async function fetchFeed(cursor: FeedCursor | null): Promise<FeedPage> {
-  if (!cursor) return { groups: [], next: null };
-  const params = new URLSearchParams({ antes: cursor.at, id: cursor.id });
-  const response = await fetch(`/api/feed?${params}`);
+  const params = cursor
+    ? `?${new URLSearchParams({ antes: cursor.at, id: cursor.id })}`
+    : "";
+  const response = await fetch(`/api/feed${params}`);
   if (!response.ok) throw new Error(String(response.status));
   return (await response.json()) as FeedPage;
 }

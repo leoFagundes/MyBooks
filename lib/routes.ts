@@ -9,7 +9,7 @@ export const routes = {
   home: "/" as const satisfies Route,
   dev: "/dev" as const satisfies Route,
   inicio: "/inicio" as const satisfies Route,
-  explorar: "/explorar" as Route,
+  explorar: "/explorar" as const satisfies Route,
   entrar: "/entrar" as const satisfies Route,
   cadastro: "/cadastro" as const satisfies Route,
   onboarding: "/onboarding" as const satisfies Route,

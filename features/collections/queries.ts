@@ -4,6 +4,7 @@ import { toBookVisual } from "@/features/books/lib/to-book-visual";
 import { avatarSrc } from "@/features/profile/lib/avatar";
 import { getViewer } from "@/lib/auth";
 import { getPublicEnv } from "@/lib/env";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { byPosition } from "./lib/position";
 import type { CollectionItemVisual, CollectionVisual, Person } from "./types";
@@ -322,4 +323,38 @@ export async function getEditableCollections(
   );
   for (const collection of collections) cacheTag(`collection:${collection.id}`);
   return collections;
+}
+
+/**
+ * Coleções populares (Explorar e o Início vazio): as públicas com livros,
+ * da mais curtida à menos (popular_collections, no banco). Sem sessão.
+ */
+export async function getPopularCollections(
+  limit = 8,
+): Promise<CollectionVisual[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("explore");
+
+  const { data, error } = await createPublicClient()
+    .rpc("popular_collections", { max_results: limit })
+    .select(CARD_COLUMNS);
+  if (error) throw error;
+  // A ordem do banco pode não sobreviver aos embutidos
+  return cards(data as CardRow[]).sort((a, b) => b.likeCount - a.likeCount);
+}
+
+/** Busca de coleções públicas (Explorar): full-text e trigramas no banco. */
+export async function searchCollections(
+  query: string,
+): Promise<CollectionVisual[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("explore");
+
+  const { data, error } = await createPublicClient()
+    .rpc("search_collections", { q: query, max_results: 20 })
+    .select(CARD_COLUMNS);
+  if (error) throw error;
+  return cards(data as CardRow[]);
 }

@@ -1,7 +1,9 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { avatarSrc } from "@/features/profile/lib/avatar";
+import { getViewer } from "@/lib/auth";
 import { getPublicEnv } from "@/lib/env";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Affinity,
@@ -245,4 +247,45 @@ export async function getAffinity(
     .maybeSingle();
   if (error || !data) return null;
   return { score: data.score, commonBooks: data.common_books };
+}
+
+/** Busca de leitores (Explorar): @ e nome, sem acento. Sem sessão. */
+export async function searchReaders(query: string): Promise<SuggestedReader[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("explore");
+
+  const { data, error } = await createPublicClient().rpc("search_readers", {
+    q: query,
+    max_results: 20,
+  });
+  if (error) throw error;
+  return data.map(toSuggested);
+}
+
+export type AffinityReader = SuggestedReader & Affinity;
+
+/**
+ * Leitores com afinidade com quem está vendo (Explorar): quem ela ainda não
+ * segue, do mais parecido ao menos. Sem sessão, null: a seção nem aparece.
+ */
+export async function getAffinityReaders(
+  limit = 6,
+): Promise<AffinityReader[] | null> {
+  "use cache: private";
+  cacheLife("minutes");
+
+  const viewer = await getViewer();
+  if (!viewer) return null;
+  cacheTag(`shelf:${viewer.id}`, `profile:${viewer.username}`);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("readers_by_affinity", {
+    max_results: limit,
+  });
+  if (error) throw error;
+  return data.map((row) => ({
+    ...toSuggested(row),
+    score: row.score,
+    commonBooks: row.common_books,
+  }));
 }

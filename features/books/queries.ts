@@ -259,3 +259,61 @@ export async function getBookCommunity(bookId: string): Promise<BookCommunity> {
     ),
   };
 }
+
+/** Busca no catálogo para o Explorar: só os livros que já estão no MyBooks. */
+export async function searchCatalogBooks(raw: string): Promise<BookVisual[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("catalog");
+  const query = normalizeQuery(raw);
+  if (query.length < 2) return [];
+  const { data, error } = await createPublicClient().rpc("search_catalog", {
+    q: query,
+    max_results: 20,
+  });
+  if (error) throw error;
+  return data.map(toBookVisual);
+}
+
+// Abaixo disso, a semana parece vazia: a seção mostra os de sempre
+const MIN_WEEKLY_BOOKS = 4;
+
+export type TrendingBooks = {
+  /** true: os da semana; false: os mais adicionados de sempre. */
+  weekly: boolean;
+  books: (BookVisual & { adds: number })[];
+};
+
+/**
+ * Livros em alta (Explorar, spec §5.9): os mais adicionados à estante na
+ * semana (a view trending_books). Semana fraca vira os de sempre.
+ */
+export async function getTrendingBooks(limit = 12): Promise<TrendingBooks> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("explore");
+  const { data, error } = await createPublicClient()
+    .from("trending_books")
+    .select(
+      "week_adds, total_adds, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+    )
+    .order("week_adds", { ascending: false })
+    .order("total_adds", { ascending: false })
+    .limit(48);
+  if (error) throw error;
+  const rows = data.flatMap(({ week_adds, total_adds, book }) =>
+    book ? [{ week: week_adds ?? 0, total: total_adds ?? 0, book }] : [],
+  );
+  const week = rows.filter((row) => row.week > 0);
+  const weekly = week.length >= MIN_WEEKLY_BOOKS;
+  const chosen = weekly
+    ? week
+    : [...rows].sort((a, b) => b.total - a.total);
+  return {
+    weekly,
+    books: chosen.slice(0, limit).map((row) => ({
+      ...toBookVisual(row.book),
+      adds: weekly ? row.week : row.total,
+    })),
+  };
+}

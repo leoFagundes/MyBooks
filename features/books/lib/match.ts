@@ -11,10 +11,7 @@ type Candidate = { title: string; authors: string[] };
 const UNIQUE_VIOLATION = "23505";
 
 const plain = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
+  value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 // O título que vale para comparar: sem acento, sem subtítulo e sem pontuação
 function titleKey(title: string) {
@@ -28,7 +25,10 @@ function titleKey(title: string) {
 
 // O sobrenome basta: "J.R.R. Tolkien" e "J. R. R. Tolkien" são a mesma pessoa
 const surname = (name: string) =>
-  plain(name).split(/[^a-z0-9]+/).filter(Boolean).at(-1) ?? "";
+  plain(name)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .at(-1) ?? "";
 
 function shareAuthor(ours: string[], theirs: string[]) {
   const names = new Set(ours.map(surname).filter(Boolean));
@@ -118,7 +118,12 @@ export async function findOrCreateBook(
   const wanted = titleKey(book.title);
   const attempts = [
     ...(book.isbn13
-      ? [{ query: book.isbn13, accept: (found: Candidate) => sameBook(book, found) }]
+      ? [
+          {
+            query: book.isbn13,
+            accept: (found: Candidate) => sameBook(book, found),
+          },
+        ]
       : []),
     {
       query: `${book.title} ${book.authors[0] ?? ""}`,

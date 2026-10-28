@@ -59,7 +59,10 @@ export function GoodreadsImport({ username }: { username: string }) {
   async function read(file: File | undefined) {
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
-      setPhase({ name: "idle", error: "Esse arquivo é grande demais (até 20 MB)." });
+      setPhase({
+        name: "idle",
+        error: "Esse arquivo é grande demais (até 20 MB).",
+      });
       return;
     }
     const result = readGoodreadsExport(await file.text());
@@ -149,8 +152,7 @@ export function GoodreadsImport({ username }: { username: string }) {
             ) : (
               <p className="text-xs text-pretty text-muted-foreground">
                 No Goodreads: Meus livros → Importar e exportar → Exportar
-                biblioteca. Livros que já estão na sua estante ficam como
-                estão.
+                biblioteca. Livros que já estão na sua estante ficam como estão.
               </p>
             )}
           </motion.div>
@@ -280,7 +282,9 @@ export function GoodreadsImport({ username }: { username: string }) {
                     </li>
                   ))}
                   {phase.failed.length > FAILED_SHOWN ? (
-                    <li>e mais {formatNumber(phase.failed.length - FAILED_SHOWN)}</li>
+                    <li>
+                      e mais {formatNumber(phase.failed.length - FAILED_SHOWN)}
+                    </li>
                   ) : null}
                 </ul>
               </div>

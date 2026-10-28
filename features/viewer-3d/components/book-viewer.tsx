@@ -1,6 +1,7 @@
 "use client";
 
-import { Orbit, RotateCcw, Smartphone, XIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, Orbit, RotateCcw, Smartphone, XIcon } from "lucide-react";
 import {
   AnimatePresence,
   animate,
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { AmbientGlow } from "@/features/books/components/ambient-glow";
 import { BookCover } from "@/features/books/components/book-cover";
 import { bookColor } from "@/features/books/lib/color";
+import type { CommunityQuote } from "@/features/books/queries";
 import type { BookVisual } from "@/features/books/types";
 import { durations, springs, tweens } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -32,7 +34,7 @@ import {
   useDeviceTilt,
 } from "../lib/device-tilt";
 import { bookDimensions } from "../lib/dimensions";
-import { frameBook, type Rect, type Size } from "../lib/framing";
+import { frameBook, openFraming, type Rect, type Size } from "../lib/framing";
 import { type BookPose, useBookPose } from "../lib/use-book-pose";
 import { useStageGestures } from "../lib/use-stage-gestures";
 import { type PillAction, ViewerPill } from "./viewer-pill";
@@ -51,6 +53,16 @@ export function preloadBookScene() {
 const SLOW_SCENE_MS = 400;
 const NOTICE_MS = 4000;
 const ZOOM_STEP = 1.25;
+const NO_QUOTES: CommunityQuote[] = [];
+
+// Para a folha de rosto: sem citação (ou sem rede), ela só fica sem o pé
+async function fetchQuotes(bookId: string): Promise<CommunityQuote[]> {
+  const response = await fetch(
+    `/api/books/${encodeURIComponent(bookId)}/quotes`,
+  );
+  if (!response.ok) return NO_QUOTES;
+  return ((await response.json()) as { quotes: CommunityQuote[] }).quotes;
+}
 
 // O teclado no diálogo inteiro: os botões da pílula não usam setas
 const KEYS: Record<string, (pose: BookPose) => void> = {
@@ -114,6 +126,13 @@ export function BookViewer({
   const stageRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(closing);
   const pose = useBookPose(reduced);
+  const { data: quotes = NO_QUOTES } = useQuery({
+    queryKey: ["citacoes-do-livro", book.id],
+    queryFn: () => fetchQuotes(book.id),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const quote = quotes[0] ?? null;
 
   const cloneX = useMotionValue(0);
   const cloneY = useMotionValue(0);
@@ -286,8 +305,17 @@ export function BookViewer({
       label: "Girar",
       icon: Orbit,
       pressed: pose.spinning,
-      disabled: !interactive,
+      // Aberto, o livro não roda: o verso das folhas não tem o que mostrar
+      disabled: !interactive || pose.opened,
       onClick: () => pose.setSpinning(!pose.spinning),
+    },
+    {
+      id: "abrir",
+      label: "Abrir",
+      icon: BookOpen,
+      pressed: pose.opened,
+      disabled: !interactive,
+      onClick: () => pose.setOpen(!pose.opened, openFraming(dims, framing)),
     },
     {
       id: "resetar",
@@ -379,6 +407,7 @@ export function BookViewer({
                     description={description}
                     dims={dims}
                     framing={framing}
+                    quotes={quotes}
                     pose={pose.values}
                     onReady={() => setReady(true)}
                   />
@@ -455,6 +484,23 @@ export function BookViewer({
           <motion.div style={{ opacity: chrome }}>
             <ViewerPill actions={actions} />
           </motion.div>
+
+          {/* A folha de rosto é desenhada no canvas: o mesmo texto, para leitor de tela */}
+          {pose.opened ? (
+            <div className="sr-only">
+              <p>
+                Folha de rosto: {book.title}
+                {authors ? `, de ${authors}` : ""}.
+              </p>
+              {description ? <p>{description}</p> : null}
+              {quote ? (
+                <p>
+                  Citação de @{quote.reader.username}
+                  {quote.page ? `, página ${quote.page}` : ""}: {quote.text}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <DialogPrimitive.Description id={instructionsId} className="sr-only">
             Arraste ou use as setas para girar o livro. Role, faça pinça ou use

@@ -1,4 +1,5 @@
 import type { MotionValue } from "motion/react";
+import type { CommunityQuote } from "@/features/books/queries";
 import type { BookVisual } from "@/features/books/types";
 import type { BookDimensions } from "./dimensions";
 import type { Framing } from "./framing";
@@ -13,6 +14,11 @@ export type PoseValues = {
   zoom: MotionValue<number>;
   /** De 0 (fechado) a 1 (a capa aberta pela dobra). */
   open: MotionValue<number>;
+  /**
+   * Deslize do livro aberto, em unidades do mundo, dentro do giro: com as
+   * duas páginas na tela, o livro gira em torno do meio delas.
+   */
+  shift: MotionValue<number>;
   tiltYaw: MotionValue<number>;
   tiltPitch: MotionValue<number>;
 };
@@ -28,6 +34,8 @@ export const SETTLE_POSE = { yaw: 0.5, pitch: 0.28 } as const;
 export type SceneProps = {
   book: BookVisual;
   description: string | null;
+  /** Citações da comunidade: a primeira vai para a folha de rosto. */
+  quotes: CommunityQuote[];
   dims: BookDimensions;
   framing: Framing;
   pose: PoseValues;

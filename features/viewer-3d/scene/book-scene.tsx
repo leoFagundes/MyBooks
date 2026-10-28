@@ -19,6 +19,7 @@ const FLOAT = 0.3;
 export default function BookScene({
   book,
   description,
+  quotes,
   dims,
   framing,
   pose,
@@ -43,6 +44,7 @@ export default function BookScene({
           <BookModel
             book={book}
             description={description}
+            quotes={quotes}
             dims={dims}
             pose={pose}
           />

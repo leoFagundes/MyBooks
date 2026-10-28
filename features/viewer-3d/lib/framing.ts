@@ -17,6 +17,12 @@ export type Framing = {
 /** Campo de visão vertical: estreito, de foto de produto, quase sem distorção. */
 export const CAMERA_FOV = 30;
 
+// Aberto, o livro ocupa quase duas capas de largura
+const SPREAD_WIDTH = 2;
+// Palco a partir do qual as duas páginas cabem lado a lado
+const SPREAD_MIN = 1.8;
+const SPREAD_FILL = 0.92;
+
 const COVER_FILL = 0.8;
 const SIDE_INSET = 24;
 // Celular deitado: o título encolhe e a pílula desce
@@ -65,3 +71,22 @@ export function frameBook(viewport: Size, dims: BookDimensions): Framing {
     viewOffsetY: viewport.height / 2 - centerY,
   };
 }
+
+/**
+ * O livro aberto. Em tela larga, ele desliza meia capa para a direita (o meio
+ * das duas páginas vai para o centro) e o zoom encaixa as duas; em tela
+ * estreita, a câmera fica na página da direita, a folha de rosto.
+ */
+export function openFraming(dims: BookDimensions, framing: Framing) {
+  const { stage, cover } = framing;
+  if (stage.width < cover.width * SPREAD_MIN) return { zoom: 1, shiftX: 0 };
+  return {
+    zoom: Math.min(
+      1,
+      (stage.width * SPREAD_FILL) / (cover.width * SPREAD_WIDTH),
+    ),
+    shiftX: dims.width / 2,
+  };
+}
+
+export type OpenFraming = ReturnType<typeof openFraming>;

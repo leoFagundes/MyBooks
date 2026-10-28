@@ -6,6 +6,7 @@ import {
   toHex,
 } from "@/features/books/lib/color";
 import { hashString } from "@/features/books/lib/hash";
+import type { CommunityQuote } from "@/features/books/queries";
 import type { BookVisual } from "@/features/books/types";
 import { drawLines, fontStack, wrapLines } from "./canvas-text";
 import type { BookDimensions } from "./dimensions";
@@ -39,8 +40,9 @@ function setFont(
   font: string,
   size: number,
   tracking = 0,
+  style: "normal" | "italic" = "normal",
 ) {
-  ctx.font = `400 ${size}px ${font}`;
+  ctx.font = `${style} 400 ${size}px ${font}`;
   ctx.letterSpacing = `${tracking * size}px`;
 }
 
@@ -198,5 +200,93 @@ export function drawPageEdges(seed: string, vertical = false) {
     position += 2 + random() * 2.5;
   }
   ctx.globalAlpha = 1;
+  return canvas;
+}
+
+/**
+ * A folha de rosto (spec §5.7): tinta sobre papel, com o título e a autoria
+ * centrados no alto, a sinopse no meio e uma citação da comunidade no pé,
+ * com o @ e a página. Sem sinopse ou sem citação, o resto se acomoda.
+ * `aspect` é a largura sobre a altura da frente do miolo.
+ */
+export function drawTitlePage(
+  book: BookVisual,
+  description: string | null,
+  quote: CommunityQuote | null,
+  aspect: number,
+) {
+  const width = ART_WIDTH;
+  const height = Math.round(width / aspect);
+  const { canvas, ctx } = createCanvas(width, height);
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = INK;
+
+  const serif = fontStack("--font-instrument-serif");
+  const mono = fontStack("--font-geist-mono");
+  const padX = width * 0.11;
+  const inner = width - 2 * padX;
+  const center = width / 2;
+  let top = height * 0.1;
+
+  ctx.textAlign = "center";
+  const titleSize = width * 0.085;
+  const titleLine = titleSize * 1.06;
+  setFont(ctx, serif, titleSize, -0.02);
+  const title = wrapLines(ctx, book.title, inner, 3, { balance: true });
+  drawLines(ctx, title, center, top, titleLine);
+  top += title.length * titleLine + height * 0.025;
+
+  const authorSize = width * 0.026;
+  const authorLine = authorSize * 1.5;
+  setFont(ctx, mono, authorSize, 0.12);
+  const author = wrapLines(
+    ctx,
+    book.authors.join(", ").toUpperCase(),
+    inner,
+    2,
+  );
+  drawLines(ctx, author, center, top, authorLine);
+  top += author.length * authorLine + height * 0.04;
+
+  ctx.fillRect(center - width * 0.05, top, width * 0.1, 2);
+  top += height * 0.045;
+
+  // A citação se arruma de baixo para cima; a sinopse fica com o que sobrar
+  let bottom = height * 0.92;
+  if (quote) {
+    const creditSize = width * 0.022;
+    const creditLine = creditSize * 1.5;
+    setFont(ctx, mono, creditSize, 0.06);
+    const credit = `— @${quote.reader.username}${quote.page ? ` · p. ${quote.page}` : ""}`;
+    bottom -= creditLine;
+    drawLines(ctx, [credit], center, bottom, creditLine);
+    bottom -= height * 0.015;
+
+    const quoteSize = width * 0.04;
+    const quoteLine = quoteSize * 1.32;
+    setFont(ctx, serif, quoteSize, 0, "italic");
+    const lines = wrapLines(ctx, `“${quote.text}”`, inner, 6, {
+      balance: true,
+    });
+    bottom -= lines.length * quoteLine;
+    drawLines(ctx, lines, center, bottom, quoteLine);
+    bottom -= height * 0.05;
+  }
+
+  if (description) {
+    ctx.textAlign = "left";
+    const bodySize = width * 0.031;
+    const bodyLine = bodySize * 1.6;
+    setFont(ctx, fontStack("--font-geist-sans"), bodySize);
+    const room = Math.min(9, Math.floor((bottom - top) / bodyLine));
+    drawLines(
+      ctx,
+      wrapLines(ctx, description, inner, Math.max(0, room)),
+      padX,
+      top,
+      bodyLine,
+    );
+  }
   return canvas;
 }

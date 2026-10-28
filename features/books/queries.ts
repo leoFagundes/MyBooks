@@ -184,6 +184,64 @@ export type BookCommunity = {
   collections: CommunityCollection[];
 };
 
+export type CommunityQuote = {
+  text: string;
+  page: number | null;
+  reader: CommunityReader;
+};
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+type ReaderProfile = {
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+function toReader(
+  profile: ReaderProfile,
+  supabaseUrl: string,
+): CommunityReader {
+  return {
+    username: profile.username,
+    displayName: profile.display_name?.trim() || profile.username,
+    avatarUrl: avatarSrc(profile.avatar_url, supabaseUrl),
+  };
+}
+
+// Até aqui uma citação cabe na folha de rosto do livro em 3D
+const SHORT_QUOTE = 280;
+
+/**
+ * Citações da comunidade para o livro em 3D: as curtas primeiro, cada grupo
+ * da mais nova para a mais antiga. Lê com a sessão de quem pede: a RLS
+ * esconde as de perfis privados que a pessoa não segue.
+ */
+export async function readBookQuotes(
+  supabase: Supabase,
+  bookId: string,
+  limit = 7,
+): Promise<CommunityQuote[]> {
+  const { supabaseUrl } = getPublicEnv();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select(
+      "text, page, profile:profiles!quotes_user_id_fkey(username, display_name, avatar_url)",
+    )
+    .eq("book_id", bookId)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) throw error;
+
+  const quotes = data.flatMap(({ text, page, profile }) =>
+    profile ? [{ text, page, reader: toReader(profile, supabaseUrl) }] : [],
+  );
+  return [
+    ...quotes.filter((quote) => quote.text.length <= SHORT_QUOTE),
+    ...quotes.filter((quote) => quote.text.length > SHORT_QUOTE),
+  ].slice(0, limit);
+}
+
 /**
  * Quem leu, as resenhas e as coleções com o livro. Lê com a sessão: a RLS
  * esconde quem tem perfil privado e não é seguido por quem está vendo.
@@ -195,15 +253,7 @@ export async function getBookCommunity(bookId: string): Promise<BookCommunity> {
 
   const supabase = await createClient();
   const { supabaseUrl } = getPublicEnv();
-  const person = (profile: {
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  }): CommunityReader => ({
-    username: profile.username,
-    displayName: profile.display_name?.trim() || profile.username,
-    avatarUrl: avatarSrc(profile.avatar_url, supabaseUrl),
-  });
+  const person = (profile: ReaderProfile) => toReader(profile, supabaseUrl);
 
   const [readers, reviews, collections] = await Promise.all([
     supabase

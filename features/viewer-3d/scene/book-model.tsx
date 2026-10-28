@@ -1,8 +1,15 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import { use, useEffect, useRef } from "react";
-import type { Color, Group, Texture } from "three";
+import { use, useEffect, useMemo, useRef } from "react";
+import {
+  CanvasTexture,
+  type Color,
+  type Group,
+  SRGBColorSpace,
+  type Texture,
+} from "three";
+import { drawTitlePage } from "../lib/book-art";
 import type { SceneProps } from "../lib/types";
 import {
   loadBookTextures,
@@ -54,6 +61,32 @@ function SurfaceMaterial({
   );
 }
 
+/**
+ * A folha de rosto, na frente do miolo. Redesenha quando a citação chega
+ * (as fontes já carregaram com as outras texturas).
+ */
+function useTitlePage(
+  book: SceneProps["book"],
+  description: string | null,
+  quote: SceneProps["quotes"][number] | null,
+  dims: SceneProps["dims"],
+  maxAnisotropy: number,
+) {
+  const aspect =
+    (dims.width - dims.board - dims.overhang) /
+    (dims.height - 2 * dims.overhang);
+  const texture = useMemo(() => {
+    const page = new CanvasTexture(
+      drawTitlePage(book, description, quote, aspect),
+    );
+    page.colorSpace = SRGBColorSpace;
+    page.anisotropy = Math.min(8, maxAnisotropy);
+    return page;
+  }, [book, description, quote, aspect, maxAnisotropy]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return texture;
+}
+
 /** Uma peça do livro: uma caixa com uma superfície por face. */
 function Slab({
   size,
@@ -89,9 +122,10 @@ function Slab({
 export function BookModel({
   book,
   description,
+  quotes,
   dims,
   pose,
-}: Pick<SceneProps, "book" | "description" | "dims" | "pose">) {
+}: Pick<SceneProps, "book" | "description" | "quotes" | "dims" | "pose">) {
   const maxAnisotropy = useThree((state) =>
     state.gl.capabilities.getMaxAnisotropy(),
   );
@@ -99,11 +133,20 @@ export function BookModel({
   const textures = use(
     loadBookTextures(book, description, dims, maxAnisotropy),
   );
+  const titlePage = useTitlePage(
+    book,
+    description,
+    quotes[0] ?? null,
+    dims,
+    maxAnisotropy,
+  );
+  const shift = useRef<Group>(null);
   const hinge = useRef<Group>(null);
 
   useEffect(() => retainBookTextures(key), [key]);
 
   useFrame(() => {
+    if (shift.current) shift.current.position.x = pose.shift.get();
     if (hinge.current) hinge.current.rotation.y = -pose.open.get() * OPEN_ANGLE;
   });
 
@@ -112,7 +155,7 @@ export function BookModel({
   const endpaper: Surface = { color: textures.endpaper, roughness: 0.9 };
 
   return (
-    <group>
+    <group ref={shift}>
       <Slab
         size={[width, height, board]}
         position={[0, 0, -depth / 2 + board / 2]}
@@ -136,6 +179,7 @@ export function BookModel({
           px: { map: textures.pagesSide, roughness: 0.95 },
           py: { map: textures.pagesTop, roughness: 0.95 },
           ny: { map: textures.pagesTop, roughness: 0.95 },
+          pz: { map: titlePage, roughness: 0.9 },
         }}
       />
       <group ref={hinge} position={[-width / 2, 0, depth / 2 - board / 2]}>

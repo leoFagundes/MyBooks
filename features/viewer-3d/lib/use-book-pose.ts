@@ -10,6 +10,7 @@ import {
 } from "motion/react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { springs, tweens } from "@/lib/motion";
+import type { OpenFraming } from "./framing";
 import { type PoseValues, SETTLE_POSE } from "./types";
 
 const TURN = 2 * Math.PI;
@@ -27,6 +28,11 @@ const STEP_PITCH = Math.PI / 12;
 const SPIN_SPEED = 0.6;
 // Teto para esperar uma mola: animação interrompida não avisa que terminou
 const SETTLE_TIMEOUT_MS = 700;
+// Aberto, o livro gira pouco: o verso das páginas não tem o que mostrar
+const OPEN_YAW_LIMIT = 0.6;
+const OPEN_PITCH_LIMIT = 0.35;
+// A capa começa a girar quando o livro já está quase de frente
+const OPEN_DELAY = 0.12;
 
 export type BookPose = {
   values: PoseValues;
@@ -49,6 +55,10 @@ export type BookPose = {
   setSpinning: (on: boolean) => void;
   /** A inclinação do aparelho, somada à pose. */
   setTilt: (yaw: number, pitch: number) => void;
+  /** A capa está aberta na folha de rosto. */
+  opened: boolean;
+  /** Abre (de frente, com o zoom e o deslize do enquadramento) ou fecha. */
+  setOpen: (open: boolean, frame: OpenFraming) => void;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -79,14 +89,31 @@ export function useBookPose(reduced: boolean): BookPose {
     pitch: motionValue(0),
     zoom: motionValue(1),
     open: motionValue(0),
+    shift: motionValue(0),
     tiltYaw: motionValue(0),
     tiltPitch: motionValue(0),
   }));
   const [spin] = useState(() => motionValue(0));
   const [spinning, setSpinningState] = useState(false);
+  const [opened, setOpened] = useState(false);
   const spinOn = useRef(false);
   const targets = useRef({ yaw: 0, pitch: 0, zoom: 1 });
   const spinLoop = useRef<((data: { delta: number }) => void) | null>(null);
+  // Aberto: até onde o giro vai, em torno da volta em que o livro abriu
+  const openLimits = useRef<{ base: number } | null>(null);
+
+  function limit(target: { yaw: number; pitch: number }) {
+    const open = openLimits.current;
+    if (open) {
+      target.yaw = clamp(
+        target.yaw,
+        open.base - OPEN_YAW_LIMIT,
+        open.base + OPEN_YAW_LIMIT,
+      );
+    }
+    const pitch = open ? OPEN_PITCH_LIMIT : PITCH_LIMIT;
+    target.pitch = clamp(target.pitch, -pitch, pitch);
+  }
 
   function to(
     value: MotionValue<number>,
@@ -154,11 +181,8 @@ export function useBookPose(reduced: boolean): BookPose {
   function drag(dx: number, dy: number) {
     const target = targets.current;
     target.yaw += dx * DRAG_YAW;
-    target.pitch = clamp(
-      target.pitch + dy * DRAG_PITCH,
-      -PITCH_LIMIT,
-      PITCH_LIMIT,
-    );
+    target.pitch += dy * DRAG_PITCH;
+    limit(target);
     to(values.yaw, target.yaw, springs.snappy);
     to(values.pitch, target.pitch, springs.snappy);
   }
@@ -166,11 +190,8 @@ export function useBookPose(reduced: boolean): BookPose {
   function release(vx: number, vy: number) {
     const target = targets.current;
     target.yaw += vx * DRAG_YAW * FLING_SECONDS;
-    target.pitch = clamp(
-      target.pitch + vy * DRAG_PITCH * FLING_SECONDS,
-      -PITCH_LIMIT,
-      PITCH_LIMIT,
-    );
+    target.pitch += vy * DRAG_PITCH * FLING_SECONDS;
+    limit(target);
     to(values.yaw, target.yaw, springs.smooth);
     to(values.pitch, target.pitch, springs.smooth);
   }
@@ -183,15 +204,12 @@ export function useBookPose(reduced: boolean): BookPose {
     const target = targets.current;
     if (direction === "left" || direction === "right") {
       target.yaw += direction === "right" ? STEP_YAW : -STEP_YAW;
-      to(values.yaw, target.yaw, springs.smooth);
     } else {
-      target.pitch = clamp(
-        target.pitch + (direction === "down" ? STEP_PITCH : -STEP_PITCH),
-        -PITCH_LIMIT,
-        PITCH_LIMIT,
-      );
-      to(values.pitch, target.pitch, springs.smooth);
+      target.pitch += direction === "down" ? STEP_PITCH : -STEP_PITCH;
     }
+    limit(target);
+    to(values.yaw, target.yaw, springs.smooth);
+    to(values.pitch, target.pitch, springs.smooth);
   }
 
   function zoomBy(factor: number) {
@@ -219,15 +237,40 @@ export function useBookPose(reduced: boolean): BookPose {
     goTo(SETTLE_POSE.yaw, SETTLE_POSE.pitch, springs.gentle);
   }
 
+  function close(transition: Transition) {
+    setOpened(false);
+    openLimits.current = null;
+    return [to(values.open, 0, transition), to(values.shift, 0, transition)];
+  }
+
   function reset() {
-    goTo(SETTLE_POSE.yaw, SETTLE_POSE.pitch, springs.gentle);
-    to(values.open, 0, springs.smooth);
+    close(springs.smooth);
+    settle();
+  }
+
+  function setOpen(open: boolean, frame: OpenFraming) {
+    if (!open) {
+      reset();
+      return;
+    }
+    setOpened(true);
+    setSpinningState(false);
+    stopSpinLoop();
+    const yaw = nearest(0, values.yaw.get());
+    openLimits.current = { base: yaw };
+    targets.current = { yaw, pitch: 0, zoom: frame.zoom };
+    to(values.yaw, yaw, springs.smooth);
+    to(values.pitch, 0, springs.smooth);
+    to(values.zoom, frame.zoom, springs.smooth);
+    to(values.shift, frame.shiftX, springs.smooth);
+    // A capa gira pela dobra com a mola gentle: passa um pouco e assenta
+    to(values.open, 1, { ...springs.gentle, delay: OPEN_DELAY });
   }
 
   function toFront() {
     return settled([
       ...goTo(0, 0, springs.snappy),
-      to(values.open, 0, springs.snappy),
+      ...close(springs.snappy),
       to(values.tiltYaw, 0, springs.snappy),
       to(values.tiltPitch, 0, springs.snappy),
     ]);
@@ -251,5 +294,7 @@ export function useBookPose(reduced: boolean): BookPose {
     toFront,
     setSpinning,
     setTilt,
+    opened,
+    setOpen,
   };
 }

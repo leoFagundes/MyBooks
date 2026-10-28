@@ -1,5 +1,6 @@
 import { ViewTransition } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ViewIn3D } from "@/features/viewer-3d/components/view-in-3d";
 import { formatNumber } from "@/lib/format";
 import { coverName, titleName } from "../lib/transition-names";
 import type { BookVisual } from "../types";
@@ -42,14 +43,15 @@ export function BookHero({
 
   return (
     <section className="grid items-start gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
-      <BookCover
-        book={book}
-        size="hero"
-        preload
-        transitionName={coverName(book.id)}
-        transitionShare={coverShare}
-        className="mx-auto sm:mx-0"
-      />
+      <ViewIn3D book={book} description={description} pending={pending}>
+        <BookCover
+          book={book}
+          size="hero"
+          preload
+          transitionName={coverName(book.id)}
+          transitionShare={coverShare}
+        />
+      </ViewIn3D>
       <div className="flex flex-col gap-4 sm:pt-6">
         <ViewTransition
           name={titleName(book.id)}

@@ -53,7 +53,11 @@ function TravelingHero({ param }: { param: string }) {
 function HeroSkeleton() {
   return (
     <div className="grid items-start gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
-      <Skeleton className="mx-auto aspect-2/3 w-40 rounded-cover sm:mx-0 sm:w-52 lg:w-60" />
+      {/* A capa e o "Ver em 3D", nas medidas do ViewIn3D */}
+      <div className="mx-auto flex w-fit flex-col items-center gap-4 sm:mx-0">
+        <Skeleton className="aspect-2/3 w-40 rounded-cover sm:w-52 lg:w-60" />
+        <Skeleton className="h-8 w-28 rounded-control" />
+      </div>
       <div className="flex flex-col gap-4 sm:pt-6">
         <Skeleton className="h-10 w-3/4" />
         <HeroTextSkeleton />

@@ -1,11 +1,10 @@
 "use client";
 
-import { XIcon } from "lucide-react";
+import { Orbit, RotateCcw, Smartphone, XIcon } from "lucide-react";
 import {
   AnimatePresence,
   animate,
   motion,
-  motionValue,
   useMotionValue,
   useReducedMotion,
 } from "motion/react";
@@ -26,10 +25,17 @@ import { BookCover } from "@/features/books/components/book-cover";
 import { bookColor } from "@/features/books/lib/color";
 import type { BookVisual } from "@/features/books/types";
 import { durations, springs, tweens } from "@/lib/motion";
+import { cn } from "@/lib/utils";
+import {
+  orientationSupport,
+  requestOrientation,
+  useDeviceTilt,
+} from "../lib/device-tilt";
 import { bookDimensions } from "../lib/dimensions";
 import { frameBook, type Rect, type Size } from "../lib/framing";
-import { type PoseValues, SETTLE_POSE } from "../lib/types";
-import { ViewerPill } from "./viewer-pill";
+import { type BookPose, useBookPose } from "../lib/use-book-pose";
+import { useStageGestures } from "../lib/use-stage-gestures";
+import { type PillAction, ViewerPill } from "./viewer-pill";
 
 // three, R3F e drei só chegam quando o visualizador abre (spec §5.7)
 const BookScene = dynamic(() => import("../scene/book-scene"), { ssr: false });
@@ -43,7 +49,20 @@ export function preloadBookScene() {
 
 // Quanto o "Montando o livro…" espera depois do pouso para aparecer
 const SLOW_SCENE_MS = 400;
-const TURN = 2 * Math.PI;
+const NOTICE_MS = 4000;
+const ZOOM_STEP = 1.25;
+
+// O teclado no diálogo inteiro: os botões da pílula não usam setas
+const KEYS: Record<string, (pose: BookPose) => void> = {
+  ArrowLeft: (pose) => pose.step("left"),
+  ArrowRight: (pose) => pose.step("right"),
+  ArrowUp: (pose) => pose.step("up"),
+  ArrowDown: (pose) => pose.step("down"),
+  "+": (pose) => pose.zoomBy(ZOOM_STEP),
+  "=": (pose) => pose.zoomBy(ZOOM_STEP),
+  "-": (pose) => pose.zoomBy(1 / ZOOM_STEP),
+  "0": (pose) => pose.reset(),
+};
 
 type BookViewerProps = {
   book: BookVisual;
@@ -94,15 +113,8 @@ export function BookViewer({
   const instructionsId = useId();
   const stageRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(closing);
+  const pose = useBookPose(reduced);
 
-  const [pose] = useState<PoseValues>(() => ({
-    yaw: motionValue(0),
-    pitch: motionValue(0),
-    zoom: motionValue(1),
-    open: motionValue(0),
-    tiltYaw: motionValue(0),
-    tiltPitch: motionValue(0),
-  }));
   const cloneX = useMotionValue(0);
   const cloneY = useMotionValue(0);
   const cloneScale = useMotionValue(1);
@@ -112,9 +124,23 @@ export function BookViewer({
 
   const [landed, setLanded] = useState(false);
   const [ready, setReady] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [slow, setSlow] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Aviso passageiro na área de status: um toast ficaria fora do diálogo,
+  // que o Radix esconde do leitor de tela
+  const [notice, setNotice] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const interactive = revealed && !closing;
+  const gestures = useStageGestures(stageRef, pose, interactive);
+
+  // Inclinar o aparelho: ligado de saída onde não há permissão a pedir
+  // (Android), a não ser com movimento reduzido; no iOS, o toque pede
+  const [tiltSupport] = useState(orientationSupport);
+  const [tiltOn, setTiltOn] = useState(
+    () => tiltSupport === "granted" && !reduced,
+  );
+  useDeviceTilt(tiltOn && interactive, pose.setTilt);
 
   useLayoutEffect(() => {
     closingRef.current = closing;
@@ -168,15 +194,12 @@ export function BookViewer({
   // e, depois, o livro gira para a pose de 3/4: é quando ele vira 3D. Com
   // movimento reduzido, o livro já entra girado, só com opacidade
   const reveal = useEffectEvent(() => {
-    if (reduced) {
-      pose.yaw.jump(SETTLE_POSE.yaw);
-      pose.pitch.jump(SETTLE_POSE.pitch);
-    }
+    if (reduced) pose.settle();
     animate(sceneOpacity, 1, tweens.base);
     animate(cloneOpacity, 0, tweens.base).then(() => {
-      if (reduced || closingRef.current) return;
-      animate(pose.yaw, SETTLE_POSE.yaw, springs.gentle);
-      animate(pose.pitch, SETTLE_POSE.pitch, springs.gentle);
+      if (closingRef.current) return;
+      setRevealed(true);
+      if (!reduced) pose.settle();
     });
   });
 
@@ -187,18 +210,7 @@ export function BookViewer({
   // A volta: o livro fica de frente, o clone reaparece por cima dele e voa de
   // volta para a capa da página, enquanto o fundo some
   const leave = useEffectEvent(async () => {
-    await Promise.all([
-      animate(
-        pose.yaw,
-        Math.round(pose.yaw.get() / TURN) * TURN,
-        springs.snappy,
-      ),
-      animate(pose.pitch, 0, springs.snappy),
-      animate(pose.zoom, 1, springs.snappy),
-      animate(pose.open, 0, springs.snappy),
-      animate(pose.tiltYaw, 0, springs.snappy),
-      animate(pose.tiltPitch, 0, springs.snappy),
-    ]);
+    await pose.toFront();
     const from = sourceRef.current?.getBoundingClientRect();
     if (reduced || !from || from.width === 0) {
       await Promise.all([
@@ -225,6 +237,14 @@ export function BookViewer({
     if (closing) void leave();
   }, [closing]);
 
+  // A cena caiu (às vezes já revelada, com o contexto perdido): o clone 2D
+  // volta para o lugar dela
+  function fail() {
+    setFailed(true);
+    setRevealed(false);
+    animate(cloneOpacity, 1, tweens.base);
+  }
+
   function retry() {
     setFailed(false);
     setReady(false);
@@ -232,7 +252,73 @@ export function BookViewer({
     setAttempt((current) => current + 1);
   }
 
+  async function toggleTilt() {
+    if (tiltOn) {
+      setTiltOn(false);
+      return;
+    }
+    if (await requestOrientation()) {
+      setTiltOn(true);
+      return;
+    }
+    setNotice(
+      "Sem acesso ao movimento do aparelho. Libere nos ajustes do navegador.",
+    );
+  }
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  function onKeyDown(event: React.KeyboardEvent) {
+    if (!interactive || event.altKey || event.ctrlKey || event.metaKey) return;
+    const action = KEYS[event.key];
+    if (!action) return;
+    event.preventDefault();
+    action(pose);
+  }
+
+  const actions: PillAction[] = [
+    {
+      id: "girar",
+      label: "Girar",
+      icon: Orbit,
+      pressed: pose.spinning,
+      disabled: !interactive,
+      onClick: () => pose.setSpinning(!pose.spinning),
+    },
+    {
+      id: "resetar",
+      label: "Resetar",
+      icon: RotateCcw,
+      disabled: !interactive,
+      onClick: pose.reset,
+    },
+    ...(tiltSupport === "none"
+      ? []
+      : [
+          {
+            id: "inclinar",
+            label: "Inclinar",
+            icon: Smartphone,
+            pressed: tiltOn,
+            disabled: !interactive,
+            onClick: toggleTilt,
+          },
+        ]),
+    {
+      id: "fechar",
+      label: "Fechar",
+      icon: XIcon,
+      onClick: onRequestClose,
+      shortcut: "Esc",
+    },
+  ];
+
   const authors = book.authors.join(", ");
+  const message = slow && !ready ? "Montando o livro…" : notice;
 
   return (
     <DialogPrimitive.Root
@@ -266,6 +352,7 @@ export function BookViewer({
             onRequestClose();
           }}
           onInteractOutside={(event) => event.preventDefault()}
+          onKeyDown={onKeyDown}
           className="fixed inset-0 z-50 overflow-hidden text-foreground"
         >
           <div
@@ -275,20 +362,24 @@ export function BookViewer({
             aria-roledescription="livro em 3D"
             aria-label={`${book.title} em 3D`}
             aria-describedby={instructionsId}
-            className="absolute inset-0 touch-none focus-visible:-outline-offset-4"
+            {...gestures}
+            className={cn(
+              "absolute inset-0 touch-none select-none focus-visible:-outline-offset-4",
+              interactive && "cursor-grab active:cursor-grabbing",
+            )}
           >
             {landed ? (
               <motion.div
                 className="absolute inset-0"
                 style={{ opacity: sceneOpacity }}
               >
-                <SceneBoundary key={attempt} onError={() => setFailed(true)}>
+                <SceneBoundary key={attempt} onError={fail}>
                   <BookScene
                     book={book}
                     description={description}
                     dims={dims}
                     framing={framing}
-                    pose={pose}
+                    pose={pose.values}
                     onReady={() => setReady(true)}
                   />
                 </SceneBoundary>
@@ -346,37 +437,28 @@ export function BookViewer({
                     Tentar de novo
                   </Button>
                 </motion.div>
-              ) : slow && !ready ? (
+              ) : message ? (
+                // Por cima do livro, o aviso ganha o fundo da pílula
                 <motion.p
-                  key="montando"
+                  key={message}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, transition: tweens.base }}
                   exit={{ opacity: 0, transition: tweens.fast }}
-                  className="text-sm text-muted-foreground"
+                  className="rounded-full bg-background/85 px-3 py-1.5 text-center text-sm text-pretty text-muted-foreground backdrop-blur-md"
                 >
-                  Montando o livro…
+                  {message}
                 </motion.p>
               ) : null}
             </AnimatePresence>
           </div>
 
           <motion.div style={{ opacity: chrome }}>
-            <ViewerPill
-              actions={[
-                {
-                  id: "fechar",
-                  label: "Fechar",
-                  icon: XIcon,
-                  onClick: onRequestClose,
-                  shortcut: "Esc",
-                },
-              ]}
-            />
+            <ViewerPill actions={actions} />
           </motion.div>
 
           <DialogPrimitive.Description id={instructionsId} className="sr-only">
-            Arraste ou use as setas para girar o livro. Role ou faça pinça para
-            aproximar, e dê dois cliques para voltar ao começo.
+            Arraste ou use as setas para girar o livro. Role, faça pinça ou use
+            + e − para aproximar, e dê dois cliques para voltar ao começo.
           </DialogPrimitive.Description>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

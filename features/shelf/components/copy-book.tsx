@@ -138,8 +138,7 @@ export function CopyBookScope({ children }: { children: React.ReactNode }) {
           duration: 6000,
           action: {
             label: "Desfazer",
-            onClick: () =>
-              undo(book, addedToCollection ? collectionId : null),
+            onClick: () => undo(book, addedToCollection ? collectionId : null),
           },
         },
       );
@@ -176,11 +175,7 @@ export function CopyBookScope({ children }: { children: React.ReactNode }) {
           }}
         >
           {target ? (
-            <CopyForm
-              key={target.book.id}
-              book={target.book}
-              onSubmit={copy}
-            />
+            <CopyForm key={target.book.id} book={target.book} onSubmit={copy} />
           ) : null}
         </PopoverContent>
       </Popover>
@@ -220,8 +215,8 @@ function CopyForm({
       className="flex flex-col gap-4"
     >
       <p className="text-sm text-pretty">
-        Copiar <span className="font-serif text-base">{book.title}</span> para
-        a sua estante
+        Copiar <span className="font-serif text-base">{book.title}</span> para a
+        sua estante
       </p>
       <SegmentedControl
         aria-label="Status"
@@ -339,6 +334,8 @@ export function BookShelfAction({
       </Button>
     );
   }
+  // Na grade, com mouse, "+ Copiar" aparece no hover; no toque fica sempre,
+  // só o ícone, para não cobrir as capas
   return (
     <Button
       variant="outline"
@@ -346,12 +343,12 @@ export function BookShelfAction({
       onClick={open}
       aria-label={label}
       className={cn(
-        "h-7 rounded-full bg-background/90 px-2.5 text-xs backdrop-blur-sm transition-opacity",
+        "h-7 w-7 rounded-full bg-background/90 px-0 text-xs backdrop-blur-sm transition-opacity can-hover:w-auto can-hover:px-2.5",
         revealOnHover,
       )}
     >
       <Plus className="size-3.5" />
-      Copiar
+      <span className="hidden can-hover:inline">Copiar</span>
     </Button>
   );
 }

@@ -48,7 +48,6 @@ function submitOnEnter(event: React.KeyboardEvent<HTMLFormElement>) {
   event.currentTarget.requestSubmit();
 }
 
-
 /** O passo compacto: status, nota, data e, se houver, a coleção. Enter salva. */
 export function DetailsStep({
   book,

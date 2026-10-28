@@ -128,7 +128,8 @@ function FlyingCover({ flight }: { flight: Flight }) {
 
 export function useShelfFlight() {
   const context = use(FlightContext);
-  if (!context) throw new Error("useShelfFlight precisa do <ShelfFlightProvider>");
+  if (!context)
+    throw new Error("useShelfFlight precisa do <ShelfFlightProvider>");
   return context;
 }
 

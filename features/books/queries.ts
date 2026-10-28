@@ -306,9 +306,7 @@ export async function getTrendingBooks(limit = 12): Promise<TrendingBooks> {
   );
   const week = rows.filter((row) => row.week > 0);
   const weekly = week.length >= MIN_WEEKLY_BOOKS;
-  const chosen = weekly
-    ? week
-    : [...rows].sort((a, b) => b.total - a.total);
+  const chosen = weekly ? week : [...rows].sort((a, b) => b.total - a.total);
   return {
     weekly,
     books: chosen.slice(0, limit).map((row) => ({

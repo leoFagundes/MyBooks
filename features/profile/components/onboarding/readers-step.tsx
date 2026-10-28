@@ -12,7 +12,6 @@ import { finishOnboarding } from "../../actions";
 import { genreLabel, type GenreSlug } from "../../genres";
 import { StepFrame } from "./step-frame";
 
-
 type Suggestions =
   | { state: "loading" }
   | { state: "done"; readers: SuggestedReader[] }

@@ -124,10 +124,10 @@ export function filtersToParams(filters: ShelfFilters): URLSearchParams {
 export function hasRefinements(filters: ShelfFilters) {
   return Boolean(
     filters.q.trim() ||
-      filters.genre ||
-      filters.rating ||
-      filters.decade ||
-      filters.common,
+    filters.genre ||
+    filters.rating ||
+    filters.decade ||
+    filters.common,
   );
 }
 

@@ -44,7 +44,10 @@ export function RelativeTime({
   return (
     <time
       dateTime={iso}
-      className={cn("font-mono text-[11px] text-muted-foreground", className)}
+      className={cn(
+        "font-mono text-[11px] whitespace-nowrap text-muted-foreground",
+        className,
+      )}
     >
       {current === null ? "" : formatRelativeTime(iso, current)}
     </time>

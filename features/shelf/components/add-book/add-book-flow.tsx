@@ -35,7 +35,11 @@ export function AddBookFlow({
 }: {
   /** Livro já escolhido (a página do livro): começa no passo de status. */
   initialBook: ChosenBook | null;
-  onSave: (book: ChosenBook, details: ShelfDetails) => void;
+  onSave: (
+    book: ChosenBook,
+    details: ShelfDetails,
+    collectionId: string | null,
+  ) => void;
   onPick?: (book: ChosenBook) => void;
   collectionTitle?: string;
 }) {
@@ -86,7 +90,9 @@ export function AddBookFlow({
             book={step.book}
             // O livro manual já está no catálogo: voltar é buscar de novo
             onBack={() => setStep({ name: "search" })}
-            onSave={(details) => onSave(step.book, details)}
+            onSave={(details, collectionId) =>
+              onSave(step.book, details, collectionId)
+            }
           />
         </motion.div>
       )}

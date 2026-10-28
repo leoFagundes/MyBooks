@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GlobeIcon, LockIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,8 +48,13 @@ export type CollectionFormSubmit = CollectionFormData & {
 };
 
 type CollectionFormProps = {
-  /** O botão que abre o formulário; o foco volta para ele ao fechar. */
-  trigger: React.ReactElement;
+  /**
+   * O botão que abre o formulário; o foco volta para ele ao fechar. Sem ele,
+   * quem abre é de fora (`open`), e o foco volta para onde estava.
+   */
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   mode: "create" | "edit";
   defaultValues?: Partial<CollectionFormValues>;
   /** Quem já colabora (ao editar). */
@@ -77,20 +82,42 @@ async function usernameStatus(username: string) {
  */
 export function CollectionForm({
   trigger,
+  open: openProp,
+  onOpenChange,
   mode,
   defaultValues,
   members,
   onSubmit,
 }: CollectionFormProps) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const wide = useMediaQuery("(min-width: 640px)");
+  const returnFocus = useRef<HTMLElement | null>(null);
+  // Sem SheetTrigger, o Radix não sabe a quem devolver o foco
+  const focusProps = trigger
+    ? {}
+    : {
+        onOpenAutoFocus: () => {
+          const active = document.activeElement;
+          returnFocus.current = active instanceof HTMLElement ? active : null;
+        },
+        onCloseAutoFocus: (event: Event) => {
+          event.preventDefault();
+          returnFocus.current?.focus();
+        },
+      };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
+      {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
       <SheetContent
         side={wide ? "right" : "bottom"}
         className="overflow-y-auto"
+        {...focusProps}
       >
         <SheetHeader>
           <SheetTitle>

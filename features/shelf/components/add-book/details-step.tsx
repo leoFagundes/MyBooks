@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,19 @@ function submitOnEnter(event: React.KeyboardEvent<HTMLFormElement>) {
   event.currentTarget.requestSubmit();
 }
 
-/** O passo compacto: status, nota e data. Enter salva. */
+type EditableCollection = { id: string; title: string; emoji: string | null };
+
+// As coleções em que a pessoa pode pôr livros (as dela e as colaborativas)
+async function fetchEditableCollections(): Promise<EditableCollection[]> {
+  const response = await fetch("/api/collections/editable");
+  if (!response.ok) return [];
+  const body = (await response.json()) as {
+    collections?: EditableCollection[];
+  };
+  return body.collections ?? [];
+}
+
+/** O passo compacto: status, nota, data e, se houver, a coleção. Enter salva. */
 export function DetailsStep({
   book,
   onBack,
@@ -51,7 +64,7 @@ export function DetailsStep({
 }: {
   book: ChosenBook;
   onBack: () => void;
-  onSave: (details: ShelfDetails) => void;
+  onSave: (details: ShelfDetails, collectionId: string | null) => void;
 }) {
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
@@ -59,7 +72,14 @@ export function DetailsStep({
   const [status, setStatus] = useState<ShelfStatus>("want");
   const [rating, setRating] = useState<number | null>(null);
   const [day, setDay] = useState("");
+  const [collectionId, setCollectionId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { data: collections = [] } = useQuery({
+    queryKey: ["colecoes-editaveis"],
+    queryFn: fetchEditableCollections,
+    // Uma coleção criada agora há pouco já aparece
+    staleTime: 0,
+  });
 
   // Entra com o foco no status: as setas trocam e o Enter já salva
   useEffect(() => {
@@ -84,7 +104,7 @@ export function DetailsStep({
       return;
     }
     saved.current = true;
-    onSave(parsed.data);
+    onSave(parsed.data, collectionId || null);
   }
 
   return (
@@ -145,6 +165,32 @@ export function DetailsStep({
               aria-describedby={error ? `${id}-erro` : undefined}
             />
           </div>
+        </div>
+      ) : null}
+
+      {collections.length > 0 ? (
+        <div className="flex animate-[aparecer_var(--duration-base)_var(--ease-standard)_both] flex-col gap-2">
+          <Label htmlFor={`${id}-colecao`}>
+            Coleção{" "}
+            <span className="font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </Label>
+          <select
+            id={`${id}-colecao`}
+            value={collectionId}
+            onChange={(event) => setCollectionId(event.target.value)}
+            className="h-10 w-full cursor-pointer rounded-control border border-border-strong bg-background px-3 text-sm"
+          >
+            <option value="">Nenhuma</option>
+            {collections.map((collection) => (
+              <option key={collection.id} value={collection.id}>
+                {collection.emoji
+                  ? `${collection.emoji} ${collection.title}`
+                  : collection.title}
+              </option>
+            ))}
+          </select>
         </div>
       ) : null}
 

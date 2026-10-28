@@ -11,6 +11,8 @@ import { BookHero } from "@/features/books/components/book-hero";
 import { BookPageSkeleton } from "@/features/books/components/book-page-skeleton";
 import { CommunityBlock } from "@/features/books/components/community-block";
 import { bookColor } from "@/features/books/lib/color";
+import { AddToCollection } from "@/features/collections/components/add-to-collection";
+import { getEditableCollections } from "@/features/collections/queries";
 import {
   type BookDetails,
   getBook,
@@ -137,9 +139,20 @@ async function ViewerBlock({ book }: { book: BookDetails }) {
       </section>
     );
   }
-  const { entry, quotes } = await getMyBookEntry(viewer.id, book.id);
-  if (!entry) return <AddToShelfPrompt book={book} />;
-  return <ShelfEntryBlock book={book} entry={entry} quotes={quotes} />;
+  const [{ entry, quotes }, collections] = await Promise.all([
+    getMyBookEntry(viewer.id, book.id),
+    getEditableCollections(book.id),
+  ]);
+  return (
+    <div className="flex flex-col gap-6">
+      {entry ? (
+        <ShelfEntryBlock book={book} entry={entry} quotes={quotes} />
+      ) : (
+        <AddToShelfPrompt book={book} />
+      )}
+      <AddToCollection book={book} collections={collections} />
+    </div>
+  );
 }
 
 async function Community({ bookId }: { bookId: string }) {

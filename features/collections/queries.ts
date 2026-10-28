@@ -9,6 +9,8 @@ import { byPosition } from "./lib/position";
 import type { CollectionItemVisual, CollectionVisual, Person } from "./types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Sem livro, nenhum item embutido volta (hasBook falso em todas)
+const UUID_NONE = "00000000-0000-0000-0000-000000000000";
 const MAX_COVERS = 5;
 
 type PersonRow = {
@@ -140,4 +142,184 @@ export async function getCollection(
       saved: Boolean(save?.data),
     },
   };
+}
+
+// As colunas de um card: capas pela ordem, curtidas, colaboradores e crédito
+const CARD_COLUMNS =
+  "id, title, emoji, description, visibility, is_collaborative, owner:profiles!collections_owner_id_fkey(username, display_name, avatar_url), copied_from_owner:profiles!collections_copied_from_owner_id_fkey(username), collection_members(created_at, profile:profiles(username, display_name, avatar_url)), collection_items(position, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)), collection_likes(count)";
+
+type CardRow = {
+  id: string;
+  title: string;
+  emoji: string | null;
+  description: string | null;
+  visibility: string;
+  is_collaborative: boolean;
+  owner: PersonRow | null;
+  copied_from_owner: { username: string } | null;
+  collection_members: { created_at: string; profile: PersonRow | null }[];
+  collection_items: {
+    position: string;
+    book: Parameters<typeof toBookVisual>[0] | null;
+  }[];
+  collection_likes: { count: number }[];
+};
+
+function toCard(row: CardRow): CollectionVisual | null {
+  if (!row.owner) return null;
+  const books = row.collection_items
+    .flatMap(({ position, book }) =>
+      book ? [{ position, book: toBookVisual(book) }] : [],
+    )
+    .sort(byPosition((item) => item.book.id));
+  return {
+    id: row.id,
+    title: row.title,
+    emoji: row.emoji,
+    description: row.description,
+    visibility: row.visibility === "private" ? "private" : "public",
+    isCollaborative: row.is_collaborative,
+    owner: toPerson(row.owner),
+    members: [...row.collection_members]
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .flatMap(({ profile }) => (profile ? [toPerson(profile)] : [])),
+    // No card o crédito vai sem o link: a página confere se a origem é visível
+    copiedFrom: row.copied_from_owner
+      ? { username: row.copied_from_owner.username, collection: null }
+      : null,
+    bookCount: books.length,
+    likeCount: row.collection_likes[0]?.count ?? 0,
+    covers: books.slice(0, MAX_COVERS).map((item) => item.book),
+  };
+}
+
+function cards(rows: CardRow[] | null | undefined): CollectionVisual[] {
+  return (rows ?? []).flatMap((row) => {
+    const card = toCard(row);
+    if (!card) return [];
+    // O card muda junto com a coleção (livros, título, curtidas)
+    cacheTag(`collection:${card.id}`);
+    return [card];
+  });
+}
+
+export type ProfileCollections = {
+  /** As da pessoa: as privadas só aparecem para ela e para quem colabora. */
+  owned: CollectionVisual[];
+  /** Em que ela colabora; só no próprio perfil. */
+  member: CollectionVisual[];
+  /** As que ela salvou; só no próprio perfil. */
+  saved: CollectionVisual[];
+};
+
+/** A aba Coleções do perfil, conforme quem vê (a RLS esconde as privadas). */
+export async function getProfileCollections(profile: {
+  id: string;
+  username: string;
+}): Promise<ProfileCollections> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`profile:${profile.username}`);
+
+  const supabase = await createClient();
+  const viewer = await getViewer();
+  const self = viewer?.id === profile.id;
+  const [owned, member, saved] = await Promise.all([
+    supabase
+      .from("collections")
+      .select(CARD_COLUMNS)
+      .eq("owner_id", profile.id)
+      .order("updated_at", { ascending: false }),
+    self
+      ? supabase
+          .from("collections")
+          .select(
+            `${CARD_COLUMNS}, membership:collection_members!inner(user_id)`,
+          )
+          .eq("membership.user_id", profile.id)
+          .order("updated_at", { ascending: false })
+      : null,
+    self
+      ? supabase
+          .from("collection_saves")
+          .select(`created_at, collection:collections(${CARD_COLUMNS})`)
+          .eq("user_id", profile.id)
+          .order("created_at", { ascending: false })
+      : null,
+  ]);
+  if (owned.error) throw owned.error;
+  return {
+    owned: cards(owned.data),
+    member: cards(member?.data),
+    saved: cards(
+      saved?.data?.flatMap(({ collection }) =>
+        collection ? [collection] : [],
+      ),
+    ),
+  };
+}
+
+/** Coleção em que a pessoa pode pôr livros, e se o livro já está nela. */
+export type EditableCollection = {
+  id: string;
+  title: string;
+  emoji: string | null;
+  hasBook: boolean;
+};
+
+/**
+ * As coleções que alguém edita (as dela e as colaborativas em que colabora),
+ * da mexida por último à mais antiga. Sem cache: o Route Handler da paleta
+ * também lê por aqui.
+ */
+export async function readEditableCollections(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  bookId?: string,
+): Promise<EditableCollection[]> {
+  let owned = supabase
+    .from("collections")
+    .select("id, title, emoji, updated_at, collection_items(book_id)")
+    .eq("owner_id", userId);
+  let shared = supabase
+    .from("collections")
+    .select(
+      "id, title, emoji, updated_at, collection_items(book_id), membership:collection_members!inner(user_id)",
+    )
+    .eq("membership.user_id", userId)
+    .eq("is_collaborative", true);
+  // Filtra os itens embutidos, não as coleções: sobra o livro, se estiver
+  const book = bookId && UUID.test(bookId) ? bookId : null;
+  owned = owned.eq("collection_items.book_id", book ?? UUID_NONE);
+  shared = shared.eq("collection_items.book_id", book ?? UUID_NONE);
+  const [mine, theirs] = await Promise.all([owned, shared]);
+  if (mine.error) throw mine.error;
+  if (theirs.error) throw theirs.error;
+  return [...mine.data, ...theirs.data]
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .map((row) => ({
+      id: row.id,
+      title: row.title,
+      emoji: row.emoji,
+      hasBook: row.collection_items.length > 0,
+    }));
+}
+
+/** Para a página do livro: as coleções que quem vê edita, marcando o livro. */
+export async function getEditableCollections(
+  bookId: string,
+): Promise<EditableCollection[]> {
+  "use cache: private";
+  cacheLife("minutes");
+  const viewer = await getViewer();
+  if (!viewer) return [];
+  cacheTag(`profile:${viewer.username}`, `book:${bookId}`);
+  const supabase = await createClient();
+  const collections = await readEditableCollections(
+    supabase,
+    viewer.id,
+    bookId,
+  );
+  for (const collection of collections) cacheTag(`collection:${collection.id}`);
+  return collections;
 }

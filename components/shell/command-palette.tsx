@@ -5,6 +5,7 @@ import {
   BookPlus,
   CornerDownLeft,
   House,
+  LibraryBig,
   Search,
   Shapes,
   SunMoon,
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/command-styles";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
+import { useNewCollection } from "@/features/collections/components/new-collection-provider";
 import { useAddBook } from "@/features/shelf/components/add-book/add-book-provider";
 import { routes } from "@/lib/routes";
 import { useTheme } from "./theme-provider";
@@ -76,6 +78,7 @@ function CommandPalette({
   const router = useRouter();
   const { resolved, setPreference } = useTheme();
   const addBook = useAddBook();
+  const newCollection = useNewCollection();
   const returnFocus = useRef<HTMLElement | null>(null);
 
   function run(action: () => void) {
@@ -127,6 +130,15 @@ function CommandPalette({
                   <BookPlus />
                   Adicionar livro
                   <Kbd className="ml-auto">N</Kbd>
+                </Command.Item>
+              ) : null}
+              {addBook.enabled ? (
+                <Command.Item
+                  className={itemClasses}
+                  onSelect={() => run(newCollection)}
+                >
+                  <LibraryBig />
+                  Nova coleção
                 </Command.Item>
               ) : null}
               <Command.Item

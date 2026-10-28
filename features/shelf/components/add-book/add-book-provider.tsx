@@ -60,7 +60,11 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  function save(book: ChosenBook, details: ShelfDetails) {
+  function save(
+    book: ChosenBook,
+    details: ShelfDetails,
+    collectionId: string | null,
+  ) {
     setOpen(false);
     const title = book.visual.title;
     const toastId = toast.loading("Pondo na estante…", { description: title });
@@ -72,20 +76,36 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           description: title,
           action: {
             label: "Tentar de novo",
-            onClick: () => save(book, details),
+            onClick: () => save(book, details, collectionId),
           },
         });
         return;
       }
-      toast.success("Na sua estante", {
-        id: toastId,
-        description: title,
-        duration: 6000,
-        action: {
-          label: "Desfazer",
-          onClick: () => undo(result.data.bookId, title),
+      // Na coleção escolhida também; o livro já está no catálogo
+      const inCollection = collectionId
+        ? await addBookToCollection(collectionId, {
+            catalogId: result.data.bookId,
+          })
+        : null;
+      if (inCollection && !inCollection.ok) {
+        toast.error(`Na sua estante, mas: ${inCollection.error}`, {
+          id: toastId,
+          description: title,
+        });
+        return;
+      }
+      toast.success(
+        inCollection ? "Na sua estante e na coleção" : "Na sua estante",
+        {
+          id: toastId,
+          description: title,
+          duration: 6000,
+          action: {
+            label: "Desfazer",
+            onClick: () => undo(result.data.bookId, title),
+          },
         },
-      });
+      );
     });
   }
 

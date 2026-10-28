@@ -1,3 +1,5 @@
+import type { BookVisual } from "@/features/books/types";
+
 /** Quem está vendo diante de um leitor: não segue, segue ou pediu para seguir. */
 export type FollowState = "none" | "accepted" | "pending";
 
@@ -22,10 +24,7 @@ export type SuggestedReader = Reader & {
 export type FollowRequest = { reader: Reader; at: string };
 
 export type NotificationType =
-  | "follow"
-  | "collection_like"
-  | "collection_copy"
-  | "collection_invite";
+  "follow" | "collection_like" | "collection_copy" | "collection_invite";
 
 /** Um aviso do popover (os pedidos para seguir vêm à parte). */
 export type NotificationItem = {
@@ -46,3 +45,44 @@ export type NotificationsPayload = {
 
 /** Afinidade literária (reading_affinity): de 0 a 100 e os livros em comum. */
 export type Affinity = { score: number; commonBooks: number };
+
+export const ACTIVITY_TYPES = [
+  "shelf_want",
+  "shelf_reading",
+  "shelf_read",
+  "shelf_abandoned",
+  "collection_create",
+  "collection_add",
+  "follow",
+] as const;
+
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
+/** Onde a próxima página do feed começa: a última atividade mostrada. */
+export type FeedCursor = { at: string; id: string };
+
+/** Uma atividade do feed, já com o livro, a coleção ou a pessoa seguida. */
+export type ActivityRow = {
+  id: string;
+  type: ActivityType;
+  at: string;
+  actor: Reader;
+  book: BookVisual | null;
+  collection: { id: string; title: string; emoji: string | null } | null;
+  target: Reader | null;
+};
+
+/** Atividades seguidas da mesma pessoa, do mesmo tipo, juntas num card. */
+export type FeedGroup = {
+  /** O id da atividade mais nova do grupo. */
+  key: string;
+  type: ActivityType;
+  actor: Reader;
+  /** Quando foi a mais nova. */
+  at: string;
+  books: BookVisual[];
+  collection: ActivityRow["collection"];
+  people: Reader[];
+};
+
+export type FeedPage = { groups: FeedGroup[]; next: FeedCursor | null };

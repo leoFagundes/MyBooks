@@ -1,18 +1,25 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
+import { toBookVisual } from "@/features/books/lib/to-book-visual";
 import { avatarSrc } from "@/features/profile/lib/avatar";
 import { getViewer } from "@/lib/auth";
 import { getPublicEnv } from "@/lib/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  Affinity,
-  FollowState,
-  NotificationItem,
-  NotificationsPayload,
-  Reader,
-  ReaderState,
-  SuggestedReader,
+import { FEED_PAGE_SIZE, groupActivities } from "./lib/feed";
+import {
+  ACTIVITY_TYPES,
+  type ActivityRow,
+  type ActivityType,
+  type Affinity,
+  type FeedCursor,
+  type FeedPage,
+  type FollowState,
+  type NotificationItem,
+  type NotificationsPayload,
+  type Reader,
+  type ReaderState,
+  type SuggestedReader,
 } from "./types";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -145,9 +152,8 @@ const NOTIFICATION_TYPES = new Set<string>([
   "collection_invite",
 ]);
 
-const isNotificationType = (
-  value: string,
-): value is NotificationItem["type"] => NOTIFICATION_TYPES.has(value);
+const isNotificationType = (value: string): value is NotificationItem["type"] =>
+  NOTIFICATION_TYPES.has(value);
 
 const READER_COLUMNS = "id, username, display_name, avatar_url";
 
@@ -288,4 +294,75 @@ export async function getAffinityReaders(
     score: row.score,
     commonBooks: row.common_books,
   }));
+}
+
+/** As sugestões do Início vazio; seguir alguém atualiza feed:<id>. */
+export async function getHomeSuggestions(
+  viewerId: string,
+  limit = 5,
+): Promise<SuggestedReader[]> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`feed:${viewerId}`);
+  return getSuggestedReaders(limit);
+}
+
+const ACTIVITY_COLUMNS = `id, type, created_at, actor:profiles!activities_actor_id_fkey(${READER_COLUMNS}), book:books(id, title, authors, cover_url, cover_color, page_count, published_year), collection:collections(id, title, emoji), target:profiles!activities_target_user_id_fkey(${READER_COLUMNS})`;
+
+const isActivityType = (value: string): value is ActivityType =>
+  (ACTIVITY_TYPES as readonly string[]).includes(value);
+
+/**
+ * Uma página do feed (feed_activities, no banco: só quem a pessoa segue, com
+ * a RLS das atividades), já agrupada. Atividade cujo livro ou coleção sumiu
+ * do alcance fica de fora.
+ */
+export async function readFeedPage(
+  supabase: Supabase,
+  cursor: FeedCursor | null,
+): Promise<FeedPage> {
+  const { data, error } = await supabase
+    .rpc("feed_activities", {
+      before_at: cursor?.at,
+      before_id: cursor?.id,
+      max_rows: FEED_PAGE_SIZE,
+    })
+    .select(ACTIVITY_COLUMNS)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+  if (error) throw error;
+  const rows = data.flatMap((row): ActivityRow[] => {
+    if (!isActivityType(row.type) || !row.actor) return [];
+    const book = row.book ? toBookVisual(row.book) : null;
+    const target = row.target ? toReader(row.target) : null;
+    const needsBook =
+      row.type.startsWith("shelf_") || row.type === "collection_add";
+    if (needsBook && !book) return [];
+    if (row.type.startsWith("collection_") && !row.collection) return [];
+    if (row.type === "follow" && !target) return [];
+    return [
+      {
+        id: row.id,
+        type: row.type,
+        at: row.created_at,
+        actor: toReader(row.actor),
+        book,
+        collection: row.collection,
+        target,
+      },
+    ];
+  });
+  const lastRow = data.at(-1);
+  return groupActivities(rows, {
+    full: data.length === FEED_PAGE_SIZE,
+    last: lastRow ? { at: lastRow.created_at, id: lastRow.id } : null,
+  });
+}
+
+/** A primeira página do feed, que o Início desenha no servidor. */
+export async function getFeedFirstPage(viewerId: string): Promise<FeedPage> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`feed:${viewerId}`);
+  return readFeedPage(await createClient(), null);
 }

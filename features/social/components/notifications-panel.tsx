@@ -17,7 +17,10 @@ import { springs, tweens } from "@/lib/motion";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { acceptFollowRequest, declineFollowRequest } from "../actions";
-import { NOTIFICATIONS_KEY, type useNotifications } from "../lib/use-notifications";
+import {
+  NOTIFICATIONS_KEY,
+  type useNotifications,
+} from "../lib/use-notifications";
 import type {
   FollowRequest,
   NotificationItem,

@@ -322,6 +322,23 @@ export function BookShelfAction({
       </Button>
     );
   }
+  // No feed as capas são pequenas: só o ícone, como o selo
+  if (place === "feed") {
+    return (
+      <Button
+        variant="outline"
+        size="icon-sm"
+        onClick={open}
+        aria-label={label}
+        className={cn(
+          "size-7 rounded-full bg-background/90 backdrop-blur-sm transition-opacity",
+          revealOnHover,
+        )}
+      >
+        <Plus className="size-3.5" />
+      </Button>
+    );
+  }
   return (
     <Button
       variant="outline"

@@ -23,7 +23,9 @@ export function ReaderRow({
   return (
     <div className="flex items-center gap-3 py-3">
       <Avatar className="size-10">
-        {reader.avatarUrl ? <AvatarImage src={reader.avatarUrl} alt="" /> : null}
+        {reader.avatarUrl ? (
+          <AvatarImage src={reader.avatarUrl} alt="" />
+        ) : null}
         <AvatarFallback>{initials(reader.displayName)}</AvatarFallback>
       </Avatar>
       <div className="flex min-w-0 flex-1 flex-col">

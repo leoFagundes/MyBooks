@@ -15,9 +15,10 @@ import { BookLink } from "@/features/books/components/book-link";
 import type { BookVisual } from "@/features/books/types";
 import { CollectionCard } from "@/features/collections/components/collection-card";
 import type { CollectionVisual } from "@/features/collections/types";
-import { genreLabel } from "@/features/profile/genres";
+
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { routes } from "@/lib/routes";
+import { readsLine } from "../../lib/reads-line";
 import type { ReaderListItem } from "../../queries";
 import { ReaderRow } from "../reader-row";
 
@@ -53,15 +54,6 @@ async function fetchResults(query: string, tab: Tab): Promise<ExploreResults> {
   const response = await fetch(`/api/explore/search?${params}`);
   if (!response.ok) throw new Error(String(response.status));
   return (await response.json()) as ExploreResults;
-}
-
-const list = new Intl.ListFormat("pt-BR", { type: "conjunction" });
-
-function readsLine(favoriteGenres: string[]) {
-  const labels = favoriteGenres
-    .slice(0, 3)
-    .flatMap((slug) => genreLabel(slug) ?? []);
-  return labels.length > 0 ? `Lê ${list.format(labels)}` : null;
 }
 
 /**

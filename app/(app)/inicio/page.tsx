@@ -3,8 +3,12 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getProfileCounts } from "@/features/profile/queries";
 import { ReadingNow } from "@/features/shelf/components/reading-now";
 import { getShelf } from "@/features/shelf/queries";
+import { Feed } from "@/features/social/components/feed/feed";
+import { FeedEmpty } from "@/features/social/components/feed/feed-empty";
+import { getFeedFirstPage } from "@/features/social/queries";
 import { requireViewer } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
 import { routes } from "@/lib/routes";
@@ -19,7 +23,7 @@ export const unstable_dynamicStaleTime = 300;
 export default function HomePage() {
   return (
     <PageTransition>
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-10 sm:px-6 sm:py-14">
         <Suspense fallback={<HomeSkeleton />}>
           <Home />
         </Suspense>
@@ -31,7 +35,11 @@ export default function HomePage() {
 async function Home() {
   const viewer = await requireViewer();
   if (!viewer.onboarded) redirect(routes.onboarding);
-  const shelf = await getShelf(viewer.id);
+  const [shelf, feed, counts] = await Promise.all([
+    getShelf(viewer.id),
+    getFeedFirstPage(viewer.id),
+    getProfileCounts(viewer),
+  ]);
   const firstName = viewer.displayName.split(/\s+/)[0] || viewer.displayName;
   const reading = shelf.filter((item) => item.status === "reading");
 
@@ -50,6 +58,25 @@ async function Home() {
         ) : null}
       </header>
       <ReadingNow entries={reading} />
+      {feed.groups.length > 0 ? (
+        <section
+          aria-labelledby="quem-voce-segue"
+          className="flex max-w-2xl flex-col gap-6"
+        >
+          <h2
+            id="quem-voce-segue"
+            className="font-serif text-2xl tracking-tight"
+          >
+            Quem você segue
+          </h2>
+          <Feed first={feed} ownedIds={shelf.map((item) => item.book.id)} />
+        </section>
+      ) : (
+        <FeedEmpty
+          viewerId={viewer.id}
+          followsSomeone={(counts?.following ?? 0) > 0}
+        />
+      )}
     </>
   );
 }

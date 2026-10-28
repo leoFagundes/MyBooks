@@ -532,3 +532,33 @@ export async function setSave(
   updateTag(`profile:${viewer.username}`);
   return { ok: true, data: undefined };
 }
+
+/**
+ * Copia a coleção para quem está vendo (copy_collection, no banco): privada,
+ * com os livros, a ordem e as notas, e o crédito da origem. O botão trava
+ * enquanto copia: dois cliques fazem uma cópia só.
+ */
+export async function copyCollection(
+  id: string,
+): Promise<ActionResult<{ id: string }>> {
+  const collectionId = collectionIdSchema.safeParse(id);
+  if (!collectionId.success) {
+    return { ok: false, error: "Não deu para copiar agora." };
+  }
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("copy_collection", {
+    source: collectionId.data,
+  });
+  if (error || !data) {
+    return {
+      ok: false,
+      error:
+        error?.code === "P0002"
+          ? "Essa coleção não está mais aqui."
+          : "Não deu para copiar agora.",
+    };
+  }
+  updateTag(`profile:${viewer.username}`);
+  return { ok: true, data: { id: data } };
+}

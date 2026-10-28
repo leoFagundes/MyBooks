@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useRef, useTransition } from "react";
 import { toast } from "sonner";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { SwapText } from "@/components/motion/swap-text";
@@ -75,6 +75,18 @@ export function LikeCountLink({ count }: { count: number }) {
       <Link href={routes.entrar} aria-label="Entrar para curtir">
         <HeartIcon className="size-4" />
         <AnimatedNumber value={count} />
+      </Link>
+    </Button>
+  );
+}
+
+/** Para quem não entrou: copiar começa por entrar. */
+export function CopyCollectionLink() {
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link href={routes.entrar}>
+        <CopyIcon className="size-4" />
+        Copiar coleção
       </Link>
     </Button>
   );
@@ -166,10 +178,16 @@ export function CopyCollectionButton({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // O disabled só chega no próximo render; o segundo clique de um duplo
+  // chega antes dele
+  const copying = useRef(false);
 
   function copy() {
+    if (copying.current) return;
+    copying.current = true;
     startTransition(async () => {
       const result = await onCopy();
+      copying.current = false;
       if (!result.ok) {
         toast("Não deu para copiar agora");
         return;

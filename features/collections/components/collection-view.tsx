@@ -26,6 +26,7 @@ import { useAddBook } from "@/features/shelf/components/add-book/add-book-provid
 import { routes } from "@/lib/routes";
 import {
   addBookToCollection,
+  copyCollection,
   deleteCollection,
   leaveCollection,
   moveCollectionItem,
@@ -41,6 +42,8 @@ import type { CollectionPageData } from "../queries";
 import type { ItemPlacement } from "../schemas";
 import type { CollectionItemVisual, CollectionVisual } from "../types";
 import {
+  CopyCollectionButton,
+  CopyCollectionLink,
   LikeButton,
   LikeCountLink,
   SaveButton,
@@ -183,6 +186,13 @@ export function CollectionView({ page }: { page: CollectionPageData }) {
                 path={routes.collection(collection.id)}
                 title={collection.title}
               />
+              {!viewer.signedIn ? (
+                <CopyCollectionLink />
+              ) : !viewer.isOwner ? (
+                <CopyCollectionButton
+                  onCopy={() => copyCollection(collection.id)}
+                />
+              ) : null}
               {viewer.isOwner ? (
                 <>
                   <EditCollectionButton collection={collection} />

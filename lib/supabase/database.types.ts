@@ -590,6 +590,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      copy_collection: { Args: { source: string }; Returns: string }
       profile_counts: {
         Args: { profile_id: string }
         Returns: {

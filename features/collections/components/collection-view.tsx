@@ -25,13 +25,20 @@ import {
   rebalanceCollection,
   removeFromCollection,
   saveItemNote,
+  setLike,
+  setSave,
   updateCollection,
 } from "../actions";
 import { applyMovePlan, type MovePlan } from "../lib/position";
 import type { CollectionPageData } from "../queries";
 import type { ItemPlacement } from "../schemas";
 import type { CollectionItemVisual, CollectionVisual } from "../types";
-import { ShareButton } from "./collection-actions";
+import {
+  LikeButton,
+  LikeCountLink,
+  SaveButton,
+  ShareButton,
+} from "./collection-actions";
 import { CollectionForm } from "./collection-form";
 import { CollectionHeader } from "./collection-header";
 import { SortableBooks } from "./sortable-books";
@@ -149,6 +156,21 @@ export function CollectionView({ page }: { page: CollectionPageData }) {
                   <PlusIcon className="size-4" />
                   Adicionar livro
                 </Button>
+              ) : null}
+              {viewer.signedIn ? (
+                <LikeButton
+                  liked={viewer.liked}
+                  count={collection.likeCount}
+                  onToggle={(next) => setLike(collection.id, next)}
+                />
+              ) : (
+                <LikeCountLink count={collection.likeCount} />
+              )}
+              {viewer.signedIn && !viewer.isOwner ? (
+                <SaveButton
+                  saved={viewer.saved}
+                  onToggle={(next) => setSave(collection.id, next)}
+                />
               ) : null}
               <ShareButton
                 path={routes.collection(collection.id)}

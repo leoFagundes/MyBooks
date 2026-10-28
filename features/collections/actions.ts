@@ -305,3 +305,68 @@ export async function saveItemNote(
   updateTag(`collection:${collectionId.data}`);
   return { ok: true, data: undefined };
 }
+
+const toggleSchema = z.boolean();
+
+/**
+ * Curtir ou desfazer a curtida. Repetir não muda nada: a curtida que já
+ * existe fica (on conflict do nothing), e a que não existe não se apaga.
+ */
+export async function setLike(
+  id: string,
+  liked: boolean,
+): Promise<ActionResult> {
+  const collectionId = collectionIdSchema.safeParse(id);
+  const value = toggleSchema.safeParse(liked);
+  if (!collectionId.success || !value.success) {
+    return { ok: false, error: "Não deu para curtir agora." };
+  }
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { error } = value.data
+    ? await supabase
+        .from("collection_likes")
+        .upsert(
+          { user_id: viewer.id, collection_id: collectionId.data },
+          { onConflict: "user_id,collection_id", ignoreDuplicates: true },
+        )
+    : await supabase
+        .from("collection_likes")
+        .delete()
+        .eq("user_id", viewer.id)
+        .eq("collection_id", collectionId.data);
+  if (error) return { ok: false, error: "Não deu para curtir agora." };
+  updateTag(`collection:${collectionId.data}`);
+  return { ok: true, data: undefined };
+}
+
+/** Salvar a coleção para ver depois (só quem salvou sabe); idempotente. */
+export async function setSave(
+  id: string,
+  saved: boolean,
+): Promise<ActionResult> {
+  const collectionId = collectionIdSchema.safeParse(id);
+  const value = toggleSchema.safeParse(saved);
+  if (!collectionId.success || !value.success) {
+    return { ok: false, error: "Não deu para salvar agora." };
+  }
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { error } = value.data
+    ? await supabase
+        .from("collection_saves")
+        .upsert(
+          { user_id: viewer.id, collection_id: collectionId.data },
+          { onConflict: "user_id,collection_id", ignoreDuplicates: true },
+        )
+    : await supabase
+        .from("collection_saves")
+        .delete()
+        .eq("user_id", viewer.id)
+        .eq("collection_id", collectionId.data);
+  if (error) return { ok: false, error: "Não deu para salvar agora." };
+  updateTag(`collection:${collectionId.data}`);
+  // A lista "Salvas" do perfil de quem salvou
+  updateTag(`profile:${viewer.username}`);
+  return { ok: true, data: undefined };
+}

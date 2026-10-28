@@ -3,6 +3,7 @@
 import { BookmarkIcon, CopyIcon, HeartIcon, Share2Icon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
@@ -63,6 +64,18 @@ export function LikeButton({
         />
       </motion.span>
       <AnimatedNumber value={state.count} />
+    </Button>
+  );
+}
+
+/** Para quem não entrou: as curtidas, e o clique leva a entrar. */
+export function LikeCountLink({ count }: { count: number }) {
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link href={routes.entrar} aria-label="Entrar para curtir">
+        <HeartIcon className="size-4" />
+        <AnimatedNumber value={count} />
+      </Link>
     </Button>
   );
 }

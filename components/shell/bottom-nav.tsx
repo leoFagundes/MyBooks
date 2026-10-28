@@ -65,7 +65,13 @@ export function BottomNav({
           >
             <Plus className="size-5" />
           </Button>
-          {estante ?? <EstanteLink viewer={viewer ?? null} variant="pill" />}
+          {estante ?? (
+            <EstanteLink
+              viewer={viewer ?? null}
+              variant="pill"
+              target={!preview}
+            />
+          )}
         </div>
       </nav>
     </NavIndicatorContext>

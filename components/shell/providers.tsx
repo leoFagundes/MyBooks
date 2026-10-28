@@ -9,6 +9,7 @@ import { NewCollectionProvider } from "@/features/collections/components/new-col
 import { AddBookProvider } from "@/features/shelf/components/add-book/add-book-provider";
 import { CommandPaletteProvider } from "./command-palette";
 import { QueryProvider } from "./query-provider";
+import { ShelfFlightProvider } from "./shelf-flight";
 import { SmoothScroll } from "./smooth-scroll";
 import { ThemeProvider } from "./theme-provider";
 
@@ -20,15 +21,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <MotionConfig reducedMotion="user" transition={springs.smooth}>
           <TooltipProvider>
             <CoverTransitionProvider>
-              <AddBookProvider>
-                <NewCollectionProvider>
-                  <CommandPaletteProvider>
-                    <SmoothScroll />
-                    {children}
-                    <Toaster />
-                  </CommandPaletteProvider>
-                </NewCollectionProvider>
-              </AddBookProvider>
+              <ShelfFlightProvider>
+                <AddBookProvider>
+                  <NewCollectionProvider>
+                    <CommandPaletteProvider>
+                      <SmoothScroll />
+                      {children}
+                      <Toaster />
+                    </CommandPaletteProvider>
+                  </NewCollectionProvider>
+                </AddBookProvider>
+              </ShelfFlightProvider>
             </CoverTransitionProvider>
           </TooltipProvider>
         </MotionConfig>

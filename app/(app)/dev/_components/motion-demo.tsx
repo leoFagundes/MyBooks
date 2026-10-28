@@ -2,12 +2,15 @@
 
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { SwapText } from "@/components/motion/swap-text";
 import { TextReveal } from "@/components/motion/text-reveal";
+import { useShelfFlight } from "@/components/shell/shelf-flight";
 import { Button } from "@/components/ui/button";
+import { BookCover } from "@/features/books/components/book-cover";
+import { sampleBooks } from "@/features/books/sample-books";
 import { springs } from "@/lib/motion";
 import { DemoRow } from "./dev-section";
 
@@ -35,6 +38,10 @@ export function MotionDemo() {
   const [following, setFollowing] = useState(false);
   const [springsOn, setSpringsOn] = useState(false);
   const [bookCount, setBookCount] = useState(128);
+  const flight = useShelfFlight();
+  const flyingCover = useRef<HTMLDivElement>(null);
+  const [shelfCount, setShelfCount] = useState(41);
+  const flyingBook = sampleBooks[2] ?? sampleBooks[0];
 
   return (
     <>
@@ -119,6 +126,27 @@ export function MotionDemo() {
           <AnimatedNumber value={87} className="text-foreground" /> seguindo
         </span>
       </p>
+
+      <DemoRow label="Copiar livro">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (flyingCover.current && flyingBook) {
+              flight.fly(flyingCover.current, flyingBook);
+            }
+            flight.showCount(shelfCount + 1);
+            setShelfCount((count) => count + 1);
+          }}
+        >
+          Copiar para a estante
+        </Button>
+      </DemoRow>
+      {flyingBook ? (
+        <div ref={flyingCover} className="w-24">
+          <BookCover book={flyingBook} size="fill" />
+        </div>
+      ) : null}
 
       <DemoRow label="Molas">
         <Button

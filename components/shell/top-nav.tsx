@@ -66,7 +66,7 @@ export function TopNav({ viewer, slots, preview = false }: TopNavProps) {
             {slots ? (
               slots.estante
             ) : (
-              <EstanteLink viewer={viewer} variant="top" />
+              <EstanteLink viewer={viewer} variant="top" target={!preview} />
             )}
           </nav>
           <div className="col-start-3 flex items-center justify-end gap-1">

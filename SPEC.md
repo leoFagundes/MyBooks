@@ -256,4 +256,4 @@ Regras de acesso:
 5. **Social**: seguir, perfis privados, explorar, afinidade, copiar livros, feed e notificações em tempo real.
 6. **Visualizador 3D.**
 7. **Toques finais de produto**: landing com narrativa de rolagem, ⌘K completo, sortear próxima leitura, scanner de ISBN, imagens OG e importação do Goodreads.
-8. **Polimento e QA**: revisão de todas as animações, acessibilidade, performance, testes Playwright e deploy na Vercel.
+8. **Polimento e QA**: revisão de todas as animações, fluidez de cada animação, acessibilidade, performance, testes Playwright e deploy na Vercel.

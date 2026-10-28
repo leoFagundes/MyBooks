@@ -161,3 +161,17 @@ export function canSeeContent(
 ) {
   return !profile.isPrivate || relation === "self" || relation === "following";
 }
+
+/** O e-mail da conta de quem está vendo, das claims da sessão. */
+export async function getAccountEmail(
+  username: string,
+): Promise<string | null> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`profile:${username}`);
+
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const email = data?.claims.email;
+  return typeof email === "string" && email ? email : null;
+}

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check } from "lucide-react";
-import { useEffect, useId, useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { SwapText } from "@/components/motion/swap-text";
@@ -10,7 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { saveProfile } from "../../actions";
-import { typedUsername, type UsernameAvailability } from "../../lib/username";
+import {
+  AVAILABILITY_MESSAGES,
+  useUsernameAvailability,
+} from "../../lib/use-username-availability";
+import { typedUsername } from "../../lib/username";
 import { profileStepSchema } from "../../schemas";
 import { type AvatarValue, AvatarPicker } from "./avatar-picker";
 import { StepFrame } from "./step-frame";
@@ -26,49 +30,6 @@ const fieldsSchema = profileStepSchema.pick({
   username: true,
 });
 type Fields = z.input<typeof fieldsSchema>;
-
-const MESSAGES: Record<UsernameAvailability, string> = {
-  available: "Disponível",
-  yours: "Esse é o seu @",
-  taken: "Esse @ já tem dono",
-  invalid: "Use de 3 a 20 letras, números ou _",
-  reserved: "Esse @ é reservado",
-};
-
-/** Confere o @ com debounce; enquanto a resposta não chega, "conferindo". */
-function useAvailability(username: string, own: string) {
-  const [answer, setAnswer] = useState<{
-    username: string;
-    status: UsernameAvailability;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!username || username === own) return;
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `/api/usernames/availability?username=${encodeURIComponent(username)}`,
-          { signal: controller.signal },
-        );
-        const { status } = (await response.json()) as {
-          status: UsernameAvailability;
-        };
-        setAnswer({ username, status });
-      } catch {
-        // Cancelada pela próxima letra, ou sem rede: o salvar confere de novo
-      }
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [username, own]);
-
-  if (!username) return null;
-  if (username === own) return "yours" as const;
-  return answer?.username === username ? answer.status : ("checking" as const);
-}
 
 export function ProfileStep({
   userId,
@@ -102,12 +63,12 @@ export function ProfileStep({
   });
   const name = useWatch({ control, name: "displayName" });
   const username = useWatch({ control, name: "username" });
-  const availability = useAvailability(username, ownUsername);
+  const availability = useUsernameAvailability(username, ownUsername);
 
   const submit = handleSubmit((values) => {
     setServerError(null);
     if (availability === "taken") {
-      setError("username", { message: MESSAGES.taken });
+      setError("username", { message: AVAILABILITY_MESSAGES.taken });
       return;
     }
     startSaving(async () => {
@@ -133,7 +94,7 @@ export function ProfileStep({
   const usernameError = errors.username?.message;
   const status =
     availability && availability !== "checking"
-      ? MESSAGES[availability]
+      ? AVAILABILITY_MESSAGES[availability]
       : availability === "checking"
         ? "Conferindo…"
         : null;

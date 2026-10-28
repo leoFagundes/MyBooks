@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Button } from "@/components/ui/button";
+import { AccountDeletedNotice } from "@/features/profile/components/settings/account-deleted-notice";
 import { routes } from "@/lib/routes";
 
 // Landing provisória: a narrativa com rolagem chega na Fase 7. Quem já tem
@@ -8,6 +9,7 @@ import { routes } from "@/lib/routes";
 export default function HomePage() {
   return (
     <PageTransition>
+      <AccountDeletedNotice />
       <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-6 px-6 py-24">
         <p className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
           MyBooks

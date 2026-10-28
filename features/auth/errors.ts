@@ -30,6 +30,11 @@ const MESSAGES = new Map<string, string>([
   ["access_denied", "O login foi cancelado. Tente de novo quando quiser."],
   ["signup_disabled", "Os cadastros estão fechados no momento."],
   ["email_address_invalid", "Esse e-mail não parece certo."],
+  ["same_password", "A senha nova é igual à de agora."],
+  [
+    "reauthentication_needed",
+    "Por segurança, entre de novo antes de trocar a senha.",
+  ],
 ]);
 
 const FALLBACK = "Algo não deu certo. Tente de novo em instantes.";

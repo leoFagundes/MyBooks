@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PASSWORD_MIN } from "@/features/auth/schemas";
 import { GENRE_SLUGS, type GenreSlug } from "./genres";
 import { RESERVED_USERNAMES } from "./lib/username";
 
@@ -52,3 +53,32 @@ export const editProfileSchema = z.object({
 });
 
 export type EditProfileValues = z.input<typeof editProfileSchema>;
+
+/** Senha nova nas configurações, com a mesma regra do cadastro. */
+export const passwordChangeSchema = z
+  .object({
+    password: z
+      .string()
+      .min(
+        PASSWORD_MIN,
+        `A senha precisa de ${PASSWORD_MIN} caracteres ou mais`,
+      )
+      .max(72, "Até 72 caracteres"),
+    confirm: z.string(),
+  })
+  .refine((values) => values.password === values.confirm, {
+    path: ["confirm"],
+    message: "As duas senhas não batem",
+  });
+
+export type PasswordChangeValues = z.input<typeof passwordChangeSchema>;
+
+/** Excluir a conta só com o @ digitado (com ou sem a arroba). */
+export const deleteAccountSchema = z.object({
+  confirm: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(40)
+    .transform((typed) => typed.replace(/^@+/, "")),
+});

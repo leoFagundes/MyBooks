@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowLeft, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowLeft,
+  LogOutIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -21,6 +27,7 @@ import { routes } from "@/lib/routes";
 import {
   addBookToCollection,
   deleteCollection,
+  leaveCollection,
   moveCollectionItem,
   rebalanceCollection,
   removeFromCollection,
@@ -181,6 +188,8 @@ export function CollectionView({ page }: { page: CollectionPageData }) {
                   <EditCollectionButton collection={collection} />
                   <DeleteCollectionButton collection={collection} />
                 </>
+              ) : viewer.isMember ? (
+                <LeaveCollectionButton collection={collection} />
               ) : null}
             </div>
           }
@@ -235,12 +244,66 @@ function EditCollectionButton({
         visibility: collection.visibility,
         isCollaborative: collection.isCollaborative,
       }}
+      members={collection.members}
       onSubmit={async (data) => {
         const result = await updateCollection(collection.id, data);
         if (result.ok) toast("Coleção salva");
         return result;
       }}
     />
+  );
+}
+
+function LeaveCollectionButton({
+  collection,
+}: {
+  collection: CollectionVisual;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function confirm() {
+    startTransition(async () => {
+      // Na privada, o servidor leva às próprias coleções
+      const result = await leaveCollection(collection.id);
+      if (result && !result.ok) {
+        toast(result.error);
+        return;
+      }
+      setOpen(false);
+      toast("Você saiu da coleção", { description: collection.title });
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        <LogOutIcon className="size-4" />
+        Sair da coleção
+      </Button>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Sair da coleção?</DialogTitle>
+          <DialogDescription>
+            Você deixa de editar {collection.title}. Os livros que você pôs
+            continuam nela, e @{collection.owner.username} pode convidar você de
+            novo.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost">Cancelar</Button>
+          </DialogClose>
+          <Button
+            onClick={confirm}
+            disabled={pending}
+            aria-busy={pending || undefined}
+          >
+            Sair da coleção
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

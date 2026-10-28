@@ -6,11 +6,12 @@ import { z } from "zod";
 import { catalogIdFor } from "@/features/books/lib/catalog-ref";
 import { type BookRef, bookRefSchema } from "@/features/shelf/schemas";
 import { type ActionResult, fieldErrorsFrom } from "@/lib/action";
-import { requireViewer } from "@/lib/auth";
+import { requireViewer, type Viewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 import { firstPositions, positionBetween } from "./lib/position";
 import {
+  COLLECTION_LIMITS,
   collectionBookIdSchema,
   type CollectionFormData,
   collectionFormSchema,
@@ -23,33 +24,112 @@ import {
 
 const NOT_EDITOR = "Você não edita mais esta coleção.";
 const NOT_OWNER = "Só quem criou a coleção pode fazer isso.";
+const TOO_MANY = `Até ${COLLECTION_LIMITS.members} pessoas por coleção.`;
+
+/** Convites (@ novos) e quem deixa de colaborar, no salvar do formulário. */
+export type MemberChanges = { invites?: string[]; removed?: string[] };
+
+const usernamesSchema = z
+  .array(z.string().regex(/^[a-z0-9_]{3,20}$/))
+  .max(COLLECTION_LIMITS.members);
 
 // O formulário manda os dados já limpos (vazio vira null); o servidor
 // confere de novo com o mesmo schema
-function parseForm(input: CollectionFormData) {
-  return collectionFormSchema.safeParse({
+function parseForm(input: CollectionFormData & MemberChanges) {
+  const form = collectionFormSchema.safeParse({
     ...input,
     description: input.description ?? "",
     emoji: input.emoji ?? "",
   });
+  const invites = usernamesSchema.safeParse(input.invites ?? []);
+  const removed = usernamesSchema.safeParse(input.removed ?? []);
+  return { form, invites, removed };
 }
 
-/** Nova coleção, de quem está vendo. Leva até a página dela. */
-export async function createCollection(
-  input: CollectionFormData,
-): Promise<ActionResult<{ id: string }>> {
-  const parsed = parseForm(input);
-  if (!parsed.success) {
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Os ids dos @ (sem repetir). Antes de qualquer escrita: um @ que não existe
+ * vira o erro, e nada muda.
+ */
+async function profileIds(
+  supabase: Supabase,
+  usernames: string[],
+  viewer: Viewer,
+): Promise<ActionResult<{ id: string; username: string }[]>> {
+  const unique = [...new Set(usernames)];
+  if (unique.length === 0) return { ok: true, data: [] };
+  if (unique.includes(viewer.username)) {
+    return { ok: false, error: "Você não precisa se convidar." };
+  }
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("username", unique);
+  if (error) {
+    return { ok: false, error: "Não deu para conferir os convites agora." };
+  }
+  const missing = unique.filter(
+    (username) => !data.some((profile) => profile.username === username),
+  );
+  if (missing.length > 0) {
     return {
       ok: false,
-      error: "Confira o título e o emoji.",
-      fieldErrors: fieldErrorsFrom(parsed.error),
+      error: `Não achamos ${missing.map((username) => `@${username}`).join(", ")}.`,
+    };
+  }
+  return { ok: true, data };
+}
+
+/** Convida (já colabora: nada muda); a notificação sai por trigger. */
+async function addMembers(
+  supabase: Supabase,
+  collectionId: string,
+  people: { id: string; username: string }[],
+): Promise<ActionResult> {
+  if (people.length === 0) return { ok: true, data: undefined };
+  const { error } = await supabase.from("collection_members").upsert(
+    people.map((person) => ({
+      collection_id: collectionId,
+      user_id: person.id,
+    })),
+    { onConflict: "collection_id,user_id", ignoreDuplicates: true },
+  );
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === "23514"
+          ? TOO_MANY
+          : "Não deu para convidar agora. Tente de novo.",
+    };
+  }
+  for (const person of people) updateTag(`profile:${person.username}`);
+  return { ok: true, data: undefined };
+}
+
+/** Nova coleção, de quem está vendo, com os convites. Leva até a página dela. */
+export async function createCollection(
+  input: CollectionFormData & MemberChanges,
+): Promise<ActionResult<{ id: string }>> {
+  const { form, invites } = parseForm(input);
+  if (!form.success || !invites.success) {
+    return {
+      ok: false,
+      error: "Confira o título, o emoji e os convites.",
+      fieldErrors: form.success ? undefined : fieldErrorsFrom(form.error),
     };
   }
   const viewer = await requireViewer();
-  const { title, description, emoji, visibility, isCollaborative } =
-    parsed.data;
+  const { title, description, emoji, visibility, isCollaborative } = form.data;
   const supabase = await createClient();
+  const invitees = await profileIds(
+    supabase,
+    isCollaborative ? invites.data : [],
+    viewer,
+  );
+  if (!invitees.ok) return invitees;
+
   const { data, error } = await supabase
     .from("collections")
     .insert({
@@ -66,27 +146,44 @@ export async function createCollection(
     return { ok: false, error: "Não deu para criar a coleção. Tente de novo." };
   }
   updateTag(`profile:${viewer.username}`);
+  // A coleção já existe: um convite que falhar pode ser refeito ao editar
+  await addMembers(supabase, data.id, invitees.data);
   return { ok: true, data: { id: data.id } };
 }
 
-/** Título, descrição, emoji, quem vê e se é colaborativa: só a dona. */
+/**
+ * Título, descrição, emoji, quem vê, a opção colaborativa, convites e quem
+ * deixa de colaborar: só a dona. Desligar a colaboração tira todos os
+ * membros (sem ela, ninguém além da dona edita).
+ */
 export async function updateCollection(
   id: string,
-  input: CollectionFormData,
+  input: CollectionFormData & MemberChanges,
 ): Promise<ActionResult> {
   const collectionId = collectionIdSchema.safeParse(id);
-  const parsed = parseForm(input);
-  if (!collectionId.success || !parsed.success) {
+  const { form, invites, removed } = parseForm(input);
+  if (
+    !collectionId.success ||
+    !form.success ||
+    !invites.success ||
+    !removed.success
+  ) {
     return {
       ok: false,
-      error: "Confira o título e o emoji.",
-      fieldErrors: parsed.success ? undefined : fieldErrorsFrom(parsed.error),
+      error: "Confira o título, o emoji e os convites.",
+      fieldErrors: form.success ? undefined : fieldErrorsFrom(form.error),
     };
   }
   const viewer = await requireViewer();
-  const { title, description, emoji, visibility, isCollaborative } =
-    parsed.data;
+  const { title, description, emoji, visibility, isCollaborative } = form.data;
   const supabase = await createClient();
+  const invitees = await profileIds(
+    supabase,
+    isCollaborative ? invites.data : [],
+    viewer,
+  );
+  if (!invitees.ok) return invitees;
+
   // A RLS filtra quem não é dona: nenhuma linha muda, e não há erro
   const { data, error } = await supabase
     .from("collections")
@@ -105,6 +202,71 @@ export async function updateCollection(
   if (data.length === 0) return { ok: false, error: NOT_OWNER };
   updateTag(`collection:${collectionId.data}`);
   updateTag(`profile:${viewer.username}`);
+
+  // Quem sai: todos, sem colaboração; senão, os tirados no formulário
+  const { data: members } = await supabase
+    .from("collection_members")
+    .select("user_id, profile:profiles(username)")
+    .eq("collection_id", collectionId.data);
+  const leaving = (members ?? []).filter(
+    (member) =>
+      !isCollaborative ||
+      (member.profile !== null &&
+        removed.data.includes(member.profile.username)),
+  );
+  if (leaving.length > 0) {
+    const { error: leaveError } = await supabase
+      .from("collection_members")
+      .delete()
+      .eq("collection_id", collectionId.data)
+      .in(
+        "user_id",
+        leaving.map((member) => member.user_id),
+      );
+    if (leaveError) {
+      return {
+        ok: false,
+        error: "Salvei, mas não deu para tirar quem colabora.",
+      };
+    }
+    for (const member of leaving) {
+      if (member.profile) updateTag(`profile:${member.profile.username}`);
+    }
+  }
+  const added = await addMembers(supabase, collectionId.data, invitees.data);
+  if (!added.ok) return { ok: false, error: `Salvei, mas: ${added.error}` };
+  return { ok: true, data: undefined };
+}
+
+/** Quem colabora sai da coleção; privada, leva às próprias coleções. */
+export async function leaveCollection(id: string): Promise<ActionResult> {
+  const collectionId = collectionIdSchema.safeParse(id);
+  if (!collectionId.success) {
+    return { ok: false, error: "Você não colabora nesta coleção." };
+  }
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { data: collection } = await supabase
+    .from("collections")
+    .select("visibility")
+    .eq("id", collectionId.data)
+    .maybeSingle();
+  const { data, error } = await supabase
+    .from("collection_members")
+    .delete()
+    .eq("collection_id", collectionId.data)
+    .eq("user_id", viewer.id)
+    .select("user_id");
+  if (error) return { ok: false, error: "Não deu para sair agora." };
+  if (data.length === 0) {
+    return { ok: false, error: "Você não colabora nesta coleção." };
+  }
+  updateTag(`collection:${collectionId.data}`);
+  updateTag(`profile:${viewer.username}`);
+  // Na privada, quem sai deixa de vê-la
+  if (collection?.visibility === "private") {
+    redirect(routes.profileTab(viewer.username, "colecoes"));
+  }
   return { ok: true, data: undefined };
 }
 

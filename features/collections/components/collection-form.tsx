@@ -29,6 +29,7 @@ import {
   type CollectionFormValues,
   collectionFormSchema,
 } from "../schemas";
+import type { Person } from "../types";
 import { EmojiPicker } from "./emoji-picker";
 
 const visibilityOptions = [
@@ -39,15 +40,36 @@ const visibilityOptions = [
 // O formato do @ (o mesmo do banco); se a pessoa existe, quem diz é o servidor
 const USERNAME = /^[a-z0-9_]{3,20}$/;
 
-export type CollectionFormSubmit = CollectionFormData & { invites: string[] };
+export type CollectionFormSubmit = CollectionFormData & {
+  /** @ convidados agora. */
+  invites: string[];
+  /** @ de quem colaborava e foi tirado no formulário. */
+  removed: string[];
+};
 
 type CollectionFormProps = {
   /** O botão que abre o formulário; o foco volta para ele ao fechar. */
   trigger: React.ReactElement;
   mode: "create" | "edit";
   defaultValues?: Partial<CollectionFormValues>;
+  /** Quem já colabora (ao editar). */
+  members?: Person[];
   onSubmit: (data: CollectionFormSubmit) => Promise<ActionResult<unknown>>;
 };
+
+// O @ existe? O mesmo endpoint do cadastro: "taken" é de outra pessoa. Sem
+// resposta, o servidor confere no salvar
+async function usernameStatus(username: string) {
+  try {
+    const response = await fetch(
+      `/api/usernames/availability?username=${encodeURIComponent(username)}`,
+    );
+    const body = (await response.json()) as { status?: string };
+    return body.status ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Criar ou editar uma coleção, numa gaveta (spec §5.8): título, descrição,
@@ -57,6 +79,7 @@ export function CollectionForm({
   trigger,
   mode,
   defaultValues,
+  members,
   onSubmit,
 }: CollectionFormProps) {
   const [open, setOpen] = useState(false);
@@ -83,6 +106,7 @@ export function CollectionForm({
         <CollectionFields
           mode={mode}
           defaultValues={defaultValues}
+          members={members}
           onSubmit={onSubmit}
           onDone={() => setOpen(false)}
         />
@@ -102,6 +126,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 function CollectionFields({
   mode,
   defaultValues,
+  members = [],
   onSubmit,
   onDone,
 }: Omit<CollectionFormProps, "trigger"> & { onDone: () => void }) {
@@ -126,14 +151,19 @@ function CollectionFields({
   const collaborative = useWatch({ control, name: "isCollaborative" });
   const visibility = useWatch({ control, name: "visibility" });
   const [invites, setInvites] = useState<string[]>([]);
+  const [removed, setRemoved] = useState<string[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const errorId = (field: string) => `${id}-${field}-erro`;
+  const staying = members.filter(
+    (member) => !removed.includes(member.username),
+  );
 
   async function submit(data: CollectionFormData) {
     setServerError(null);
     const result = await onSubmit({
       ...data,
       invites: data.isCollaborative ? invites : [],
+      removed,
     });
     if (result.ok) {
       onDone();
@@ -246,7 +276,7 @@ function CollectionFields({
             )}
           />
         </div>
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="popLayout">
           {collaborative ? (
             <motion.div
               key="convites"
@@ -254,8 +284,27 @@ function CollectionFields({
               animate={{ opacity: 1, y: 0, transition: springs.smooth }}
               exit={{ opacity: 0, transition: tweens.fast }}
             >
-              <InviteField invites={invites} onChange={setInvites} />
+              <InviteField
+                invites={invites}
+                onChange={setInvites}
+                members={staying.map((member) => member.username)}
+                onRemoveMember={(username) =>
+                  setRemoved((current) => [...current, username])
+                }
+              />
             </motion.div>
+          ) : staying.length > 0 ? (
+            <motion.p
+              key="aviso"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0, transition: springs.smooth }}
+              exit={{ opacity: 0, transition: tweens.fast }}
+              className="text-xs text-pretty text-muted-foreground"
+            >
+              Ao salvar,{" "}
+              {staying.map((member) => `@${member.username}`).join(", ")}{" "}
+              {staying.length === 1 ? "deixa" : "deixam"} de colaborar.
+            </motion.p>
           ) : null}
         </AnimatePresence>
       </div>
@@ -282,25 +331,79 @@ function CollectionFields({
   );
 }
 
+function Chip({
+  username,
+  label,
+  onRemove,
+}: {
+  username: string;
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <motion.li
+      layout
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96, transition: tweens.fast }}
+      transition={springs.snappy}
+      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted py-0.5 pr-1 pl-2.5 text-sm"
+    >
+      @{username}
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onRemove}
+        className="cursor-pointer rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <XIcon className="size-3.5" />
+      </button>
+    </motion.li>
+  );
+}
+
 function InviteField({
   invites,
   onChange,
+  members,
+  onRemoveMember,
 }: {
   invites: string[];
   onChange: (invites: string[]) => void;
+  /** Quem já colabora (sai ao salvar, se tirado aqui). */
+  members: string[];
+  onRemoveMember: (username: string) => void;
 }) {
   const id = useId();
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
-  function add() {
+  async function add() {
     const username = draft.trim().replace(/^@/, "").toLowerCase();
     if (!USERNAME.test(username)) {
       setError("Use de 3 a 20 letras, números ou _");
-    } else if (invites.includes(username)) {
+      return;
+    }
+    if (invites.includes(username)) {
       setError("Essa pessoa já está na lista");
-    } else if (invites.length >= COLLECTION_LIMITS.members) {
+      return;
+    }
+    if (members.includes(username)) {
+      setError(`@${username} já colabora`);
+      return;
+    }
+    if (invites.length + members.length >= COLLECTION_LIMITS.members) {
       setError(`Até ${COLLECTION_LIMITS.members} pessoas por coleção`);
+      return;
+    }
+    setChecking(true);
+    const status = await usernameStatus(username);
+    setChecking(false);
+    if (status === "yours") {
+      setError("Esse @ é o seu");
+    } else if (status !== null && status !== "taken") {
+      setError(`Não achamos @${username}`);
     } else {
       onChange([...invites, username]);
       setDraft("");
@@ -310,6 +413,23 @@ function InviteField({
 
   return (
     <div className="flex flex-col gap-2">
+      {members.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Colaboram</p>
+          <ul aria-label="Colaboradores" className="flex flex-wrap gap-1.5">
+            <AnimatePresence initial={false}>
+              {members.map((username) => (
+                <Chip
+                  key={username}
+                  username={username}
+                  label={`Tirar @${username} da coleção`}
+                  onRemove={() => onRemoveMember(username)}
+                />
+              ))}
+            </AnimatePresence>
+          </ul>
+        </div>
+      ) : null}
       <Label htmlFor={`${id}-convite`}>Convidar por @</Label>
       <div className="flex gap-2">
         <Input
@@ -331,7 +451,13 @@ function InviteField({
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={add}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={add}
+          disabled={checking}
+          aria-busy={checking || undefined}
+        >
           Convidar
         </Button>
       </div>
@@ -340,27 +466,14 @@ function InviteField({
         <ul aria-label="Convidados" className="flex flex-wrap gap-1.5">
           <AnimatePresence initial={false}>
             {invites.map((username) => (
-              <motion.li
+              <Chip
                 key={username}
-                layout
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.96, transition: tweens.fast }}
-                transition={springs.snappy}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted py-0.5 pr-1 pl-2.5 text-sm"
-              >
-                @{username}
-                <button
-                  type="button"
-                  aria-label={`Tirar @${username}`}
-                  onClick={() =>
-                    onChange(invites.filter((invite) => invite !== username))
-                  }
-                  className="cursor-pointer rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <XIcon className="size-3.5" />
-                </button>
-              </motion.li>
+                username={username}
+                label={`Tirar @${username}`}
+                onRemove={() =>
+                  onChange(invites.filter((invite) => invite !== username))
+                }
+              />
             ))}
           </AnimatePresence>
         </ul>

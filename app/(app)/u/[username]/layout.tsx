@@ -12,6 +12,7 @@ import {
   ProfileTabsSkeleton,
 } from "@/features/profile/components/profile-tabs";
 import {
+  canSeeContent,
   getProfileCounts,
   getProfileFromParam,
   getProfileRelation,
@@ -79,6 +80,8 @@ async function ProfileTop({ params }: { params: Params }) {
       <ProfileHeader
         profile={profile}
         counts={counts}
+        lists={canSeeContent(profile, relation)}
+        isSelf={relation === "self"}
         action={
           relation === "self" ? (
             <EditProfileSheet profile={profile} />

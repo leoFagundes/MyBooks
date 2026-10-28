@@ -78,3 +78,15 @@ export function CollectionsIllustration(props: IllustrationProps) {
     </svg>
   );
 }
+
+export function ReadersIllustration(props: IllustrationProps) {
+  return (
+    <svg viewBox="0 0 120 80" aria-hidden {...props}>
+      <circle cx="46" cy="30" r="9" {...stroke} />
+      <path d="M30 60c2-10 8-15 16-15s14 5 16 15" {...stroke} />
+      <circle cx="76" cy="34" r="7" {...stroke} />
+      <path d="M66 60c1-7 5-11 10-11s9 4 10 11" strokeDasharray="2 4" {...stroke} />
+      <path d="M20 68h80" {...stroke} />
+    </svg>
+  );
+}

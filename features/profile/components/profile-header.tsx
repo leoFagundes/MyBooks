@@ -2,6 +2,7 @@ import { Lock } from "lucide-react";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FollowListButton } from "@/features/social/components/follow-list";
 import { initials } from "@/lib/initials";
 import { genreLabel } from "../genres";
 import type { ProfileCounts, ProfileSummary } from "../queries";
@@ -41,11 +42,16 @@ export function ProfileHeader({
   profile,
   counts,
   action,
+  lists = false,
+  isSelf = false,
 }: {
   profile: ProfileSummary;
   counts: ProfileCounts | null;
-  /** "Editar perfil" no seu; "Seguir" no dos outros (Fase 5). */
+  /** "Editar perfil" no seu; "Seguir" no dos outros. */
   action?: React.ReactNode;
+  /** Seguidores e seguindo abrem a lista (quem vê pode ver o perfil). */
+  lists?: boolean;
+  isSelf?: boolean;
 }) {
   const genres = profile.favoriteGenres.flatMap((slug) => {
     const label = genreLabel(slug);
@@ -103,10 +109,32 @@ export function ProfileHeader({
           >
             {COUNTERS.map((counter) => {
               const value = counts[counter.key];
-              return (
-                <li key={counter.key} data-testid={counter.testId}>
+              const content = (
+                <>
                   <AnimatedNumber value={value} className="text-foreground" />{" "}
                   {value === 1 ? counter.one : counter.many}
+                </>
+              );
+              const list =
+                counter.key === "followers"
+                  ? "seguidores"
+                  : counter.key === "following"
+                    ? "seguindo"
+                    : null;
+              return (
+                <li key={counter.key} data-testid={counter.testId}>
+                  {lists && list ? (
+                    <FollowListButton
+                      profileId={profile.id}
+                      username={profile.username}
+                      list={list}
+                      isSelf={isSelf}
+                    >
+                      {content}
+                    </FollowListButton>
+                  ) : (
+                    content
+                  )}
                 </li>
               );
             })}

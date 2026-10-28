@@ -12,6 +12,7 @@ async function navViewer(): Promise<NavViewer | null> {
   const viewer = await getViewer();
   return viewer
     ? {
+        id: viewer.id,
         username: viewer.username,
         displayName: viewer.displayName,
         avatarUrl: viewer.avatarUrl,

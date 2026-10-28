@@ -137,3 +137,16 @@ export async function removeFollower(
   updateTag(`feed:${parsed.data}`);
   return { ok: true, data: undefined };
 }
+
+/** Abrir o popover marca os avisos como lidos (só a data de leitura muda). */
+export async function markNotificationsRead(): Promise<ActionResult> {
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", viewer.id)
+    .is("read_at", null);
+  if (error) return { ok: false, error: "Não deu para marcar como lidos." };
+  return { ok: true, data: undefined };
+}

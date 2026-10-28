@@ -51,7 +51,7 @@ export function AccountActions({
       >
         <Plus />
       </Button>
-      <NotificationsButton />
+      <NotificationsButton userId={viewer.id} />
       <AccountMenu viewer={viewer} />
     </>
   );

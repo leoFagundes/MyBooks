@@ -4,6 +4,7 @@ import { TopNav } from "@/components/shell/top-nav";
 import { DemoRow } from "./dev-section";
 
 const sampleViewer: NavViewer = {
+  id: "",
   username: "analivia",
   displayName: "Ana Lívia",
   avatarUrl: null,

@@ -17,3 +17,29 @@ export type SuggestedReader = Reader & {
   isPrivate: boolean;
   favoriteGenres: string[];
 };
+
+/** Um pedido para seguir esperando resposta. */
+export type FollowRequest = { reader: Reader; at: string };
+
+export type NotificationType =
+  | "follow"
+  | "collection_like"
+  | "collection_copy"
+  | "collection_invite";
+
+/** Um aviso do popover (os pedidos para seguir vêm à parte). */
+export type NotificationItem = {
+  id: string;
+  type: NotificationType;
+  actor: Reader | null;
+  /** A coleção curtida, copiada ou do convite, enquanto quem vê puder vê-la. */
+  collection: { id: string; title: string } | null;
+  at: string;
+  unread: boolean;
+};
+
+export type NotificationsPayload = {
+  unread: number;
+  requests: FollowRequest[];
+  items: NotificationItem[];
+};

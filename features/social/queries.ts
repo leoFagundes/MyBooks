@@ -4,6 +4,8 @@ import { getPublicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type {
   FollowState,
+  NotificationItem,
+  NotificationsPayload,
   Reader,
   ReaderState,
   SuggestedReader,
@@ -130,4 +132,95 @@ export async function readFollowList(
     ...person,
     state: readerState(person.id, viewerId, states),
   }));
+}
+
+const NOTIFICATION_TYPES = new Set<string>([
+  "follow",
+  "collection_like",
+  "collection_copy",
+  "collection_invite",
+]);
+
+const isNotificationType = (
+  value: string,
+): value is NotificationItem["type"] => NOTIFICATION_TYPES.has(value);
+
+const READER_COLUMNS = "id, username, display_name, avatar_url";
+
+/**
+ * O popover de avisos: os pedidos para seguir pendentes (todos, de follows),
+ * os 30 avisos mais novos e quantos ainda não foram lidos.
+ */
+export async function readNotifications(
+  supabase: Supabase,
+  userId: string,
+): Promise<NotificationsPayload> {
+  const [requests, items, unread] = await Promise.all([
+    supabase
+      .from("follows")
+      .select(
+        `created_at, person:profiles!follows_follower_id_fkey(${READER_COLUMNS})`,
+      )
+      .eq("following_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("notifications")
+      .select(
+        `id, type, refs, read_at, created_at, actor:profiles!notifications_actor_id_fkey(${READER_COLUMNS})`,
+      )
+      .eq("user_id", userId)
+      .neq("type", "follow_request")
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("read_at", null),
+  ]);
+  if (requests.error) throw requests.error;
+  if (items.error) throw items.error;
+  if (unread.error) throw unread.error;
+
+  const collectionOf = (refs: unknown) =>
+    refs && typeof refs === "object" && "collection_id" in refs
+      ? String(refs.collection_id)
+      : null;
+  const collectionIds = [
+    ...new Set(items.data.flatMap((item) => collectionOf(item.refs) ?? [])),
+  ];
+  // A RLS esconde a coleção que quem vê não pode mais ver
+  const { data: collections } =
+    collectionIds.length > 0
+      ? await supabase
+          .from("collections")
+          .select("id, title")
+          .in("id", collectionIds)
+      : { data: [] };
+  const titles = new Map(
+    (collections ?? []).map((collection) => [collection.id, collection]),
+  );
+
+  return {
+    unread: unread.count ?? 0,
+    requests: requests.data.flatMap(({ created_at, person }) =>
+      person ? [{ reader: toReader(person), at: created_at }] : [],
+    ),
+    items: items.data.flatMap((item) => {
+      if (!isNotificationType(item.type)) return [];
+      const collectionId = collectionOf(item.refs);
+      return [
+        {
+          id: item.id,
+          type: item.type,
+          actor: item.actor ? toReader(item.actor) : null,
+          collection: collectionId ? (titles.get(collectionId) ?? null) : null,
+          at: item.created_at,
+          unread: item.read_at === null,
+        },
+      ];
+    }),
+  };
 }

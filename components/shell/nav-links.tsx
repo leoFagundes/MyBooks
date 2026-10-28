@@ -8,6 +8,8 @@ import { routes } from "@/lib/routes";
 import { NavLink, type NavItem } from "./nav-link";
 
 export type NavViewer = {
+  /** Vazio na vitrine do /dev: o sino não busca nem escuta nada. */
+  id: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;

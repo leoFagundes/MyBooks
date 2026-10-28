@@ -105,7 +105,8 @@ function PoseGroup({
   const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
-    const stops = Object.values(pose).map((value) =>
+    const { leaves, ...single } = pose;
+    const stops = [...Object.values(single), ...leaves].map((value) =>
       value.on("change", () => invalidate()),
     );
     return () => {

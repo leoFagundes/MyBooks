@@ -290,3 +290,50 @@ export function drawTitlePage(
   }
   return canvas;
 }
+
+/**
+ * Uma página de citação, para as folhas que se viram depois da folha de
+ * rosto: a citação em itálico no meio da página e o crédito embaixo.
+ */
+export function drawQuotePage(quote: CommunityQuote | null, aspect: number) {
+  const width = ART_WIDTH;
+  const height = Math.round(width / aspect);
+  const { canvas, ctx } = createCanvas(width, height);
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, width, height);
+  if (!quote) return canvas;
+  ctx.fillStyle = INK;
+
+  const serif = fontStack("--font-instrument-serif");
+  const mono = fontStack("--font-geist-mono");
+  const inner = width * 0.74;
+  const center = width / 2;
+  ctx.textAlign = "center";
+
+  const captionSize = width * 0.022;
+  setFont(ctx, mono, captionSize, 0.14);
+  drawLines(ctx, ["DA COMUNIDADE"], center, height * 0.1, captionSize * 1.5);
+
+  const quoteSize = width * 0.05;
+  const quoteLine = quoteSize * 1.3;
+  setFont(ctx, serif, quoteSize, 0, "italic");
+  const lines = wrapLines(ctx, `“${quote.text}”`, inner, 12, {
+    balance: true,
+  });
+  const creditSize = width * 0.024;
+  const creditLine = creditSize * 1.5;
+  const block = lines.length * quoteLine + height * 0.03 + creditLine;
+  const top = (height - block) / 2;
+  drawLines(ctx, lines, center, top, quoteLine);
+
+  setFont(ctx, mono, creditSize, 0.06);
+  const credit = `— @${quote.reader.username}${quote.page ? ` · p. ${quote.page}` : ""}`;
+  drawLines(
+    ctx,
+    [credit],
+    center,
+    top + lines.length * quoteLine + height * 0.03,
+    creditLine,
+  );
+  return canvas;
+}

@@ -21,6 +21,8 @@ export type PoseValues = {
   shift: MotionValue<number>;
   tiltYaw: MotionValue<number>;
   tiltPitch: MotionValue<number>;
+  /** Cada folha, de 0 (à direita) a 1 (virada para a esquerda). */
+  leaves: MotionValue<number>[];
 };
 
 /**

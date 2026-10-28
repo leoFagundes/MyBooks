@@ -9,16 +9,21 @@ import {
   SRGBColorSpace,
   type Texture,
 } from "three";
-import { drawTitlePage } from "../lib/book-art";
+import { drawQuotePage, drawTitlePage } from "../lib/book-art";
+import { type PageLayout, pageLayout } from "../lib/pages";
 import type { SceneProps } from "../lib/types";
 import {
   loadBookTextures,
   retainBookTextures,
   texturesKey,
 } from "./book-textures";
+import { LEAF_THICKNESS, PageLeaf } from "./page-leaf";
 
 // A capa aberta não deita de todo: fica um pouco erguida, como num livro real
 export const OPEN_ANGLE = (170 * Math.PI) / 180;
+// As folhas viradas deitam um pouco antes da capa, uma sobre a outra
+const LEAF_REST_GAP = 0.03;
+const LEAF_GAP = LEAF_THICKNESS * 1.25;
 
 type Face = "px" | "nx" | "py" | "ny" | "pz" | "nz";
 // A ordem dos grupos de material do BoxGeometry
@@ -87,6 +92,31 @@ function useTitlePage(
   return texture;
 }
 
+/** As páginas de citação das folhas que se viram (a primeira face é a folha de rosto). */
+function useQuotePages(
+  faces: PageLayout["faces"],
+  aspect: number,
+  maxAnisotropy: number,
+) {
+  const textures = useMemo(
+    () =>
+      faces.slice(1).map((quote) => {
+        const page = new CanvasTexture(drawQuotePage(quote, aspect));
+        page.colorSpace = SRGBColorSpace;
+        page.anisotropy = Math.min(8, maxAnisotropy);
+        return page;
+      }),
+    [faces, aspect, maxAnisotropy],
+  );
+  useEffect(
+    () => () => {
+      for (const texture of textures) texture.dispose();
+    },
+    [textures],
+  );
+  return textures;
+}
+
 /** Uma peça do livro: uma caixa com uma superfície por face. */
 function Slab({
   size,
@@ -140,6 +170,14 @@ export function BookModel({
     dims,
     maxAnisotropy,
   );
+  const layout = useMemo(() => pageLayout(quotes), [quotes]);
+  const pageWidth = dims.width - dims.board - dims.overhang;
+  const pageHeight = dims.height - 2 * dims.overhang;
+  const quotePages = useQuotePages(
+    layout.faces,
+    pageWidth / pageHeight,
+    maxAnisotropy,
+  );
   const shift = useRef<Group>(null);
   const hinge = useRef<Group>(null);
 
@@ -153,6 +191,13 @@ export function BookModel({
   const { width, height, board, overhang, pagesDepth, depth } = dims;
   const edge: Surface = { color: textures.coverColor, roughness: 0.7 };
   const endpaper: Surface = { color: textures.endpaper, roughness: 0.9 };
+  // Com folhas para virar, a folha de rosto vai na primeira delas, e o miolo
+  // embaixo fica em branco
+  const pageFaces = [titlePage, ...quotePages];
+  const blockFront: Surface =
+    layout.leafCount > 0
+      ? { color: textures.paper, roughness: 0.9 }
+      : { map: titlePage, roughness: 0.9 };
 
   return (
     <group ref={shift}>
@@ -179,9 +224,36 @@ export function BookModel({
           px: { map: textures.pagesSide, roughness: 0.95 },
           py: { map: textures.pagesTop, roughness: 0.95 },
           ny: { map: textures.pagesTop, roughness: 0.95 },
-          pz: { map: titlePage, roughness: 0.9 },
+          pz: blockFront,
         }}
       />
+      {Array.from({ length: layout.leafCount }, (_, index) => {
+        const front = pageFaces[index * 2];
+        const back = pageFaces[index * 2 + 1];
+        const turned = pose.leaves[index];
+        if (!front || !back || !turned) return null;
+        return (
+          <PageLeaf
+            key={index}
+            width={pageWidth}
+            height={pageHeight}
+            front={front}
+            back={back}
+            paper={textures.paper}
+            turned={turned}
+            // Quem vira depois deita um pouco mais alto e fica por cima
+            rest={OPEN_ANGLE - LEAF_REST_GAP * (index + 1)}
+            lift={board + LEAF_THICKNESS}
+            position={[
+              -width / 2 + board,
+              0,
+              pagesDepth / 2 +
+                LEAF_THICKNESS / 2 +
+                (layout.leafCount - 1 - index) * LEAF_GAP,
+            ]}
+          />
+        );
+      })}
       <group ref={hinge} position={[-width / 2, 0, depth / 2 - board / 2]}>
         <Slab
           size={[width, height, board]}

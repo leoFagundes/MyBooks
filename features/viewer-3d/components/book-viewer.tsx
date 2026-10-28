@@ -35,6 +35,7 @@ import {
 } from "../lib/device-tilt";
 import { bookDimensions } from "../lib/dimensions";
 import { frameBook, openFraming, type Rect, type Size } from "../lib/framing";
+import { pageLayout } from "../lib/pages";
 import { type BookPose, useBookPose } from "../lib/use-book-pose";
 import { useStageGestures } from "../lib/use-stage-gestures";
 import { type PillAction, ViewerPill } from "./viewer-pill";
@@ -151,7 +152,18 @@ export function BookViewer({
   const [notice, setNotice] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const interactive = revealed && !closing;
-  const gestures = useStageGestures(stageRef, pose, interactive);
+  // Folhear: com o livro aberto e folhas para virar, um toque à direita do
+  // meio vira a próxima, e à esquerda desvira
+  const layout = pageLayout(quotes);
+  const turnPage =
+    pose.opened && layout.leafCount > 0
+      ? (x: number) =>
+          pose.turnPage(x >= viewport.width / 2 ? 1 : -1, layout.leafCount)
+      : undefined;
+  const bookQuotes = [quote, ...layout.faces.slice(1)].filter(
+    (item): item is CommunityQuote => item !== null,
+  );
+  const gestures = useStageGestures(stageRef, pose, interactive, turnPage);
 
   // Inclinar o aparelho: ligado de saída onde não há permissão a pedir
   // (Android), a não ser com movimento reduzido; no iOS, o toque pede
@@ -293,6 +305,12 @@ export function BookViewer({
 
   function onKeyDown(event: React.KeyboardEvent) {
     if (!interactive || event.altKey || event.ctrlKey || event.metaKey) return;
+    // Aberto e com folhas, as setas dos lados folheiam
+    if (turnPage && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      event.preventDefault();
+      pose.turnPage(event.key === "ArrowRight" ? 1 : -1, layout.leafCount);
+      return;
+    }
     const action = KEYS[event.key];
     if (!action) return;
     event.preventDefault();
@@ -493,18 +511,19 @@ export function BookViewer({
                 {authors ? `, de ${authors}` : ""}.
               </p>
               {description ? <p>{description}</p> : null}
-              {quote ? (
-                <p>
-                  Citação de @{quote.reader.username}
-                  {quote.page ? `, página ${quote.page}` : ""}: {quote.text}
+              {bookQuotes.map((item) => (
+                <p key={`${item.reader.username}:${item.text}`}>
+                  Citação de @{item.reader.username}
+                  {item.page ? `, página ${item.page}` : ""}: {item.text}
                 </p>
-              ) : null}
+              ))}
             </div>
           ) : null}
 
           <DialogPrimitive.Description id={instructionsId} className="sr-only">
             Arraste ou use as setas para girar o livro. Role, faça pinça ou use
-            + e − para aproximar, e dê dois cliques para voltar ao começo.
+            + e − para aproximar, e dê dois cliques para voltar ao começo. Com o
+            livro aberto, toque nas páginas ou use as setas para folhear.
           </DialogPrimitive.Description>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

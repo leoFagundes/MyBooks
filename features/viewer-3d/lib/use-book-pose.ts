@@ -11,6 +11,7 @@ import {
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { springs, tweens } from "@/lib/motion";
 import type { OpenFraming } from "./framing";
+import { MAX_LEAVES } from "./pages";
 import { type PoseValues, SETTLE_POSE } from "./types";
 
 const TURN = 2 * Math.PI;
@@ -59,6 +60,8 @@ export type BookPose = {
   opened: boolean;
   /** Abre (de frente, com o zoom e o deslize do enquadramento) ou fecha. */
   setOpen: (open: boolean, frame: OpenFraming) => void;
+  /** Livro aberto: vira a próxima folha (1) ou desvira a última (−1). */
+  turnPage: (direction: 1 | -1, leafCount: number) => void;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -92,7 +95,9 @@ export function useBookPose(reduced: boolean): BookPose {
     shift: motionValue(0),
     tiltYaw: motionValue(0),
     tiltPitch: motionValue(0),
+    leaves: Array.from({ length: MAX_LEAVES }, () => motionValue(0)),
   }));
+  const turned = useRef(0);
   const [spin] = useState(() => motionValue(0));
   const [spinning, setSpinningState] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -240,7 +245,22 @@ export function useBookPose(reduced: boolean): BookPose {
   function close(transition: Transition) {
     setOpened(false);
     openLimits.current = null;
-    return [to(values.open, 0, transition), to(values.shift, 0, transition)];
+    turned.current = 0;
+    return [
+      to(values.open, 0, transition),
+      to(values.shift, 0, transition),
+      ...values.leaves.map((leaf) => to(leaf, 0, transition)),
+    ];
+  }
+
+  // Vira a próxima folha (1) ou desvira a última virada (−1)
+  function turnPage(direction: 1 | -1, leafCount: number) {
+    if (!openLimits.current) return;
+    const index = direction === 1 ? turned.current : turned.current - 1;
+    if (index < 0 || index >= Math.min(leafCount, values.leaves.length)) return;
+    turned.current += direction;
+    const leaf = values.leaves[index];
+    if (leaf) to(leaf, direction === 1 ? 1 : 0, springs.smooth);
   }
 
   function reset() {
@@ -296,5 +316,6 @@ export function useBookPose(reduced: boolean): BookPose {
     setTilt,
     opened,
     setOpen,
+    turnPage,
   };
 }

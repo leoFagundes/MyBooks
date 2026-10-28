@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const headers = { "Cache-Control": "private, no-store" };
     if (format.data === "csv") {
       // O BOM faz o Excel abrir os acentos certos
-      return new Response(`﻿${shelfToGoodreadsCsv(data.shelf)}`, {
+      return new Response(`\uFEFF${shelfToGoodreadsCsv(data.shelf)}`, {
         headers: {
           ...headers,
           "Content-Type": "text/csv; charset=utf-8",

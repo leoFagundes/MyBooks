@@ -24,6 +24,7 @@ import {
   type QuoteInput,
   quoteSchema,
   reviewSchema,
+  startReadingSchema,
   shelfEntrySchema,
   type ShelfEntryUpdate,
   shelfEntryUpdateSchema,
@@ -188,6 +189,36 @@ export async function updateShelfEntry(
   if (error) return { ok: false, error: "Não deu para salvar. Tente de novo." };
   updateTag(`shelf:${viewer.id}`);
   updateTag(`book:${id.data}`);
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Sortear a próxima leitura (spec §5.4): o livro passa de Quero ler a Lendo.
+ * Só mexe em livro que ainda está em Quero ler.
+ */
+export async function startReading(
+  bookId: string,
+  startedAt: string,
+): Promise<ActionResult> {
+  const parsed = startReadingSchema.safeParse({ bookId, startedAt });
+  if (!parsed.success) return { ok: false, error: "Esse livro não deu certo." };
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_books")
+    .update({ status: "reading", started_at: parsed.data.startedAt })
+    .eq("user_id", viewer.id)
+    .eq("book_id", parsed.data.bookId)
+    .eq("status", "want")
+    .select("book_id");
+  if (error) {
+    return { ok: false, error: "Não deu para começar agora. Tente de novo." };
+  }
+  if (data.length === 0) {
+    return { ok: false, error: "Esse livro já não está em Quero ler." };
+  }
+  updateTag(`shelf:${viewer.id}`);
+  updateTag(`book:${parsed.data.bookId}`);
   return { ok: true, data: undefined };
 }
 

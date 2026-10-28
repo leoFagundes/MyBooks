@@ -1,5 +1,7 @@
 "use client";
 
+import { Shuffle } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import {
   EmptyShelfIllustration,
   SearchIllustration,
 } from "@/components/ui/illustrations";
+import { tweens } from "@/lib/motion";
 import {
   countByStatus,
   decadeOptions,
@@ -23,6 +26,7 @@ import type { ShelfItem } from "../queries";
 import type { ShelfStatus } from "../schemas";
 import { useAddBook } from "./add-book/add-book-provider";
 import { BookShelfAction, CopyBookScope } from "./copy-book";
+import { useNextRead } from "./next-read/next-read-provider";
 import { ShelfToolbar } from "./shelf-toolbar";
 import { type BookAction, ShelfViews } from "./shelf-views";
 
@@ -63,6 +67,7 @@ export function ProfileShelf({
   // A busca filtra a cada letra; a URL acompanha
   const [query, setQuery] = useState(filters.q);
   const addBook = useAddBook();
+  const nextRead = useNextRead();
 
   // replaceState conversa com o router do Next: useSearchParams acompanha sem
   // pedir a página de novo ao servidor
@@ -114,6 +119,9 @@ export function ProfileShelf({
     filterShelf(entries, current, { ownedIds: owned }),
     current.sort,
   );
+  // Sortear só na própria estante, em Quero ler, entre os livros na tela
+  const drawable =
+    owner === null && current.status === "want" && visible.length > 0;
   // Na estante dos outros, cada livro tem o Copiar ou o selo "Na sua estante"
   const bookAction: BookAction | undefined = owned
     ? (book, place, active) => (
@@ -138,6 +146,28 @@ export function ProfileShelf({
         onQueryChange={changeQuery}
         onChange={update}
       />
+      <AnimatePresence initial={false}>
+        {drawable ? (
+          <motion.div
+            key="sortear"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0, transition: tweens.base }}
+            exit={{ opacity: 0, transition: tweens.fast }}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border px-4 py-3"
+          >
+            <p className="text-sm text-pretty text-muted-foreground">
+              Não sabe qual começar?
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => nextRead.open(visible.map((entry) => entry.book))}
+            >
+              <Shuffle />
+              Sortear próxima leitura
+            </Button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       {visible.length > 0 ? (
         <ShelfViews
           books={visible.map((entry) => entry.book)}

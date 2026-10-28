@@ -97,6 +97,15 @@ export const shelfDetailsSchema = z
   .object(detailsShape)
   .superRefine(coherentDetails);
 
+/**
+ * O livro sorteado sai de Quero ler e passa a Lendo, com início no dia de
+ * quem sorteou (o navegador sabe o dia; o servidor só conhece o UTC).
+ */
+export const startReadingSchema = z.object({
+  bookId: z.uuid(),
+  startedAt: daySchema,
+});
+
 /** A página em que a pessoa está (o check user_books_current_page_range). */
 export const currentPageSchema = z
   .number({ error: "Página inválida" })

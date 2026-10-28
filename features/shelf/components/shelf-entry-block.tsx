@@ -19,6 +19,7 @@ import { StarRating } from "@/features/books/components/star-rating";
 import type { BookVisual } from "@/features/books/types";
 import { formatNumber } from "@/lib/format";
 import { removeFromShelf, updateShelfEntry } from "../actions";
+import { today } from "../lib/today";
 import type { BookQuote, ShelfEntryDetails } from "../queries";
 import type { ShelfStatus } from "../schemas";
 import { useAddBook } from "./add-book/add-book-provider";
@@ -33,7 +34,6 @@ const STATUS_OPTIONS = [
 ] as const satisfies readonly { value: ShelfStatus; label: string }[];
 
 // O dia de hoje no fuso de quem usa, no formato do <input type="date">
-const today = () => new Date().toLocaleDateString("sv-SE");
 
 /** As regras do banco valem já na tela: quem quer ler não tem nota nem datas… */
 function coherent(entry: ShelfEntryDetails): ShelfEntryDetails {

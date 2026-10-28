@@ -7,6 +7,7 @@ import { springs } from "@/lib/motion";
 import { CoverTransitionProvider } from "@/features/books/components/cover-transition";
 import { NewCollectionProvider } from "@/features/collections/components/new-collection-provider";
 import { AddBookProvider } from "@/features/shelf/components/add-book/add-book-provider";
+import { NextReadProvider } from "@/features/shelf/components/next-read/next-read-provider";
 import { CommandPaletteProvider } from "./command-palette";
 import { QueryProvider } from "./query-provider";
 import { ShelfFlightProvider } from "./shelf-flight";
@@ -23,13 +24,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <CoverTransitionProvider>
               <ShelfFlightProvider>
                 <AddBookProvider>
-                  <NewCollectionProvider>
-                    <CommandPaletteProvider>
-                      <SmoothScroll />
-                      {children}
-                      <Toaster />
-                    </CommandPaletteProvider>
-                  </NewCollectionProvider>
+                  <NextReadProvider>
+                    <NewCollectionProvider>
+                      <CommandPaletteProvider>
+                        <SmoothScroll />
+                        {children}
+                        <Toaster />
+                      </CommandPaletteProvider>
+                    </NewCollectionProvider>
+                  </NextReadProvider>
                 </AddBookProvider>
               </ShelfFlightProvider>
             </CoverTransitionProvider>

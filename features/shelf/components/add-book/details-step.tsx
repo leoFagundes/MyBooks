@@ -17,6 +17,7 @@ import {
   EDITABLE_COLLECTIONS_KEY,
   fetchEditableCollections,
 } from "@/features/collections/lib/editable-collections";
+import { today } from "../../lib/today";
 import { byline, type ChosenBook } from "./chosen-book";
 
 const STATUS_OPTIONS = [
@@ -33,7 +34,6 @@ const DATE_LABEL: Record<Exclude<ShelfStatus, "want">, string> = {
 };
 
 // O dia de hoje no fuso de quem usa, no formato do <input type="date">
-const today = () => new Date().toLocaleDateString("sv-SE");
 
 /**
  * Enter salva de qualquer lugar do passo, inclusive do status (o radiogroup

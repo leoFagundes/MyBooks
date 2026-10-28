@@ -3,6 +3,7 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { catalogIdFor } from "@/features/books/lib/catalog-ref";
+import { findOrCreateBook } from "@/features/books/lib/match";
 import {
   addBookToCollection,
   removeFromCollection,
@@ -17,6 +18,9 @@ import {
   type CopyBookInput,
   copyBookSchema,
   currentPageSchema,
+  type ImportedBook,
+  importBatchSchema,
+  latestDay,
   type QuoteInput,
   quoteSchema,
   reviewSchema,
@@ -293,5 +297,58 @@ export async function removeQuote(quoteId: string): Promise<ActionResult> {
     .eq("user_id", viewer.id);
   if (error) return { ok: false, error: "Não deu para apagar a citação." };
   updateTag(`shelf:${viewer.id}`);
+  return { ok: true, data: undefined };
+}
+
+export type ImportOutcome = "added" | "kept" | "failed";
+
+/**
+ * Um lote da importação (até 5 livros). Cada livro acha o seu no catálogo
+ * (ou entra nele) e vai para a estante; o que já estava fica como está. Uma
+ * falha num livro não derruba os outros. As tags atualizam no fim, em
+ * finishImport: a cada lote, a página toda recarregaria.
+ */
+export async function importBooksBatch(
+  input: ImportedBook[],
+): Promise<ActionResult<{ outcomes: ImportOutcome[] }>> {
+  const parsed = importBatchSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Esses livros vieram num formato estranho." };
+  }
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const latest = latestDay();
+
+  const outcomes: ImportOutcome[] = [];
+  for (const book of parsed.data) {
+    try {
+      const bookId = await findOrCreateBook(book, viewer.id, supabase);
+      if (!bookId) {
+        outcomes.push("failed");
+        continue;
+      }
+      const { error } = await supabase.from("user_books").insert({
+        user_id: viewer.id,
+        book_id: bookId,
+        status: book.status,
+        rating: book.rating,
+        finished_at:
+          book.finishedAt && book.finishedAt <= latest ? book.finishedAt : null,
+        review: book.review,
+      });
+      if (error?.code === UNIQUE_VIOLATION) outcomes.push("kept");
+      else outcomes.push(error ? "failed" : "added");
+    } catch {
+      outcomes.push("failed");
+    }
+  }
+  return { ok: true, data: { outcomes } };
+}
+
+/** Fim da importação: a estante e o catálogo mudaram. */
+export async function finishImport(): Promise<ActionResult> {
+  const viewer = await requireViewer();
+  updateTag(`shelf:${viewer.id}`);
+  updateTag("catalog");
   return { ok: true, data: undefined };
 }

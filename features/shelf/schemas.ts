@@ -32,7 +32,7 @@ export const ratingSchema = z
   .multipleOf(0.5, "A nota anda de meia em meia estrela");
 
 // Um dia de folga: o servidor conta em UTC, e a pessoa pode estar adiante dele
-function latestDay() {
+export function latestDay() {
   return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
@@ -162,3 +162,32 @@ export const addBookSchema = z.object({
 });
 
 export type AddBookInput = z.input<typeof addBookSchema>;
+
+/**
+ * Um livro da exportação do Goodreads, já traduzido para a estante. A data
+ * não passa pelo "ainda não chegou": o servidor descarta a que vier adiante.
+ */
+export const importedBookSchema = z.object({
+  title: z.string().trim().min(1).max(300),
+  authors: z.array(z.string().trim().min(1).max(200)).max(10),
+  isbn13: z
+    .string()
+    .regex(/^97[89]\d{10}$/)
+    .nullable(),
+  pageCount: z.number().int().min(1).max(20_000).nullable(),
+  publishedYear: z.number().int().min(1).max(2100).nullable(),
+  status: statusSchema,
+  rating: z.number().int().min(1).max(5).nullable(),
+  finishedAt: z.iso.date().nullable(),
+  review: z.string().max(10_000).nullable(),
+});
+
+export type ImportedBook = z.infer<typeof importedBookSchema>;
+
+/** Até 5 livros por chamada: cada um pode esperar a Open Library. */
+export const IMPORT_BATCH = 5;
+
+export const importBatchSchema = z
+  .array(importedBookSchema)
+  .min(1)
+  .max(IMPORT_BATCH);

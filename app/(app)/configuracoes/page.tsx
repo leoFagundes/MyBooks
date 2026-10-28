@@ -10,6 +10,7 @@ import {
   getAccountEmail,
   getProfileByUsername,
 } from "@/features/profile/queries";
+import { GoodreadsImport } from "@/features/shelf/components/goodreads-import";
 import { requireViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 
@@ -47,5 +48,11 @@ async function Settings() {
     getAccountEmail(viewer.username),
   ]);
   if (!profile) notFound();
-  return <SettingsSections profile={profile} email={email} />;
+  return (
+    <SettingsSections
+      profile={profile}
+      email={email}
+      importer={<GoodreadsImport username={profile.username} />}
+    />
+  );
 }

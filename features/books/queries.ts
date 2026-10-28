@@ -6,6 +6,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import { searchGoogleBooks } from "./lib/google-books";
+import { isbnFromQuery } from "./lib/isbn";
 import { searchOpenLibrary } from "./lib/open-library";
 import { normalizeQuery } from "./lib/search-query";
 import { dedupeResults, type SearchResult } from "./lib/search-result";
@@ -33,17 +34,24 @@ function catalogResult(row: Tables<"books">): SearchResult {
   };
 }
 
+// Um ISBN (a consulta já chega como ISBN-13) acha a edição pelo número; o
+// resto, pelo título e pela autoria
+async function catalogRows(query: string, max: number) {
+  const supabase = createPublicClient();
+  const isbn = isbnFromQuery(query);
+  const { data, error } = isbn
+    ? await supabase.from("books").select("*").eq("isbn_13", isbn).limit(max)
+    : await supabase.rpc("search_catalog", { q: query, max_results: max });
+  if (error) throw error;
+  return data;
+}
+
 // Livro novo no catálogo chama updateTag("catalog") e aparece na hora
 async function catalogResults(query: string): Promise<SearchResult[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag("catalog");
-  const { data, error } = await createPublicClient().rpc("search_catalog", {
-    q: query,
-    max_results: 8,
-  });
-  if (error) throw error;
-  return data.map(catalogResult);
+  return (await catalogRows(query, 8)).map(catalogResult);
 }
 
 // Um dia de cache por consulta. Falha lança erro em vez de devolver vazio,
@@ -317,12 +325,7 @@ export async function searchCatalogBooks(raw: string): Promise<BookVisual[]> {
   cacheTag("catalog");
   const query = normalizeQuery(raw);
   if (query.length < 2) return [];
-  const { data, error } = await createPublicClient().rpc("search_catalog", {
-    q: query,
-    max_results: 20,
-  });
-  if (error) throw error;
-  return data.map(toBookVisual);
+  return (await catalogRows(query, 20)).map(toBookVisual);
 }
 
 // Abaixo disso, a semana parece vazia: a seção mostra os de sempre

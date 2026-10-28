@@ -7,6 +7,7 @@ import {
   CornerDownLeft,
   LoaderCircle,
   PenLine,
+  ScanBarcode,
   Search,
 } from "lucide-react";
 import {
@@ -14,10 +15,12 @@ import {
   commandInputClasses,
   commandItemClasses,
 } from "@/components/ui/command-styles";
+import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { BookCover } from "@/features/books/components/book-cover";
+import { useCanScan } from "../../lib/use-can-scan";
 import {
   byline,
   type ChosenBook,
@@ -28,6 +31,7 @@ import {
 import { useBookSearch } from "./use-book-search";
 
 const MANUAL = "__cadastrar-manualmente";
+const SCAN = "__escanear";
 // O que chega na lista entra com fade, sem pular na tela
 const arrives =
   "animate-[aparecer_var(--duration-base)_var(--ease-standard)_both]";
@@ -48,12 +52,16 @@ function ResultsSkeleton() {
   );
 }
 
-/** Busca no catálogo e na Open Library; setas andam, Enter escolhe. */
+/**
+ * Busca no catálogo e na Open Library; setas andam, Enter escolhe. No toque,
+ * com câmera, também dá para escanear o código de barras.
+ */
 export function SearchStep({
   query,
   onQueryChange,
   onChoose,
   onManual,
+  onScan,
   picked,
   context,
 }: {
@@ -61,12 +69,14 @@ export function SearchStep({
   onQueryChange: (query: string) => void;
   onChoose: (book: ChosenBook) => void;
   onManual: () => void;
+  onScan?: () => void;
   /** Resultados que já foram para a coleção (modo coleção). */
   picked?: ReadonlySet<string>;
   /** Para onde vão os livros escolhidos, acima da busca. */
   context?: string;
 }) {
   const search = useBookSearch(query);
+  const scan = useCanScan() ? onScan : undefined;
   const nothingFound =
     !search.idle &&
     !search.catalogPending &&
@@ -115,7 +125,19 @@ export function SearchStep({
           placeholder="Título, autor ou ISBN"
           className={commandInputClasses}
         />
-        <Kbd>Esc</Kbd>
+        {scan ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="-mr-2"
+            onClick={scan}
+            aria-label="Escanear o código de barras"
+          >
+            <ScanBarcode className="size-5" strokeWidth={1.5} />
+          </Button>
+        ) : (
+          <Kbd>Esc</Kbd>
+        )}
       </div>
       <Command.List className="max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain p-2">
         {search.idle ? (
@@ -191,6 +213,16 @@ export function SearchStep({
           </p>
         ) : null}
         <Command.Group heading="Não achou?" className={commandGroupClasses}>
+          {scan ? (
+            <Command.Item
+              value={SCAN}
+              onSelect={scan}
+              className={commandItemClasses}
+            >
+              <ScanBarcode />
+              Escanear o código de barras
+            </Command.Item>
+          ) : null}
           <Command.Item
             value={MANUAL}
             onSelect={onManual}

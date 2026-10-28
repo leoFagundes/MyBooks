@@ -1,7 +1,7 @@
+import { isbn13From } from "@/features/books/lib/isbn";
 import { BOOK_LIMITS } from "@/features/books/lib/search-result";
 import type { ImportedBook, ShelfStatus } from "../schemas";
 import { parseCsv } from "./csv";
-import { isbn13From } from "./isbn";
 
 /** Até 2.000 livros por arquivo. */
 export const MAX_IMPORT = 2000;
@@ -115,10 +115,12 @@ export function readGoodreadsExport(
         1,
         BOOK_LIMITS.maxPages,
       ),
-      publishedYear: year("Original Publication Year") ?? year("Year Published"),
+      publishedYear:
+        year("Original Publication Year") ?? year("Year Published"),
       status,
       // Nota 0 é "sem nota"; Quero ler não tem nota nem datas
-      rating: status === "want" ? null : toInteger(field(line, "My Rating"), 1, 5),
+      rating:
+        status === "want" ? null : toInteger(field(line, "My Rating"), 1, 5),
       finishedAt: status === "read" ? toDay(field(line, "Date Read")) : null,
       review: toReview(field(line, "My Review")),
     });

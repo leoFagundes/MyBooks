@@ -7,10 +7,12 @@ import type { ShelfDetails } from "../../schemas";
 import type { ChosenBook } from "./chosen-book";
 import { DetailsStep } from "./details-step";
 import { ManualStep } from "./manual-step";
+import { ScanStep } from "./scan-step";
 import { SearchStep } from "./search-step";
 
 type Step =
   | { name: "search" }
+  | { name: "scan" }
   | { name: "manual" }
   | { name: "details"; book: ChosenBook };
 
@@ -23,18 +25,22 @@ const stepMotion = {
 };
 
 /**
- * Os passos da paleta: buscar, cadastrar à mão e, por fim, status e nota.
+ * Os passos da paleta: buscar (ou escanear o código de barras), cadastrar à
+ * mão e, por fim, status e nota.
  * No modo coleção (`onPick`), escolher põe o livro nela e volta à busca,
  * que marca o que já entrou.
  */
 export function AddBookFlow({
   initialBook,
+  startWithScan = false,
   onSave,
   onPick,
   collectionTitle,
 }: {
   /** Livro já escolhido (a página do livro): começa no passo de status. */
   initialBook: ChosenBook | null;
+  /** Começa na câmera (o ⌘K). */
+  startWithScan?: boolean;
   onSave: (
     book: ChosenBook,
     details: ShelfDetails,
@@ -45,7 +51,11 @@ export function AddBookFlow({
 }) {
   const [query, setQuery] = useState("");
   const [step, setStep] = useState<Step>(
-    initialBook ? { name: "details", book: initialBook } : { name: "search" },
+    initialBook
+      ? { name: "details", book: initialBook }
+      : startWithScan
+        ? { name: "scan" }
+        : { name: "search" },
   );
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -68,12 +78,23 @@ export function AddBookFlow({
             onQueryChange={setQuery}
             onChoose={choose}
             onManual={() => setStep({ name: "manual" })}
+            onScan={() => setStep({ name: "scan" })}
             picked={picked}
             context={
               collectionTitle
                 ? `Para a coleção “${collectionTitle}”`
                 : undefined
             }
+          />
+        </motion.div>
+      ) : step.name === "scan" ? (
+        <motion.div key="scan" {...stepMotion}>
+          <ScanStep
+            onIsbn={(isbn) => {
+              setQuery(isbn);
+              setStep({ name: "search" });
+            }}
+            onCancel={() => setStep({ name: "search" })}
           />
         </motion.div>
       ) : step.name === "manual" ? (

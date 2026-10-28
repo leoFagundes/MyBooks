@@ -25,6 +25,8 @@ type AddBookContextValue = {
   openWith: (book: ChosenBook) => void;
   /** Escolher um livro o põe na coleção, e a busca segue aberta. */
   openForCollection: (collection: CollectionTarget) => void;
+  /** Abre direto na câmera, para ler o código de barras (só no toque). */
+  openScanner: () => void;
   /** Há conta: o +, a tecla N e o item do ⌘K funcionam. */
   enabled: boolean;
 };
@@ -37,6 +39,7 @@ type Controls = {
   setEnabled: (enabled: boolean) => void;
   setInitialBook: (book: ChosenBook | null) => void;
   setCollection: (collection: CollectionTarget | null) => void;
+  setScanFirst: (scanFirst: boolean) => void;
 };
 const ControlsContext = createContext<Controls | null>(null);
 
@@ -49,6 +52,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
   const [enabled, setEnabled] = useState(false);
   const [initialBook, setInitialBook] = useState<ChosenBook | null>(null);
   const [collection, setCollection] = useState<CollectionTarget | null>(null);
+  const [scanFirst, setScanFirst] = useState(false);
   const [, startTransition] = useTransition();
   const returnFocus = useRef<HTMLElement | null>(null);
 
@@ -140,23 +144,38 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
         open: () => {
           setInitialBook(null);
           setCollection(null);
+          setScanFirst(false);
           setOpen(true);
         },
         openWith: (book) => {
           setInitialBook(book);
           setCollection(null);
+          setScanFirst(false);
           setOpen(true);
         },
         openForCollection: (target) => {
           setInitialBook(null);
           setCollection(target);
+          setScanFirst(false);
+          setOpen(true);
+        },
+        openScanner: () => {
+          setInitialBook(null);
+          setCollection(null);
+          setScanFirst(true);
           setOpen(true);
         },
         enabled,
       }}
     >
       <ControlsContext
-        value={{ setOpen, setEnabled, setInitialBook, setCollection }}
+        value={{
+          setOpen,
+          setEnabled,
+          setInitialBook,
+          setCollection,
+          setScanFirst,
+        }}
       >
         {children}
       </ControlsContext>
@@ -183,6 +202,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           </DialogTitle>
           <AddBookFlow
             initialBook={initialBook}
+            startWithScan={scanFirst}
             onSave={save}
             collectionTitle={collection?.title}
             onPick={collection ? (book) => pick(book, collection) : undefined}
@@ -215,7 +235,8 @@ export function AddBookShortcut() {
   const controls = use(ControlsContext);
   if (!controls)
     throw new Error("AddBookShortcut precisa do <AddBookProvider>");
-  const { setOpen, setEnabled, setInitialBook, setCollection } = controls;
+  const { setOpen, setEnabled, setInitialBook, setCollection, setScanFirst } =
+    controls;
 
   useEffect(() => {
     setEnabled(true);
@@ -229,6 +250,7 @@ export function AddBookShortcut() {
       event.preventDefault();
       setInitialBook(null);
       setCollection(null);
+      setScanFirst(false);
       setOpen(true);
     }
     window.addEventListener("keydown", onKeyDown);
@@ -236,7 +258,7 @@ export function AddBookShortcut() {
       window.removeEventListener("keydown", onKeyDown);
       setEnabled(false);
     };
-  }, [setOpen, setEnabled, setInitialBook, setCollection]);
+  }, [setOpen, setEnabled, setInitialBook, setCollection, setScanFirst]);
 
   return null;
 }

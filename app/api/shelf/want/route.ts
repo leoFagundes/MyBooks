@@ -1,4 +1,4 @@
-import { readWantList } from "@/features/shelf/queries";
+import { readShelfBooks } from "@/features/shelf/queries";
 import { createClient } from "@/lib/supabase/server";
 
 // A fila de Quero ler de quem está vendo, para o sorteio aberto pelo ⌘K.
@@ -10,7 +10,7 @@ export async function GET() {
   const userId = data?.claims.sub;
   if (!userId) return Response.json({ books: [] }, { status: 401 });
   try {
-    const books = await readWantList(supabase, userId);
+    const books = await readShelfBooks(supabase, userId, "want");
     return Response.json(
       { books },
       { headers: { "Cache-Control": "private, no-store" } },

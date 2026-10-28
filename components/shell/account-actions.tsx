@@ -10,6 +10,7 @@ import {
 } from "@/features/shelf/components/add-book/add-book-provider";
 import { routes } from "@/lib/routes";
 import { AccountMenu } from "./account-menu";
+import { CommandPaletteAccount } from "./command-palette";
 import type { NavViewer } from "./nav-links";
 import { NotificationsButton } from "./notifications-button";
 import { ThemeToggle } from "./theme-toggle";
@@ -41,6 +42,8 @@ export function AccountActions({
   return (
     <>
       <AddBookShortcut />
+      {/* Na vitrine do /dev a conta é de mentira: o ⌘K não a usa */}
+      {viewer.id ? <CommandPaletteAccount username={viewer.username} /> : null}
       <Button
         variant="ghost"
         size="icon"

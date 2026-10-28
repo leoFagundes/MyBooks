@@ -58,21 +58,25 @@ export async function getShelf(userId: string): Promise<ShelfItem[]> {
 }
 
 /**
- * A fila de Quero ler de alguém, do livro mexido por último ao primeiro. Sem
- * cache: o sorteio aberto pelo ⌘K quer a fila de agora.
+ * Os livros da estante de alguém (de um status, se vier), do mexido por
+ * último ao primeiro. Sem cache: o sorteio e a busca do ⌘K querem a estante
+ * de agora.
  */
-export async function readWantList(
+export async function readShelfBooks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
+  status?: ShelfStatus,
 ): Promise<BookVisual[]> {
-  const { data, error } = await supabase
+  let request = supabase
     .from("user_books")
     .select(
       "book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
     )
-    .eq("user_id", userId)
-    .eq("status", "want")
-    .order("updated_at", { ascending: false });
+    .eq("user_id", userId);
+  if (status) request = request.eq("status", status);
+  const { data, error } = await request.order("updated_at", {
+    ascending: false,
+  });
   if (error) throw error;
   return data.flatMap(({ book }) => (book ? [toBookVisual(book)] : []));
 }

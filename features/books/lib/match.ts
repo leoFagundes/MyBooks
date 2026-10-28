@@ -1,6 +1,7 @@
 import "server-only";
 import type { ImportedBook } from "@/features/shelf/schemas";
 import type { createClient } from "@/lib/supabase/server";
+import { foldText } from "@/lib/text-match";
 import { searchBooks } from "../queries";
 import { ensureCatalogBook } from "./catalog";
 
@@ -10,13 +11,10 @@ type Candidate = { title: string; authors: string[] };
 
 const UNIQUE_VIOLATION = "23505";
 
-const plain = (value: string) =>
-  value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-
 // O título que vale para comparar: sem acento, sem subtítulo e sem pontuação
 function titleKey(title: string) {
   return (
-    plain(title)
+    foldText(title)
       .split(/[:(]/)[0]
       ?.replace(/[^a-z0-9]+/g, " ")
       .trim() ?? ""
@@ -25,7 +23,7 @@ function titleKey(title: string) {
 
 // O sobrenome basta: "J.R.R. Tolkien" e "J. R. R. Tolkien" são a mesma pessoa
 const surname = (name: string) =>
-  plain(name)
+  foldText(name)
     .split(/[^a-z0-9]+/)
     .filter(Boolean)
     .at(-1) ?? "";

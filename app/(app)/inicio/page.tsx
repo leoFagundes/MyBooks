@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MyShelf } from "@/features/shelf/components/my-shelf";
+import { ReadingNow } from "@/features/shelf/components/reading-now";
 import { getShelf } from "@/features/shelf/queries";
 import { requireViewer } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Início" };
 // clique: o roteador reaproveita estes dados por 5 minutos (ver o perfil)
 export const unstable_dynamicStaleTime = 300;
 
-// Provisório: o feed e o "Lendo agora" chegam na Fase 5
+/** Início (spec §5.3): "Lendo agora" e o que acontece com quem você segue. */
 export default function HomePage() {
   return (
     <PageTransition>
@@ -33,6 +33,7 @@ async function Home() {
   if (!viewer.onboarded) redirect(routes.onboarding);
   const shelf = await getShelf(viewer.id);
   const firstName = viewer.displayName.split(/\s+/)[0] || viewer.displayName;
+  const reading = shelf.filter((item) => item.status === "reading");
 
   return (
     <>
@@ -48,7 +49,7 @@ async function Home() {
           </p>
         ) : null}
       </header>
-      <MyShelf books={shelf.map((item) => item.book)} />
+      <ReadingNow entries={reading} />
     </>
   );
 }
@@ -57,18 +58,23 @@ function HomeSkeleton() {
   return (
     <div
       aria-busy
-      aria-label="Carregando sua estante"
+      aria-label="Carregando o início"
       className="flex flex-col gap-8"
     >
       <div className="flex flex-col gap-3">
         <Skeleton className="h-11 w-48" />
         <Skeleton className="h-3 w-28" />
       </div>
-      <Skeleton className="h-9 w-64" />
-      <div className="flex items-end gap-1.5">
-        {[176, 160, 184, 168, 152, 180, 164].map((height, i) => (
-          <Skeleton key={i} className="w-8 rounded-cover" style={{ height }} />
-        ))}
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-7 w-36" />
+        <div className="flex gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton
+              key={i}
+              className="aspect-2/3 w-24 rounded-cover sm:w-28"
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

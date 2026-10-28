@@ -97,16 +97,18 @@ export const shelfDetailsSchema = z
   .object(detailsShape)
   .superRefine(coherentDetails);
 
+/** A página em que a pessoa está (o check user_books_current_page_range). */
+export const currentPageSchema = z
+  .number({ error: "Página inválida" })
+  .int("Página inválida")
+  .min(0, "Página inválida")
+  .max(20_000, "Página inválida");
+
 /** O bloco da página do livro: o mesmo, mais a página em que a pessoa está. */
 export const shelfEntryUpdateSchema = z
   .object({
     ...detailsShape,
-    currentPage: z
-      .number({ error: "Página inválida" })
-      .int("Página inválida")
-      .min(0, "Página inválida")
-      .max(20_000, "Página inválida")
-      .nullable(),
+    currentPage: currentPageSchema.nullable(),
   })
   .superRefine(coherentDetails);
 

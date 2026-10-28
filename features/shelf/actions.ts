@@ -9,12 +9,14 @@ import {
 } from "@/features/collections/actions";
 import { type ActionResult, fieldErrorsFrom } from "@/lib/action";
 import { requireViewer } from "@/lib/auth";
+import { formatNumber } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import {
   type AddBookInput,
   addBookSchema,
   type CopyBookInput,
   copyBookSchema,
+  currentPageSchema,
   type QuoteInput,
   quoteSchema,
   reviewSchema,
@@ -180,6 +182,44 @@ export async function updateShelfEntry(
     .eq("user_id", viewer.id)
     .eq("book_id", id.data);
   if (error) return { ok: false, error: "Não deu para salvar. Tente de novo." };
+  updateTag(`shelf:${viewer.id}`);
+  updateTag(`book:${id.data}`);
+  return { ok: true, data: undefined };
+}
+
+/** A página atual, pelo popover do "Lendo agora" (spec §5.3). */
+export async function updateCurrentPage(
+  bookId: string,
+  page: number,
+): Promise<ActionResult> {
+  const id = bookIdSchema.safeParse(bookId);
+  const parsed = currentPageSchema.safeParse(page);
+  if (!id.success || !parsed.success) {
+    return { ok: false, error: "Página inválida." };
+  }
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { data: book } = await supabase
+    .from("books")
+    .select("page_count")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (book?.page_count && parsed.data > book.page_count) {
+    return {
+      ok: false,
+      error: `Esse livro tem ${formatNumber(book.page_count)} páginas.`,
+    };
+  }
+  const { data, error } = await supabase
+    .from("user_books")
+    .update({ current_page: parsed.data })
+    .eq("user_id", viewer.id)
+    .eq("book_id", id.data)
+    .select("book_id");
+  if (error) return { ok: false, error: "Não deu para salvar a página." };
+  if (data.length === 0) {
+    return { ok: false, error: "Esse livro não está mais na sua estante." };
+  }
   updateTag(`shelf:${viewer.id}`);
   updateTag(`book:${id.data}`);
   return { ok: true, data: undefined };

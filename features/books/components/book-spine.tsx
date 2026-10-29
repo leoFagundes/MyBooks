@@ -59,7 +59,7 @@ export function BookSpine({
     >
       <MotionLink
         href={href ?? routes.book(book.id)}
-        aria-label={author ? `${book.title}, de ${author}` : book.title}
+        aria-label={author ? `${book.title}, ${author}` : book.title}
         data-lifted={lifted}
         {...props}
         onPointerLeave={onDeactivate}
@@ -79,6 +79,7 @@ export function BookSpine({
         <span className="max-h-[calc(100%-3rem)] truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
           {book.title}
         </span>
+        {/* O espaço separa título e autor no texto (o flex não o desenha) */}{" "}
         {width >= 24 && author ? (
           <span className="max-h-10 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
             {author}

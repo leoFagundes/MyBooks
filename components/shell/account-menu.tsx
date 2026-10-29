@@ -36,11 +36,9 @@ export function AccountMenu({ viewer }: { viewer: NavViewer }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Abrir menu da conta"
-          className="ml-1 cursor-pointer rounded-full"
-        >
+        <button type="button" className="ml-1 cursor-pointer rounded-full">
+          {/* Nome pelo conteúdo: as iniciais do avatar ficam fora dele */}
+          <span className="sr-only">Abrir menu da conta</span>
           <Avatar>
             {viewer.avatarUrl ? (
               <AvatarImage src={viewer.avatarUrl} alt="" />

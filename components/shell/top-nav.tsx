@@ -73,13 +73,16 @@ export function TopNav({ viewer, slots, preview = false }: TopNavProps) {
             <Button
               variant="ghost"
               onClick={palette.toggle}
-              aria-label="Buscar"
               aria-keyshortcuts="Meta+K Control+K"
               className="h-9 gap-2 px-2.5"
             >
               <Search />
-              <span className="hidden lg:inline">Buscar</span>
-              <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
+              {/* O nome vem do conteúdo (WCAG 2.5.3): abaixo do lg, só para
+                  leitor de tela; o atalho vai no aria-keyshortcuts */}
+              <span className="sr-only lg:not-sr-only">Buscar</span>
+              <Kbd aria-hidden className="hidden sm:inline-flex">
+                ⌘K
+              </Kbd>
             </Button>
             {slots ? slots.account : <AccountActions viewer={viewer} />}
           </div>

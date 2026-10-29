@@ -26,14 +26,15 @@ test.describe("ações da coleção", () => {
   test("curtir alterna o estado e o contador", async ({ page }) => {
     await openDemo(page);
     const like = actions(page).getByRole("button", { name: "Curtir" });
+    // O texto do botão é "Curtir" (só para leitor de tela) e o número
     await expect(like).toHaveAttribute("aria-pressed", "false");
-    await expect(like).toHaveText("34", { useInnerText: true });
+    await expect(like).toHaveText(/\b34$/, { useInnerText: true });
     await like.click();
     await expect(like).toHaveAttribute("aria-pressed", "true");
-    await expect(like).toHaveText("35", { useInnerText: true });
+    await expect(like).toHaveText(/\b35$/, { useInnerText: true });
     await like.click();
     await expect(like).toHaveAttribute("aria-pressed", "false");
-    await expect(like).toHaveText("34", { useInnerText: true });
+    await expect(like).toHaveText(/\b34$/, { useInnerText: true });
   });
 
   test("uma ação que falha volta atrás com um aviso gentil", async ({
@@ -45,7 +46,7 @@ test.describe("ações da coleção", () => {
     await like.click();
     await expect(page.getByText("Não deu para curtir agora")).toBeVisible();
     await expect(like).toHaveAttribute("aria-pressed", "false");
-    await expect(like).toHaveText("34", { useInnerText: true });
+    await expect(like).toHaveText(/\b34$/, { useInnerText: true });
   });
 
   test("salvar vira salva", async ({ page }) => {

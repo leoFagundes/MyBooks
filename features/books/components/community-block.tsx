@@ -49,9 +49,9 @@ export function CommunityBlock({ community }: { community: BookCommunity }) {
               <li key={reader.username}>
                 <Link
                   href={routes.profile(reader.username)}
-                  aria-label={reader.displayName}
                   className="block rounded-full"
                 >
+                  <span className="sr-only">{reader.displayName}</span>
                   <ReaderAvatar
                     reader={reader}
                     className="size-8 ring-2 ring-background"

@@ -48,7 +48,6 @@ export function LikeButton({
     <Button
       variant="outline"
       size="sm"
-      aria-label="Curtir"
       aria-pressed={state.liked}
       onClick={toggle}
     >
@@ -63,6 +62,8 @@ export function LikeButton({
           className={cn("size-4", state.liked && "fill-brand text-brand")}
         />
       </motion.span>
+      {/* O nome vem do conteúdo, para conter o número que se vê (WCAG 2.5.3) */}
+      <span className="sr-only">Curtir</span>
       <AnimatedNumber value={state.count} />
     </Button>
   );
@@ -72,8 +73,9 @@ export function LikeButton({
 export function LikeCountLink({ count }: { count: number }) {
   return (
     <Button asChild variant="outline" size="sm">
-      <Link href={routes.entrar} aria-label="Entrar para curtir">
+      <Link href={routes.entrar}>
         <HeartIcon className="size-4" />
+        <span className="sr-only">Entrar para curtir</span>
         <AnimatedNumber value={count} />
       </Link>
     </Button>

@@ -58,7 +58,7 @@ export function LandingFooter() {
           Dados e capas dos livros:{" "}
           <a
             href="https://openlibrary.org"
-            className="rounded-control text-foreground underline-offset-4 hover:underline"
+            className="rounded-control text-foreground underline underline-offset-4"
           >
             Open Library
           </a>

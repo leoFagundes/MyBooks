@@ -38,6 +38,7 @@ function AvatarFallback({
 }: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
   return (
     <AvatarPrimitive.Fallback
+      aria-hidden
       data-slot="avatar-fallback"
       className={cn(
         "flex size-full items-center justify-center rounded-full border border-border text-xs font-medium text-muted-foreground",

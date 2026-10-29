@@ -22,7 +22,8 @@ test.describe("capas, lombadas e prateleira", () => {
   });
 
   test("capa real aparece como imagem", async ({ page }) => {
-    const cover = page.getByTestId("capa-torto-arado");
+    // A capa aparece em mais de uma demonstração do /dev: vale a primeira
+    const cover = page.getByTestId("capa-torto-arado").first();
     await cover.scrollIntoViewIfNeeded();
     await expect(cover).toHaveAttribute("data-cover", "image");
     await expect(
@@ -37,6 +38,7 @@ test.describe("capas, lombadas e prateleira", () => {
     test("a capa aparece sem esperar a hidratação", async ({ page }) => {
       const image = page
         .getByTestId("capa-torto-arado")
+        .first()
         .getByRole("img", { name: "Capa de Torto Arado" });
       await expect(image).toHaveCSS("opacity", "1");
     });

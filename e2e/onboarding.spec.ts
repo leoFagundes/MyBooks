@@ -27,8 +27,9 @@ async function openOnboarding(page: Page, user: TestUser, baseURL?: string) {
 // Um @ livre e estável por conta de teste (o id só tem [0-9a-f-])
 const freeUsername = (user: TestUser) => `leitora_${user.id.slice(0, 8)}`;
 
+// A busca pode trazer muitos resultados, cada um com dois botões
 async function tabTo(page: Page, target: Locator) {
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 100; i++) {
     if (await target.evaluate((el) => el === document.activeElement)) return;
     await page.keyboard.press("Tab");
   }
@@ -93,9 +94,7 @@ test("os quatro passos levam ao /inicio, com foto, gêneros, livro e quem seguir
 
     await expect(page).toHaveURL(/\/inicio$/);
     await expect(
-      page.getByRole("link", {
-        name: "Grande Sertão: Veredas, de João Guimarães Rosa",
-      }),
+      page.getByRole("main").getByText("1 livro na estante"),
     ).toBeVisible();
 
     const { data } = await adminClient()
@@ -163,9 +162,14 @@ test("dá para fazer o onboarding só com o teclado", async ({
       .getByRole("listitem")
       .filter({ hasText: "O Hobbit" })
       .first();
-    await tabTo(page, book.getByRole("button", { name: "Já li" }));
+    // O Tab só tem para onde ir depois que a busca responde
+    const read = book.getByRole("button", { name: "Já li" });
+    await expect(read).toBeVisible();
+    await tabTo(page, read);
     await page.keyboard.press("Enter");
     await expect(book.getByText("Na estante")).toBeVisible();
+    // O botão apertado sumiu: o foco foi para o "Desfazer" da mesma linha
+    await expect(book.getByRole("button", { name: "Desfazer" })).toBeFocused();
     await tabTo(page, page.getByRole("button", { name: "Continuar" }));
     await page.keyboard.press("Enter");
 

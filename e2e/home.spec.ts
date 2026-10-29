@@ -70,7 +70,7 @@ test.describe("barra com a conta", () => {
       await page.getByRole("menuitem", { name: "Sair" }).click();
       await expect(page).toHaveURL(/\/$/);
       await expect(
-        page.getByRole("link", { name: "Criar minha estante" }),
+        page.getByRole("link", { name: "Criar minha estante" }).first(),
       ).toBeVisible();
 
       await page.goto("/inicio");
@@ -82,7 +82,7 @@ test.describe("barra com a conta", () => {
 });
 
 test.describe("início", () => {
-  test("cumprimenta pelo nome e mostra a estante", async ({
+  test("cumprimenta pelo nome, conta a estante e mostra o que está lendo", async ({
     page,
     baseURL,
   }) => {
@@ -96,12 +96,16 @@ test.describe("início", () => {
       const errors = trackPageErrors(page);
       await page.goto("/inicio");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Lia/);
+      const main = page.getByRole("main");
+      await expect(main.getByText("2 livros na estante")).toBeVisible();
+      // Só o que está sendo lido entra no "Lendo agora"
+      const reading = main.getByRole("region", { name: "Lendo agora" });
       await expect(
-        page.getByRole("link", { name: "Dom Casmurro, de Machado de Assis" }),
+        reading.getByRole("button", { name: /^Dom Casmurro:/ }),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "O Hobbit, de J. R. R. Tolkien" }),
-      ).toBeVisible();
+        reading.getByRole("button", { name: /^O Hobbit:/ }),
+      ).toHaveCount(0);
       // Sem erro de hidratação nem exceção na página
       expect(errors).toEqual([]);
     } finally {
@@ -109,7 +113,7 @@ test.describe("início", () => {
     }
   });
 
-  test("sem livros, o estado vazio convida a começar", async ({
+  test("sem livros nem quem seguir, o vazio convida a seguir leitores", async ({
     page,
     baseURL,
   }) => {
@@ -122,12 +126,12 @@ test.describe("início", () => {
       await page.goto("/inicio");
       // No main: por uns 200ms o streaming do React ainda guarda uma cópia
       // escondida (div#S:n[hidden]) do conteúdo que já apareceu
+      const main = page.getByRole("main");
       await expect(
-        page.getByRole("main").getByText("Sua estante está esperando"),
+        main.getByText("Siga leitores para ver o que eles leem"),
       ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Procurar um livro" }),
-      ).toBeVisible();
+      await expect(main.getByRole("link", { name: "Explorar" })).toBeVisible();
+      await expect(main.getByText(/livros? na estante/)).toHaveCount(0);
     } finally {
       await deleteTestUser(user.id);
     }
@@ -150,7 +154,8 @@ test.describe("início", () => {
 
 test("na landing, Criar minha estante leva ao cadastro", async ({ page }) => {
   await page.goto("/");
-  const cta = page.getByRole("link", { name: "Criar minha estante" });
+  // A landing convida no topo e na chamada final: vale o do topo
+  const cta = page.getByRole("link", { name: "Criar minha estante" }).first();
   await waitForHydration(cta);
   await cta.click();
   await expect(page).toHaveURL(/\/cadastro$/);

@@ -52,6 +52,9 @@ export function BooksStep({
   const [, startTransition] = useTransition();
   // Livro de fora só ganha id do catálogo quando chega lá
   const [catalogIds, setCatalogIds] = useState<Record<string, string>>({});
+  // O botão apertado some (vira "Na estante", ou volta): o foco vai para o
+  // botão que entra no lugar dele, na mesma linha, e não se perde no body
+  const [refocus, setRefocus] = useState<string | null>(null);
   // A estante muda na hora; se a action falhar, volta sozinha
   const [shelf, setOptimisticShelf] = useOptimistic(
     added,
@@ -69,6 +72,7 @@ export function BooksStep({
     const chosen = chooseResult(result, search.query);
     if (!chosen) return;
     const key = resultKey(result);
+    setRefocus(key);
     startTransition(async () => {
       setOptimisticShelf({ key: shelfKey(result), status });
       const response = await addBook({
@@ -89,6 +93,7 @@ export function BooksStep({
   function remove(result: SearchResult) {
     const bookId = result.catalogId ?? catalogIds[resultKey(result)];
     if (!bookId) return;
+    setRefocus(resultKey(result));
     startTransition(async () => {
       setOptimisticShelf({ key: bookId, status: null });
       const response = await removeFromShelf(bookId);
@@ -128,7 +133,10 @@ export function BooksStep({
             placeholder="Título, autor ou ISBN"
             autoComplete="off"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setRefocus(null);
+            }}
           />
         </div>
 
@@ -196,6 +204,7 @@ export function BooksStep({
                             type="button"
                             variant="ghost"
                             size="sm"
+                            autoFocus={refocus === resultKey(result)}
                             onClick={() => remove(result)}
                           >
                             Desfazer
@@ -207,6 +216,7 @@ export function BooksStep({
                             type="button"
                             variant="outline"
                             size="sm"
+                            autoFocus={refocus === resultKey(result)}
                             onClick={() => add(result, "want")}
                           >
                             Quero ler

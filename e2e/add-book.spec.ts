@@ -163,16 +163,16 @@ test.describe("adicionar livro", () => {
     await expect
       .poll(() => shelfRows(user))
       .toEqual([expect.objectContaining({ status: "read", rating: 4.5 })]);
-    // A página atrás já mostra o livro na estante (a lombada é um link)
-    const spine = page.getByRole("main").getByRole("link", { name: title });
-    await expect(spine).toBeVisible();
+    // O Início atrás já conta o livro na estante
+    const count = page.getByRole("main").getByText("1 livro na estante");
+    await expect(count).toBeVisible();
 
     await toast.getByRole("button", { name: "Desfazer" }).click();
     await expect(
       page.getByRole("listitem").filter({ hasText: "Tirei da estante" }),
     ).toBeVisible();
     await expect.poll(() => shelfRows(user)).toEqual([]);
-    await expect(spine).toBeHidden();
+    await expect(count).toBeHidden();
     expect(errors).toEqual([]);
   });
 

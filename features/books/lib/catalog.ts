@@ -109,6 +109,22 @@ async function storeCover(
 }
 
 /**
+ * Traz para o bucket a capa de um livro que ainda aponta para a Open Library
+ * (os do seed): lá, cada capa passa por três redirecionamentos e chega
+ * segundos depois, atrasando o LCP. Grava as três larguras em covers/<id>/;
+ * quem chama troca o cover_url.
+ */
+export async function copyCoverToBucket(
+  bookId: string,
+  url: string,
+  { fetcher = fetch }: { fetcher?: typeof fetch } = {},
+): Promise<boolean> {
+  const image = await downloadCover(url, fetcher);
+  const cover = image ? await processCover(image) : null;
+  return cover ? storeCover(createAdminClient(), bookId, cover) : false;
+}
+
+/**
  * O id do livro no catálogo. Acha pela obra na fonte ou pelo ISBN-13; se não
  * achar, baixa a capa uma vez, tira a cor, grava as três larguras em
  * covers/<id>/ e insere o livro em nome de quem o trouxe.

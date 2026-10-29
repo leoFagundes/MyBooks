@@ -244,7 +244,7 @@ Pare e me apresente o relatório antes de integrar qualquer coisa.
 ### 7.2 Sugestões de edição e de exclusão
 
 - Na página do livro:
-  - **"Sugerir edição":** formulário já preenchido, que salva só os campos alterados e o motivo;
+  - **"Sugerir edição":** formulário já preenchido, que salva só os campos alterados e o motivo; Para quem não é dono da criação do livro sugerir uma edição para o adm.
   - **"Sugerir exclusão":** motivos como duplicado (indicando de qual livro), conteúdo impróprio, livro inexistente ou outro.
 - Tabela `book_change_requests`: book_id, user_id, type (edit | delete | merge), changes jsonb, base_snapshot jsonb, reason, status, reviewed_by, reviewed_at, review_note.
 - Fila no admin:

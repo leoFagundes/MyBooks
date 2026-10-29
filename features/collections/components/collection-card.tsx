@@ -74,11 +74,14 @@ export function CollectionCard({
             data-testid={`leque-${collection.id}`}
           />
           <div className="flex min-w-0 flex-col gap-1">
-            <p className="flex items-center gap-2 font-serif text-xl leading-tight">
+            {/* O título quebra linha (até duas) em vez de virar reticências */}
+            <p className="flex items-baseline gap-2 font-serif text-xl leading-tight">
               {collection.emoji ? (
                 <span aria-hidden>{collection.emoji}</span>
               ) : null}
-              <span className="truncate">{collection.title}</span>
+              <span className="line-clamp-2 min-w-0 text-pretty">
+                {collection.title}
+              </span>
               {collection.visibility === "private" ? (
                 <LockIcon
                   aria-label="Privada"

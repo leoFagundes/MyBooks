@@ -283,6 +283,12 @@
   mix-blend-mode: soft-light;
 }
 
+/* Item com o Copiar ou o selo no canto da capa: a capa tipográfica começa o
+   título abaixo deles. */
+li[data-copy-item] {
+  --capa-chip: 2.25rem;
+}
+
 /* Lombada: luz na borda esquerda e sombra na direita. */
 .spine {
   box-shadow:
@@ -508,6 +514,66 @@
   to {
     transform: perspective(900px) rotateY(90deg);
     filter: brightness(0.6);
+  }
+}
+
+/* Ilustrações dos estados vazios: cada traço se desenha ao aparecer, na
+   ordem dele (--i, 35ms cada), e o tracejado esmaece junto. Em CSS, para
+   valer desde o HTML do servidor. Com o pathLength 1, o traço inteiro mede 1:
+   o intervalo de 2 esconde tudo antes do desenho. */
+.ilustracao [data-traco] {
+  stroke-dasharray: 1 2;
+  animation: traco-desenha var(--duration-slow) var(--ease-standard)
+    calc(var(--i, 0) * 35ms + 80ms) both;
+}
+.ilustracao [data-tracejado] {
+  animation: aparecer var(--duration-slow) var(--ease-standard)
+    calc(var(--i, 0) * 35ms + 80ms) both;
+}
+@keyframes traco-desenha {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ilustracao [data-traco] {
+    stroke-dasharray: none;
+    animation-name: aparecer;
+  }
+}
+
+/* Toast carregando (toast.promise): a barra corre rápido no começo e quase
+   para perto do fim, até a resposta chegar. Só transform, no compositor.
+   Pronto, o Sonner troca o texto e o ícone, e a barra esmaece. */
+.toast-progresso {
+  transform-origin: left;
+  animation: toast-progresso 8s var(--ease-standard) both;
+}
+@keyframes toast-progresso {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.92);
+  }
+}
+.toast-barra {
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+.sonner-loader[data-visible="false"] .toast-barra {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-progresso {
+    animation: toast-pulsa 1.2s var(--ease-standard) infinite alternate;
+  }
+}
+@keyframes toast-pulsa {
+  to {
+    opacity: 0.35;
   }
 }
 

@@ -4,6 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
 import type { BookVisual } from "../types";
+import { preloadHeroCover } from "./book-cover";
 import {
   InsideSource,
   type TransitionSource,
@@ -24,7 +25,8 @@ type Handlers = {
  * O que todo link para a página do livro precisa para a capa viajar:
  * - prefetch completo na intenção (mouse, foco ou toque), porque o par só se
  *   forma se o destino já estiver pronto no clique (receita do Next para
- *   Partial Prefetching: `true` depois da intenção, `"auto"` antes);
+ *   Partial Prefetching: `true` depois da intenção, `"auto"` antes), e a capa
+ *   grande da página já começa a chegar;
  * - o tipo da transição (capa ou lombada), para o destino animar do jeito certo;
  * - marcar a origem já no apertar, antes de a navegação começar.
  */
@@ -43,29 +45,35 @@ export function useBookLinkBehavior({
   const source = shared ?? own;
   const [intent, setIntent] = useState(false);
 
+  function showIntent() {
+    setIntent(true);
+    preloadHeroCover(book);
+  }
+
   const props = {
+    ref: source.ref,
     prefetch: intent ? true : ("auto" as const),
     transitionTypes: [variant === "spine" ? "livro-lombada" : "livro-capa"],
     "data-transition-source": source.isSource ? "true" : undefined,
     onPointerEnter: (event: React.PointerEvent<HTMLAnchorElement>) => {
-      setIntent(true);
+      showIntent();
       handlers.onPointerEnter?.(event);
     },
     onFocus: (event: React.FocusEvent<HTMLAnchorElement>) => {
-      setIntent(true);
+      showIntent();
       handlers.onFocus?.(event);
     },
     onPointerDown: (event: React.PointerEvent<HTMLAnchorElement>) => {
-      setIntent(true);
-      source.markSource();
+      showIntent();
+      source.markSource(event.currentTarget);
       handlers.onPointerDown?.(event);
     },
     onKeyDown: (event: React.KeyboardEvent<HTMLAnchorElement>) => {
-      if (event.key === "Enter") source.markSource();
+      if (event.key === "Enter") source.markSource(event.currentTarget);
       handlers.onKeyDown?.(event);
     },
     onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
-      source.markSource();
+      source.markSource(event.currentTarget);
       handlers.onClick?.(event);
     },
   };

@@ -6,6 +6,7 @@ import { createContext, use, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { BookVisual } from "@/features/books/types";
+import { actionErrorMessage, unwrapAction } from "@/lib/action";
 import { startReading, updateShelfEntry } from "../../actions";
 import { today } from "../../lib/today";
 import { WANT_LIST_KEY } from "../../lib/want-list";
@@ -59,22 +60,29 @@ export function NextReadProvider({ children }: { children: React.ReactNode }) {
 
   function start(book: BookVisual) {
     setOpen(false);
-    const toastId = toast.loading("Começando a leitura…", {
-      description: book.title,
-    });
     startTransition(async () => {
-      const result = await startReading(book.id, today());
-      if (!result.ok) {
-        toast.error(result.error, { id: toastId, description: book.title });
-        return;
-      }
-      void queryClient.invalidateQueries({ queryKey: WANT_LIST_KEY });
-      toast.success("Boa leitura!", {
-        id: toastId,
-        description: `${book.title} está em Lendo agora.`,
-        duration: 6000,
-        action: { label: "Desfazer", onClick: () => undo(book) },
+      // Um toast só, do carregando ao pronto (ou ao erro)
+      const starting = unwrapAction(startReading(book.id, today()));
+      toast.promise(starting, {
+        loading: "Começando a leitura…",
+        description: book.title,
+        success: () => ({
+          message: "Boa leitura!",
+          description: `${book.title} está em Lendo agora.`,
+          duration: 6000,
+          action: { label: "Desfazer", onClick: () => undo(book) },
+        }),
+        error: (error: unknown) => ({
+          message: actionErrorMessage(error),
+          description: book.title,
+        }),
       });
+      const started = await starting.then(
+        () => true,
+        () => false,
+      );
+      if (started)
+        void queryClient.invalidateQueries({ queryKey: WANT_LIST_KEY });
     });
   }
 

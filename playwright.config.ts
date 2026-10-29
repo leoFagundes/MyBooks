@@ -45,6 +45,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], baseURL: producaoURL },
       testMatch: /\.producao\.spec\.ts$/,
     },
+    // Auditoria de responsividade (npm run test:auditoria): cada largura
+    // monta o próprio contexto, com ou sem toque
+    {
+      name: "auditoria",
+      testMatch: /\.auditoria\.ts$/,
+    },
   ],
   webServer: producao
     ? {

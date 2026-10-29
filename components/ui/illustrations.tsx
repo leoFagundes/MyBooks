@@ -1,96 +1,152 @@
 // Ilustrações minimalistas em traço fino para os estados vazios (spec §8).
-// Usam currentColor: a cor vem da classe de quem usa.
+// Usam currentColor: a cor vem da classe de quem usa. O viewBox tem o tamanho
+// em que elas aparecem (96 × 64), então o traço de 1.5 é o mesmo dos ícones.
+// Tudo se apoia na base (y = 56): nada passa dela. O traço se desenha ao
+// aparecer (.ilustracao no globals.css), na ordem de cada um.
+
+import { cn } from "@/lib/utils";
 
 type IllustrationProps = React.ComponentProps<"svg">;
 
-const stroke = {
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.5,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-} as const;
+function Illustration({ className, children, ...props }: IllustrationProps) {
+  return (
+    <svg
+      viewBox="0 0 96 64"
+      aria-hidden
+      className={cn("ilustracao", className)}
+      {...props}
+    >
+      {children}
+    </svg>
+  );
+}
 
+/**
+ * Um traço da ilustração. O contínuo se desenha (pathLength); o tracejado,
+ * o que ainda falta ou pode vir, esmaece por último.
+ */
+function Stroke({
+  d,
+  order,
+  dashed = false,
+}: {
+  d: string;
+  order: number;
+  dashed?: boolean;
+}) {
+  return (
+    <path
+      d={d}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...(dashed
+        ? { strokeDasharray: "2 4", "data-tracejado": "" }
+        : { pathLength: 1, "data-traco": "" })}
+      style={{ "--i": order } as React.CSSProperties}
+    />
+  );
+}
+
+/** Retângulo de cantos arredondados como um caminho só (para se desenhar). */
+function rect(x: number, y: number, width: number, height: number, r: number) {
+  return `M${x + r} ${y}h${width - 2 * r}a${r} ${r} 0 0 1 ${r} ${r}v${height - 2 * r}a${r} ${r} 0 0 1 -${r} ${r}h-${width - 2 * r}a${r} ${r} 0 0 1 -${r} -${r}v-${height - 2 * r}a${r} ${r} 0 0 1 ${r} -${r}z`;
+}
+
+/** Círculo como um caminho só. */
+function circle(cx: number, cy: number, r: number) {
+  return `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 -${2 * r} 0`;
+}
+
+/** Duas lombadas, uma encostada nelas e o lugar de um livro que falta. */
 export function EmptyShelfIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <path d="M8 68h104" {...stroke} />
-      <rect x="22" y="30" width="12" height="38" rx="1.5" {...stroke} />
-      <rect x="36" y="22" width="10" height="46" rx="1.5" {...stroke} />
-      <path d="M50 68l10-40 9 2.4-10 40" {...stroke} />
-      <path d="M78 54h22M78 60h14" strokeDasharray="2 4" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M10 56H86" />
+      <Stroke order={1} d={rect(22, 26, 10, 30, 1.5)} />
+      <Stroke order={2} d={rect(34, 20, 8, 36, 1.5)} />
+      {/* Inclinado sobre o canto de baixo, que fica na base */}
+      <Stroke order={3} d="M50.7 56L58.5 54.1L49.8 19.1L42 21.1Z" />
+      <Stroke
+        order={4}
+        dashed
+        d="M66 56V25.5a1.5 1.5 0 0 1 1.5-1.5h7a1.5 1.5 0 0 1 1.5 1.5V56"
+      />
+    </Illustration>
   );
 }
 
 export function SearchIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <circle cx="54" cy="36" r="18" {...stroke} />
-      <path d="M67 49l14 14" {...stroke} />
-      <path d="M46 36h16M54 28v16" strokeDasharray="2 4" {...stroke} />
-      <path d="M20 70h80" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M22 56H74" />
+      <Stroke order={1} d={circle(44, 28, 13)} />
+      <Stroke order={2} d="M53.5 37.5L63 47" />
+      <Stroke order={3} dashed d="M38 28H50" />
+    </Illustration>
   );
 }
 
 export function QuietBellIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <path d="M46 52V36a14 14 0 0128 0v16l5 6H41z" {...stroke} />
-      <path d="M55 64a5 5 0 0010 0" {...stroke} />
-      <path d="M86 24h10M90 18l-4 12M96 30h10" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M36 44V31a12 12 0 0 1 24 0V44l3.5 4.5H32.5Z" />
+      <Stroke order={1} d="M44.5 52.5a3.5 3.5 0 0 0 7 0" />
+      <Stroke order={2} d="M66 17h6l-6 7h6" />
+      <Stroke order={3} d="M76 10h4l-4 4.5h4" />
+    </Illustration>
   );
 }
 
 export function LockedShelfIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <path d="M8 68h104" {...stroke} />
-      <rect x="22" y="34" width="10" height="34" rx="1.5" {...stroke} />
-      <rect x="34" y="28" width="9" height="40" rx="1.5" {...stroke} />
-      <rect x="68" y="40" width="26" height="20" rx="3" {...stroke} />
-      <path d="M73 40v-6a8 8 0 0116 0v6" {...stroke} />
-      <path d="M81 48v4" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M10 56H86" />
+      <Stroke order={1} d={rect(22, 28, 9, 28, 1.5)} />
+      <Stroke order={2} d={rect(33, 22, 8, 34, 1.5)} />
+      <Stroke order={3} d={rect(52, 36, 22, 20, 3)} />
+      <Stroke order={4} d="M57 36V31a6 6 0 0 1 12 0V36" />
+      <Stroke order={5} d="M63 44V48" />
+    </Illustration>
   );
 }
 
 export function QuoteIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <path d="M34 30c-6 2-10 7-10 14v6h12v-12h-6c0-4 2-6 6-7" {...stroke} />
-      <path d="M58 30c-6 2-10 7-10 14v6h12v-12h-6c0-4 2-6 6-7" {...stroke} />
-      <path d="M72 38h28M72 46h22M72 54h26" strokeDasharray="2 4" {...stroke} />
-      <path d="M20 68h80" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M16 56H80" />
+      {/* Um trecho em destaque: as aspas, o fio da citação e o texto */}
+      <Stroke order={1} d="M23 18l-2.5 5M28 18l-2.5 5" />
+      <Stroke order={2} d="M32 18V46" />
+      <Stroke order={3} dashed d="M40 22H74M40 30H70M40 38H72M40 46H62" />
+    </Illustration>
   );
 }
 
+/** Três livros em leque: os de trás aparecem só pelas bordas que se veem. */
 export function CollectionsIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <path d="M44 22l-8 40 22 4 8-40z" {...stroke} />
-      <rect x="52" y="16" width="22" height="42" rx="2" {...stroke} />
-      <path d="M80 20l12 38-21 7" {...stroke} />
-      <path d="M20 70h80" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M14 56H82" />
+      <Stroke order={1} d={rect(39, 14, 18, 42, 2)} />
+      <Stroke order={2} d="M43.5 22.5h9" />
+      <Stroke order={3} d="M39 54.9L34 56L26.1 18.8L39 16.1" />
+      <Stroke order={4} d="M57 54.9L62 56L69.9 18.8L57 16.1" />
+    </Illustration>
   );
 }
 
+/** Um leitor e, tracejado, o próximo que você pode seguir. */
 export function ReadersIllustration(props: IllustrationProps) {
   return (
-    <svg viewBox="0 0 120 80" aria-hidden {...props}>
-      <circle cx="46" cy="30" r="9" {...stroke} />
-      <path d="M30 60c2-10 8-15 16-15s14 5 16 15" {...stroke} />
-      <circle cx="76" cy="34" r="7" {...stroke} />
-      <path
-        d="M66 60c1-7 5-11 10-11s9 4 10 11"
-        strokeDasharray="2 4"
-        {...stroke}
-      />
-      <path d="M20 68h80" {...stroke} />
-    </svg>
+    <Illustration {...props}>
+      <Stroke order={0} d="M18 56H78" />
+      <Stroke order={1} d={circle(38, 26, 7)} />
+      <Stroke order={2} d="M26 56c1.5-9 6.5-14 12-14s10.5 5 12 14" />
+      <Stroke order={3} dashed d={circle(60, 30, 6)} />
+      <Stroke order={4} dashed d="M50 56c1-7.5 5-11.5 10-11.5s9 4 10 11.5" />
+    </Illustration>
   );
 }

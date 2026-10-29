@@ -37,7 +37,14 @@ export function StarRating({
   }
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
+    // Sem espaço ao lado das estrelas, o rótulo desce para a linha de baixo
+    // (no celular, sempre): nada se espreme nem invade a coluna vizinha
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5",
+        className,
+      )}
+    >
       <span id={`${id}-rotulo`} className="sr-only">
         {label}
       </span>
@@ -66,13 +73,13 @@ export function StarRating({
           const next = pointerRating(event.clientX);
           onChange(next === value ? null : next);
         }}
-        className="-m-1 flex cursor-pointer touch-manipulation items-center gap-1 rounded-control p-1"
+        className="-m-1 flex shrink-0 cursor-pointer touch-manipulation items-center gap-1 rounded-control p-1"
       >
         {STARS.map((star) => {
           // 0, meia ou cheia
           const fill = Math.max(0, Math.min(1, (shown ?? 0) - (star - 1)));
           return (
-            <span key={star} aria-hidden className="relative size-7">
+            <span key={star} aria-hidden className="relative size-7 shrink-0">
               <Star
                 strokeWidth={1.5}
                 className="absolute inset-0 size-7 text-border-strong"
@@ -100,7 +107,7 @@ export function StarRating({
       </div>
       <span
         aria-hidden
-        className="min-w-24 font-mono text-xs text-muted-foreground"
+        className="min-w-24 basis-full font-mono text-xs text-muted-foreground sm:basis-auto"
       >
         {ratingLabel(shown)}
       </span>
@@ -125,7 +132,7 @@ export function StarRatingDisplay({
       {STARS.map((star) => {
         const fill = Math.max(0, Math.min(1, value - (star - 1)));
         return (
-          <span key={star} aria-hidden className="relative size-3.5">
+          <span key={star} aria-hidden className="relative size-3.5 shrink-0">
             <Star
               strokeWidth={1.5}
               className="absolute inset-0 size-3.5 text-border-strong"

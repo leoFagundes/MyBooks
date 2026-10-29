@@ -48,6 +48,7 @@ export function BookHero({
           book={book}
           size="hero"
           preload
+          sourceImage
           transitionName={coverName(book.id)}
           transitionShare={coverShare}
         />

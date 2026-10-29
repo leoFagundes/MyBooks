@@ -170,7 +170,9 @@ export function ShelfToolbar({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="@container flex flex-col gap-4">
+      {/* Os cinco status não cabem numa linha no celular: quebram em 3 + 2,
+          em vez de esconder o último numa rolagem */}
       <SegmentedControl
         aria-label="Status"
         options={statusOptions}
@@ -178,7 +180,7 @@ export function ShelfToolbar({
         onValueChange={(value) =>
           onChange({ status: value === ALL ? null : value })
         }
-        className="self-start"
+        className="grid grid-cols-6 *:col-span-2 *:nth-[n+4]:col-span-3 @min-[30rem]:inline-flex @min-[30rem]:self-start"
       />
 
       <div className="flex flex-wrap items-center gap-2">

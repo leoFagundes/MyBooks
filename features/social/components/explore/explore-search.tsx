@@ -90,7 +90,8 @@ export function ExploreSearch({ children }: { children: React.ReactNode }) {
         <Input
           type="search"
           aria-label="Buscar livros, leitores e coleções"
-          placeholder="Busque um livro, um leitor ou uma coleção"
+          // Curto: cabe inteiro em 360px
+          placeholder="Livros, leitores e coleções"
           value={current.q}
           onChange={(event) => update({ ...current, q: event.target.value })}
           className="h-12 pl-12 text-base"
@@ -198,7 +199,7 @@ function Results({
               {book.title}
             </p>
             {book.authors[0] ? (
-              <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+              <p className="mt-0.5 line-clamp-2 font-mono text-[11px] text-muted-foreground">
                 {book.authors[0]}
               </p>
             ) : null}

@@ -42,7 +42,7 @@ export function BookBox({
       </div>
       <div
         className={cn(
-          "spine absolute top-0 flex flex-col items-center justify-between overflow-hidden rounded-cover bg-(--cover) py-3",
+          "spine absolute top-0 flex flex-col items-center justify-between gap-1.5 overflow-hidden rounded-cover bg-(--cover) py-3",
           ink === "ink" ? "text-ink" : "text-paper",
         )}
         style={
@@ -55,11 +55,12 @@ export function BookBox({
           } as React.CSSProperties
         }
       >
-        <span className="max-h-[calc(100%-3rem)] truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
+        {/* Igual à BookSpine, que assume no fim */}
+        <span className="max-h-[calc(100%-3rem)] shrink-0 truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
           {book.title}
         </span>
         {spineWidth >= 24 && author ? (
-          <span className="max-h-10 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
+          <span className="min-h-0 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
             {author}
           </span>
         ) : null}

@@ -112,7 +112,7 @@ export function ShelfEntryBlock({
   return (
     <section
       aria-labelledby={`${id}-titulo`}
-      className="flex flex-col gap-6 rounded-card border border-border p-5 sm:p-6"
+      className="@container flex flex-col gap-6 rounded-card border border-border p-5 sm:p-6"
     >
       <div className="flex items-center justify-between gap-3">
         <h2 id={`${id}-titulo`} className="font-serif text-2xl tracking-tight">
@@ -128,16 +128,17 @@ export function ShelfEntryBlock({
         </Button>
       </div>
 
+      {/* Os quatro status não cabem numa linha no celular: viram 2 × 2 */}
       <SegmentedControl
         aria-label="Status"
         options={STATUS_OPTIONS}
         value={entry.status}
         onValueChange={(status) => save({ status })}
-        className="self-start"
+        className="grid grid-cols-2 @xs:inline-flex @xs:self-start"
       />
 
       {entry.status !== "want" ? (
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <span aria-hidden className="text-sm font-medium">
               Nota

@@ -69,7 +69,7 @@ async function BookContent({ params }: { params: Params }) {
         <BookBackLink bookId={book.id} />
         <BookHero book={book} description={book.description} />
         <BookFacts book={book} />
-        <div className="mt-14 grid items-start gap-12 lg:grid-cols-2">
+        <div className="mt-14 grid grid-cols-1 items-start gap-12 lg:grid-cols-2">
           <Suspense fallback={<Skeleton className="h-72 rounded-card" />}>
             <ViewerBlock book={book} />
           </Suspense>

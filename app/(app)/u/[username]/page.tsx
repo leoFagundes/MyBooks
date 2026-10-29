@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReturningCover } from "@/features/books/components/returning-cover";
 import { PrivateProfileNotice } from "@/features/profile/components/private-profile-notice";
 import { getProfileTab } from "@/features/profile/queries";
 import { ProfileShelf } from "@/features/shelf/components/profile-shelf";
@@ -65,6 +66,7 @@ function ShelfSkeleton() {
     >
       <Skeleton className="h-9 w-64" />
       <Skeleton className="h-44 w-full" />
+      <ReturningCover />
     </div>
   );
 }

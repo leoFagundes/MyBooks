@@ -26,6 +26,7 @@
     "db:types": "node --env-file-if-exists=.env.local node_modules/supabase/dist/supabase.js gen types typescript --project-id djehboxlhvjtlrvmdiis --schema public > lib/supabase/database.types.ts",
     "seed:gerar": "tsx scripts/gerar-seed.mts",
     "test:e2e:producao": "playwright test --project=producao",
+    "test:auditoria": "playwright test --project=auditoria",
     "capas:copiar": "tsx --conditions=react-server --env-file=.env.local scripts/copiar-capas.mts"
   },
   "dependencies": {

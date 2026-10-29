@@ -32,7 +32,7 @@ export function BookPageSkeleton({ param = "id" }: { param?: string }) {
         <Skeleton className="h-6 w-48 rounded-full" />
         <Skeleton className="h-3 w-56" />
       </div>
-      <div className="mt-14 grid items-start gap-12 lg:grid-cols-2">
+      <div className="mt-14 grid grid-cols-1 items-start gap-12 lg:grid-cols-2">
         <Skeleton className="h-72 rounded-card" />
         <div className="flex flex-col gap-6">
           <Skeleton className="h-8 w-40" />

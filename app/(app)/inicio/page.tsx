@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReturningCover } from "@/features/books/components/returning-cover";
 import { getProfileCounts } from "@/features/profile/queries";
 import { ReadingNow } from "@/features/shelf/components/reading-now";
 import { getShelf } from "@/features/shelf/queries";
@@ -103,6 +104,7 @@ function HomeSkeleton() {
           ))}
         </div>
       </div>
+      <ReturningCover />
     </div>
   );
 }

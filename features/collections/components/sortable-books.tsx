@@ -283,6 +283,8 @@ function SortableBook({
         }}
         className={cn(
           "group relative touch-manipulation rounded-cover",
+          // Mover e Tirar ficam nos cantos de cima da capa
+          editable && "[--capa-chip:2.5rem]",
           isDragging &&
             "outline-2 outline-offset-2 outline-border-strong outline-dashed",
         )}
@@ -324,7 +326,7 @@ function SortableBook({
         <p className="line-clamp-2 font-serif text-base leading-tight">
           {book.title}
         </p>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="line-clamp-2 text-xs text-muted-foreground">
           {book.authors.join(", ")}
         </p>
       </div>

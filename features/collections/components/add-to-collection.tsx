@@ -131,7 +131,7 @@ export function AddToCollection({
                   <span aria-hidden className="w-5 text-center">
                     {collection.emoji ?? "📚"}
                   </span>
-                  <span className="min-w-0 flex-1 truncate">
+                  <span className="line-clamp-2 min-w-0 flex-1 text-pretty">
                     {collection.title}
                   </span>
                   {collection.hasBook ? (

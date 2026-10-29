@@ -7,8 +7,9 @@ import {
   useReducedMotion,
   useSpring,
 } from "motion/react";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import { useState, ViewTransition, type ViewTransitionClass } from "react";
+import { preload } from "react-dom";
 import { springs } from "@/lib/motion";
 import { CAN_HOVER, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ import { bookColor, coverInk } from "../lib/color";
 import { COVER_RADIUS_PX } from "../lib/cover";
 import { coverName } from "../lib/transition-names";
 import type { BookVisual } from "../types";
-import { useIsInsideSource } from "./cover-transition";
+import { useIsInsideSource, useTravelingCover } from "./cover-transition";
 
 const MAX_TILT = 6;
 
@@ -45,6 +46,26 @@ const sizes = {
 // aparece na hora, sem repetir o fade.
 const arrivedCovers = new Set<string>();
 
+/**
+ * Pede a capa no tamanho do topo da página do livro, na intenção do clique
+ * (hover, foco ou toque): quando a página abre, a versão grande já está a
+ * caminho ou no cache. O React não repete o mesmo pedido.
+ */
+export function preloadHeroCover(book: BookVisual) {
+  if (!book.coverUrl) return;
+  const { props } = getImageProps({
+    src: book.coverUrl,
+    alt: "",
+    fill: true,
+    sizes: sizes.hero,
+  });
+  preload(props.src, {
+    as: "image",
+    imageSrcSet: props.srcSet,
+    imageSizes: props.sizes,
+  });
+}
+
 type BookCoverProps = {
   book: BookVisual;
   size?: keyof typeof widths;
@@ -61,6 +82,12 @@ type BookCoverProps = {
   transitionName?: string;
   /** Animação quando o par se forma (padrão: "capa"). */
   transitionShare?: ViewTransitionClass;
+  /**
+   * Destino da viagem: mostra primeiro a mesma imagem que estava na tela na
+   * origem (já no cache, aparece no primeiro quadro), e a versão maior entra
+   * por cima, com crossfade, quando chega.
+   */
+  sourceImage?: boolean;
   className?: string;
 };
 
@@ -77,11 +104,13 @@ export function BookCover({
   layoutId,
   transitionName,
   transitionShare = "capa",
+  sourceImage = false,
   className,
 }: BookCoverProps) {
   const insideSource = useIsInsideSource();
   const name =
     transitionName ?? (insideSource ? coverName(book.id) : undefined);
+  const shownSrc = useTravelingCover(sourceImage ? book.id : null);
   const [failed, setFailed] = useState(false);
   const reduced = useReducedMotion() ?? false;
   const canHover = useMediaQuery(CAN_HOVER);
@@ -160,6 +189,18 @@ export function BookCover({
           style={{ rotateX, rotateY, borderRadius: COVER_RADIUS_PX }}
           className="book-cover relative aspect-2/3 overflow-hidden bg-(--cover)"
         >
+          {showImage && shownSrc ? (
+            // A mesma URL da origem, sem srcset: do cache, sem esperar nada
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={shownSrc}
+              alt=""
+              aria-hidden
+              decoding="sync"
+              draggable={false}
+              className="absolute inset-0 size-full object-cover"
+            />
+          ) : null}
           {showImage ? (
             <Image
               ref={hideUntilLoaded}
@@ -204,8 +245,9 @@ function GeneratedCover({
     <div
       role="img"
       aria-label={`Capa de ${book.title}`}
+      // Com um botão no canto da capa (--capa-chip), o título começa abaixo dele
       className={cn(
-        "@container absolute inset-0 flex flex-col justify-between p-[10%]",
+        "@container absolute inset-0 flex flex-col justify-between p-[10%] pt-[max(10%,var(--capa-chip,0px))]",
         ink === "ink" ? "text-ink" : "text-paper",
       )}
     >

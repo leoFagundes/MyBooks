@@ -28,10 +28,11 @@ export function ReaderRow({
         ) : null}
         <AvatarFallback>{initials(reader.displayName)}</AvatarFallback>
       </Avatar>
+      {/* No celular, nome e detalhe quebram linha em vez de sumir em reticências */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Link
           href={routes.profile(reader.username)}
-          className="truncate rounded-sm text-sm font-medium hover:underline hover:decoration-border-strong hover:underline-offset-4"
+          className="rounded-sm text-sm font-medium text-pretty break-words hover:underline hover:decoration-border-strong hover:underline-offset-4"
         >
           {reader.displayName}{" "}
           <span className="font-mono text-xs font-normal text-muted-foreground">
@@ -39,7 +40,7 @@ export function ReaderRow({
           </span>
         </Link>
         {detail ? (
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">
             {detail}
           </span>
         ) : null}

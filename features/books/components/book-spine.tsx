@@ -72,16 +72,17 @@ export function BookSpine({
           ...({ "--cover": background } as React.CSSProperties),
         }}
         className={cn(
-          "spine relative flex shrink-0 flex-col items-center justify-between overflow-hidden rounded-cover bg-(--cover) py-3",
+          "spine relative flex shrink-0 flex-col items-center justify-between gap-1.5 overflow-hidden rounded-cover bg-(--cover) py-3",
           ink === "ink" ? "text-ink" : "text-paper",
         )}
       >
-        <span className="max-h-[calc(100%-3rem)] truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
+        <span className="max-h-[calc(100%-3rem)] shrink-0 truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
           {book.title}
         </span>
         {/* O espaço separa título e autor no texto (o flex não o desenha) */}{" "}
+        {/* O autor fica com o que o título deixa: inteiro nos títulos curtos */}
         {width >= 24 && author ? (
-          <span className="max-h-10 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
+          <span className="min-h-0 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
             {author}
           </span>
         ) : null}

@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { addBookToCollection } from "@/features/collections/actions";
+import { ActionError, actionErrorMessage, unwrapAction } from "@/lib/action";
 import { addBook, removeFromShelf } from "../../actions";
 import type { ShelfDetails } from "../../schemas";
 import { AddBookFlow } from "./add-book-flow";
@@ -18,6 +19,23 @@ import type { ChosenBook } from "./chosen-book";
 
 /** A coleção que recebe os livros escolhidos na paleta. */
 export type CollectionTarget = { id: string; title: string };
+
+/** O livro chegou à estante, mas não à coleção escolhida. */
+class PartlySaved extends ActionError {}
+
+/** Põe o livro na estante e, se houver, na coleção escolhida. */
+async function putOnShelf(
+  book: ChosenBook,
+  details: ShelfDetails,
+  collectionId: string | null,
+) {
+  const { bookId } = await unwrapAction(addBook({ book: book.ref, details }));
+  if (!collectionId) return { bookId, inCollection: false };
+  // O livro já está no catálogo
+  const added = await addBookToCollection(collectionId, { catalogId: bookId });
+  if (!added.ok) throw new PartlySaved(`Na sua estante, mas: ${added.error}`);
+  return { bookId, inCollection: true };
+}
 
 type AddBookContextValue = {
   open: () => void;
@@ -71,70 +89,60 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
   ) {
     setOpen(false);
     const title = book.visual.title;
-    const toastId = toast.loading("Pondo na estante…", { description: title });
     startTransition(async () => {
-      const result = await addBook({ book: book.ref, details });
-      if (!result.ok) {
-        toast.error(result.error, {
-          id: toastId,
-          description: title,
-          action: {
-            label: "Tentar de novo",
-            onClick: () => save(book, details, collectionId),
-          },
-        });
-        return;
-      }
-      // Na coleção escolhida também; o livro já está no catálogo
-      const inCollection = collectionId
-        ? await addBookToCollection(collectionId, {
-            catalogId: result.data.bookId,
-          })
-        : null;
-      if (inCollection && !inCollection.ok) {
-        toast.error(`Na sua estante, mas: ${inCollection.error}`, {
-          id: toastId,
-          description: title,
-        });
-        return;
-      }
-      toast.success(
-        inCollection ? "Na sua estante e na coleção" : "Na sua estante",
-        {
-          id: toastId,
+      // Um toast só, do carregando ao pronto (ou ao erro)
+      const saving = putOnShelf(book, details, collectionId);
+      toast.promise(saving, {
+        loading: "Pondo na estante…",
+        description: title,
+        success: ({ bookId, inCollection }) => ({
+          message: inCollection
+            ? "Na sua estante e na coleção"
+            : "Na sua estante",
           description: title,
           duration: 6000,
-          action: {
-            label: "Desfazer",
-            onClick: () => undo(result.data.bookId, title),
-          },
-        },
-      );
+          action: { label: "Desfazer", onClick: () => undo(bookId, title) },
+        }),
+        error: (error: unknown) => ({
+          message: actionErrorMessage(error),
+          description: title,
+          // Já está na estante: tentar de novo duplicaria o pedido
+          action:
+            error instanceof PartlySaved
+              ? undefined
+              : {
+                  label: "Tentar de novo",
+                  onClick: () => save(book, details, collectionId),
+                },
+        }),
+      });
+      await saving.catch(() => {});
     });
   }
 
   function pick(book: ChosenBook, target: CollectionTarget) {
     const title = book.visual.title;
-    const toastId = toast.loading("Pondo na coleção…", { description: title });
     startTransition(async () => {
-      const result = await addBookToCollection(target.id, book.ref);
-      if (!result.ok) {
-        toast.error(result.error, {
-          id: toastId,
+      const adding = unwrapAction(addBookToCollection(target.id, book.ref));
+      toast.promise(adding, {
+        loading: "Pondo na coleção…",
+        description: title,
+        success: ({ added }) => ({
+          message: added
+            ? `Em ${target.title}`
+            : `Já estava em ${target.title}`,
+          description: title,
+        }),
+        error: (error: unknown) => ({
+          message: actionErrorMessage(error),
           description: title,
           action: {
             label: "Tentar de novo",
             onClick: () => pick(book, target),
           },
-        });
-        return;
-      }
-      toast.success(
-        result.data.added
-          ? `Em ${target.title}`
-          : `Já estava em ${target.title}`,
-        { id: toastId, description: title },
-      );
+        }),
+      });
+      await adding.catch(() => {});
     });
   }
 

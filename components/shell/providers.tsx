@@ -13,6 +13,7 @@ import { QueryProvider } from "./query-provider";
 import { ShelfFlightProvider } from "./shelf-flight";
 import { SmoothScroll } from "./smooth-scroll";
 import { ThemeProvider } from "./theme-provider";
+import { ViewTransitionDebug } from "./view-transition-debug";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +29,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     <NewCollectionProvider>
                       <CommandPaletteProvider>
                         <SmoothScroll />
+                        {process.env.NODE_ENV === "development" ? (
+                          <ViewTransitionDebug />
+                        ) : null}
                         {children}
                         <Toaster />
                       </CommandPaletteProvider>

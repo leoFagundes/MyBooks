@@ -9,6 +9,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookCover } from "@/features/books/components/book-cover";
 import { BookLink } from "@/features/books/components/book-link";
+import { ReturningCover } from "@/features/books/components/returning-cover";
 import { getTrendingBooks } from "@/features/books/queries";
 import { CollectionCard } from "@/features/collections/components/collection-card";
 import { NewCollectionButton } from "@/features/collections/components/new-collection-button";
@@ -184,6 +185,7 @@ function CoversSkeleton() {
           <Skeleton key={cover} className="aspect-2/3 rounded-cover" />
         ))}
       </div>
+      <ReturningCover />
     </div>
   );
 }

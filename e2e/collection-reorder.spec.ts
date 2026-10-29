@@ -85,12 +85,15 @@ test.describe("grade reordenável da coleção", () => {
     await handle.focus();
     await page.keyboard.press("Space");
     await expect(announcement(page, "Você pegou Vidas Secas")).toHaveCount(1);
-    // Setas para cima e para a esquerda chegam ao começo em qualquer largura
-    for (const key of ["ArrowUp", "ArrowUp", "ArrowUp"]) {
+    // Setas para cima e para a esquerda chegam ao começo em qualquer largura.
+    // Com folga: no limite da grade a seta não faz nada, e uma seta dada
+    // enquanto a página ainda rola até o item pode se perder
+    for (const key of [
+      ...Array(6).fill("ArrowUp"),
+      ...Array(6).fill("ArrowLeft"),
+    ]) {
       await page.keyboard.press(key);
-    }
-    for (const key of ["ArrowLeft", "ArrowLeft", "ArrowLeft", "ArrowLeft"]) {
-      await page.keyboard.press(key);
+      await page.waitForTimeout(120);
     }
     await page.keyboard.press("Space");
     await expect.poll(async () => (await order(page))[0]).toBe("Vidas Secas");

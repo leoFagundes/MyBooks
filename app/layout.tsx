@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Providers } from "@/components/shell/providers";
 import { ThemeScript } from "@/components/shell/theme-script";
@@ -25,6 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <Providers>{children}</Providers>
+        {/* SPEC §10: só mandam dados na Vercel, com os dois ligados no painel */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

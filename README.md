@@ -44,3 +44,4 @@ No painel do Supabase, em Authentication → URL Configuration, o Site URL é `h
 | `npm run format`     | formata o código (Prettier)                              |
 
 Antes do primeiro `npm run test:e2e`, instale o navegador dos testes com `npx playwright install chromium`. Os testes de banco e os E2E com conta usam o `SUPABASE_ACCESS_TOKEN` e a `SUPABASE_SECRET_KEY` do `.env.local`.
+"# MyBooks" 

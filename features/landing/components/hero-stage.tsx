@@ -298,6 +298,20 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
     value > 0.5 ? "auto" : "none",
   );
   const words = splitWords(TITLE);
+  const reduced = useReducedMotion();
+
+  // O Tab não para no invisível: o foco numa camada escondida rola a página
+  // até o trecho em que ela aparece (o começo ou o fim da história)
+  function reveal(opacity: MotionValue<number>, where: "start" | "end") {
+    const node = section.current;
+    if (reduced || !node || opacity.get() > 0.9) return;
+    const top = window.scrollY + node.getBoundingClientRect().top;
+    window.scrollTo({
+      top:
+        where === "start" ? top : top + node.offsetHeight - window.innerHeight,
+      behavior: "instant",
+    });
+  }
 
   return (
     <section
@@ -310,6 +324,7 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
         className="sticky top-0 h-svh overflow-hidden motion-reduce:relative motion-reduce:h-auto motion-reduce:overflow-visible"
       >
         <motion.div
+          onFocusCapture={() => reveal(titleOpacity, "start")}
           style={{
             opacity: titleOpacity,
             y: titleY,
@@ -375,6 +390,7 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
 
         {showcase ? (
           <motion.div
+            onFocusCapture={() => reveal(profileOpacity, "end")}
             style={{ pointerEvents: endEvents }}
             // pt-14: o fim da história centra abaixo da barra
             className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 px-4 pt-14 motion-reduce:pointer-events-auto! motion-reduce:relative motion-reduce:pb-24 sm:gap-10 sm:px-6"

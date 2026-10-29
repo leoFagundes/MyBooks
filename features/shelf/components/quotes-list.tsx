@@ -4,6 +4,7 @@ import { BookLink } from "@/features/books/components/book-link";
 import { formatNumber } from "@/lib/format";
 import { routes } from "@/lib/routes";
 import type { QuoteItem } from "../queries";
+import { ShareQuoteButton } from "./share-quote-button";
 
 /** As citações de alguém, cada uma com o livro e a página. */
 export function QuotesList({ quotes }: { quotes: QuoteItem[] }) {
@@ -15,7 +16,7 @@ export function QuotesList({ quotes }: { quotes: QuoteItem[] }) {
             <div className="shrink-0 self-start">
               <BookCover book={quote.book} size="xs" tilt={false} />
             </div>
-            <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
               <blockquote className="font-serif text-xl leading-snug text-pretty sm:text-2xl">
                 “{quote.text}”
               </blockquote>
@@ -33,6 +34,11 @@ export function QuotesList({ quotes }: { quotes: QuoteItem[] }) {
                 {quote.page !== null ? ` · p. ${formatNumber(quote.page)}` : ""}
               </figcaption>
             </div>
+            <ShareQuoteButton
+              quoteId={quote.id}
+              bookTitle={quote.book.title}
+              className="-mt-1 -mr-2 self-start"
+            />
           </figure>
         </StaggerItem>
       ))}

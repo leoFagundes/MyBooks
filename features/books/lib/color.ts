@@ -31,6 +31,16 @@ export function toHex(rgb: readonly number[]) {
   return `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** A mistura de duas cores (0 é só a primeira; 1, só a segunda), em hex. */
+export function mixColors(from: string, to: string, amount: number) {
+  const target = channels(to);
+  return toHex(
+    channels(from).map((channel, index) =>
+      Math.round(channel + ((target[index] ?? channel) - channel) * amount),
+    ),
+  );
+}
+
 /** Luminância relativa da WCAG, de 0 (preto) a 1 (branco). */
 export function relativeLuminance(hex: string) {
   const [r, g, b] = channels(hex).map(linear);

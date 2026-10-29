@@ -13,6 +13,7 @@ import { springs, tweens } from "@/lib/motion";
 import { addQuote, removeQuote } from "../actions";
 import type { BookQuote } from "../queries";
 import { quoteSchema } from "../schemas";
+import { ShareQuoteButton } from "./share-quote-button";
 
 type Change =
   { type: "add"; quote: BookQuote } | { type: "remove"; id: string };
@@ -20,10 +21,12 @@ type Change =
 /** As citações da pessoa neste livro: guardar com a página e apagar. */
 export function QuotesBlock({
   bookId,
+  bookTitle,
   quotes: saved,
   pageCount,
 }: {
   bookId: string;
+  bookTitle: string;
   quotes: BookQuote[];
   pageCount: number | null;
 }) {
@@ -98,6 +101,10 @@ export function QuotesBlock({
                     </figcaption>
                   ) : null}
                 </figure>
+                {/* A citação que ainda está chegando não tem imagem */}
+                {quote.id.startsWith("nova-") ? null : (
+                  <ShareQuoteButton quoteId={quote.id} bookTitle={bookTitle} />
+                )}
                 <Button
                   type="button"
                   variant="ghost"

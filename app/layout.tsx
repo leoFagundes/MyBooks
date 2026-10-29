@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: { default: "MyBooks", template: "%s · MyBooks" },
   description:
     "Sua vida de leitor, em uma estante só. Monte sua estante, organize coleções e descubra o que outros leitores andam lendo.",
+  // As imagens vêm dos opengraph-image de cada rota
+  openGraph: { siteName: "MyBooks", locale: "pt_BR", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

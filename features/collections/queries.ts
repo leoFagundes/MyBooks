@@ -344,6 +344,28 @@ export async function getPopularCollections(
   return cards(data as CardRow[]).sort((a, b) => b.likeCount - a.likeCount);
 }
 
+/**
+ * A coleção como um visitante a vê, para a imagem de compartilhamento: só
+ * pública (a privada some, e a imagem fica genérica). Sem sessão, em cache.
+ */
+export async function getCollectionCard(
+  id: string,
+): Promise<CollectionVisual | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`collection:${id}`);
+  if (!UUID.test(id)) return null;
+
+  const { data, error } = await createPublicClient()
+    .from("collections")
+    .select(CARD_COLUMNS)
+    .eq("id", id)
+    .eq("visibility", "public")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? (cards([data as CardRow])[0] ?? null) : null;
+}
+
 /** Busca de coleções públicas (Explorar): full-text e trigramas no banco. */
 export async function searchCollections(
   query: string,

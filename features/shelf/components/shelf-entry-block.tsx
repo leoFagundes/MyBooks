@@ -213,6 +213,7 @@ export function ShelfEntryBlock({
 
       <QuotesBlock
         bookId={book.id}
+        bookTitle={book.title}
         quotes={quotes}
         pageCount={book.pageCount}
       />

@@ -2,6 +2,7 @@ import "server-only";
 import { byPosition } from "@/features/collections/lib/position";
 import { toCsv } from "@/features/shelf/lib/csv";
 import type { ShelfStatus } from "@/features/shelf/schemas";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -53,28 +54,6 @@ export type AccountExport = {
   likedCollections: { title: string; owner: string }[];
   savedCollections: { title: string; owner: string }[];
 };
-
-// O PostgREST devolve no máximo mil linhas por vez: a estante e as citações
-// de quem lê muito vêm em páginas
-const PAGE = 1000;
-
-async function fetchAll<T>(
-  page: (
-    from: number,
-    to: number,
-  ) => PromiseLike<{
-    data: T[] | null;
-    error: unknown;
-  }>,
-): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1);
-    if (error) throw error;
-    rows.push(...(data ?? []));
-    if (!data || data.length < PAGE) return rows;
-  }
-}
 
 /** Tudo o que é da pessoa, para o "Exportar meus dados" (lido com a sessão dela). */
 export async function buildAccountExport(

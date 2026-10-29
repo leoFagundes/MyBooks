@@ -1,5 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
+import { toBookVisual } from "@/features/books/lib/to-book-visual";
+import type { BookVisual } from "@/features/books/types";
 import { getViewer } from "@/lib/auth";
 import { getPublicEnv } from "@/lib/env";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -78,6 +80,50 @@ export async function getProfileByUsername(
     bio: data.bio,
     favoriteGenres: data.favorite_genres,
     isPrivate: data.is_private,
+  };
+}
+
+export type ProfileCard = ProfileSummary & {
+  counts: ProfileCounts | null;
+  /** Até 5 capas da estante, das mexidas por último. */
+  covers: BookVisual[];
+};
+
+/**
+ * O perfil como um visitante o vê, para a imagem de compartilhamento: perfil
+ * privado mostra só o nome. Sem sessão, em cache.
+ */
+export async function getProfileCard(
+  username: string,
+): Promise<ProfileCard | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`profile:${username}`);
+  const profile = await getProfileByUsername(username);
+  if (!profile) return null;
+  if (profile.isPrivate) {
+    return { ...profile, bio: null, counts: null, covers: [] };
+  }
+  cacheTag(`shelf:${profile.id}`);
+  const supabase = createPublicClient();
+  const [counts, shelf] = await Promise.all([
+    supabase.rpc("profile_counts", { profile_id: profile.id }).single(),
+    supabase
+      .from("user_books")
+      .select(
+        "book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+      )
+      .eq("user_id", profile.id)
+      .order("updated_at", { ascending: false })
+      .limit(24),
+  ]);
+  const books = (shelf.data ?? []).flatMap(({ book }) =>
+    book ? [toBookVisual(book)] : [],
+  );
+  return {
+    ...profile,
+    counts: counts.error ? null : counts.data,
+    covers: books.filter((book) => book.coverUrl).slice(0, 5),
   };
 }
 

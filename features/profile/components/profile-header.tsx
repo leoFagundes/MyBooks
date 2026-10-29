@@ -47,6 +47,7 @@ export function ProfileHeader({
   lists = false,
   isSelf = false,
   affinity = null,
+  titleAs: Title = "h1",
 }: {
   profile: ProfileSummary;
   counts: ProfileCounts | null;
@@ -57,6 +58,8 @@ export function ProfileHeader({
   isSelf?: boolean;
   /** Com quem vê, no perfil dos outros que ela pode ver. */
   affinity?: Affinity | null;
+  /** h2 onde o h1 da página é outro (a landing). */
+  titleAs?: "h1" | "h2";
 }) {
   const genres = profile.favoriteGenres.flatMap((slug) => {
     const label = genreLabel(slug);
@@ -77,9 +80,9 @@ export function ProfileHeader({
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
           <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="font-serif text-4xl leading-none tracking-tight text-balance sm:text-5xl">
+            <Title className="font-serif text-4xl leading-none tracking-tight text-balance sm:text-5xl">
               {profile.displayName}
-            </h1>
+            </Title>
             <p className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
               @{profile.username}
               {profile.isPrivate ? (
@@ -95,7 +98,11 @@ export function ProfileHeader({
         ) : null}
 
         {genres.length > 0 ? (
-          <ul aria-label="Gêneros favoritos" className="flex flex-wrap gap-1.5">
+          <ul
+            aria-label="Gêneros favoritos"
+            data-genres
+            className="flex flex-wrap gap-1.5"
+          >
             {genres.map((genre) => (
               <li
                 key={genre.slug}

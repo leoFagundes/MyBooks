@@ -10,3 +10,6 @@ function cssIdent(id: string): string {
 
 export const coverName = (id: string) => `capa-${cssIdent(id)}`;
 export const titleName = (id: string) => `titulo-${cssIdent(id)}`;
+/** O livro na troca de vista da estante; `scope` separa duas estantes na tela. */
+export const viewName = (scope: string, id: string) =>
+  `vista-${cssIdent(scope)}-${cssIdent(id)}`;

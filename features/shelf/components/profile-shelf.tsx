@@ -3,7 +3,7 @@
 import { Shuffle } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -22,13 +22,16 @@ import {
   type ShelfFilters,
   sortShelf,
 } from "../lib/filters";
+import { shelfViewOf, type ShelfView } from "../lib/view";
+import { rememberedShelfView, rememberShelfView } from "../lib/view-preference";
+import { saveShelfView } from "../actions";
 import type { ShelfItem } from "../queries";
 import type { ShelfStatus } from "../schemas";
 import { useAddBook } from "./add-book/add-book-provider";
 import { BookShelfAction, CopyBookScope } from "./copy-book";
 import { useNextRead } from "./next-read/next-read-provider";
 import { ShelfToolbar } from "./shelf-toolbar";
-import { type BookAction, ShelfViews } from "./shelf-views";
+import { type BookAction, ShelfViews, useShelfViewSwitch } from "./shelf-views";
 
 const EMPTY_STATUS: Record<ShelfStatus, string> = {
   read: "Nenhum livro lido por aqui",
@@ -37,16 +40,23 @@ const EMPTY_STATUS: Record<ShelfStatus, string> = {
   abandoned: "Nenhum livro abandonado",
 };
 
+// A vista vai ao perfil depois que a pessoa para de trocar
+const SAVE_VIEW_DELAY_MS = 600;
+
 /**
  * Aba Estante do perfil: status com contagens, busca, filtros, ordem e as
- * três visualizações. Tudo fica na URL (?status=&q=&genero=&nota=&ano=&ordem=
- * &vista=), sem ida ao servidor: a estante inteira já está aqui.
+ * três visualizações. Os filtros ficam na URL (?status=&q=&genero=&nota=&ano=
+ * &ordem=), sem ida ao servidor: a estante inteira já está aqui. A vista é
+ * uma preferência: fica no cookie (o servidor manda `initialView`) e, com
+ * conta, no perfil. O ?vista= dos links antigos ainda vale.
  */
 export function ProfileShelf({
   entries,
   owner,
   ownerId,
   ownedIds,
+  initialView,
+  signedIn,
 }: {
   entries: ShelfItem[];
   /** Primeiro nome de quem é a estante; null quando é de quem está vendo. */
@@ -58,8 +68,17 @@ export function ProfileShelf({
    * com conta); null no próprio perfil e para visitante.
    */
   ownedIds: string[] | null;
+  /** A vista do cookie, lida pelo servidor. */
+  initialView: ShelfView;
+  /** Quem vê tem conta: a vista vai também para o perfil. */
+  signedIn: boolean;
 }) {
   const searchParams = useSearchParams();
+  const linkedView = shelfViewOf(searchParams.get("vista"));
+  const views = useShelfViewSwitch(
+    () => linkedView ?? rememberedShelfView() ?? initialView,
+  );
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const filters = filtersFromParams(searchParams);
   const owned = ownedIds ? new Set(ownedIds) : undefined;
   // "Em comum" só vale para quem tem uma estante para comparar
@@ -76,6 +95,28 @@ export function ProfileShelf({
     const url = `${window.location.pathname}${search.size > 0 ? `?${search}` : ""}`;
     window.history.replaceState(null, "", url);
   }
+
+  function changeView(next: ShelfView) {
+    views.change(next);
+    rememberShelfView(next);
+    // O ?vista= de um link antigo deixa de valer: a URL o perde
+    if (linkedView) update({});
+    if (!signedIn) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(
+      () => void saveShelfView(next),
+      SAVE_VIEW_DELAY_MS,
+    );
+  }
+
+  // Outra estante (escondida pelo Activity) pode ter trocado a vista: ao
+  // reaparecer, esta segue a escolha mais nova
+  useEffect(() => {
+    const latest = rememberedShelfView();
+    if (latest && latest !== views.view && !linkedView) views.setView(latest);
+    // Só na volta à tela: a troca daqui já passa pela memória
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function changeQuery(value: string) {
     setQuery(value);
@@ -139,6 +180,8 @@ export function ProfileShelf({
     <div className="flex flex-col gap-6">
       <ShelfToolbar
         filters={current}
+        view={views.view}
+        onViewChange={changeView}
         query={query}
         counts={counts}
         genres={genreOptions(entries)}
@@ -171,7 +214,7 @@ export function ProfileShelf({
       {visible.length > 0 ? (
         <ShelfViews
           books={visible.map((entry) => entry.book)}
-          view={current.view}
+          switcher={views}
           bookAction={bookAction}
         />
       ) : hasRefinements(current) || !current.status ? (

@@ -54,7 +54,13 @@ export async function processCover(
           .toBuffer(),
       })),
     );
-    const palette = await Vibrant.from(image).getPalette();
+    // O node-vibrant (Jimp) não lê WebP, que é o que chega do cadastro: a cor
+    // sai de uma cópia pequena em PNG
+    const sample = await sharp(image)
+      .resize({ width: 160, withoutEnlargement: true })
+      .png()
+      .toBuffer();
+    const palette = await Vibrant.from(sample).getPalette();
     return { color: pickCoverColor(palette), files };
   } catch {
     return null;

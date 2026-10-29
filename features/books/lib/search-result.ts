@@ -1,3 +1,5 @@
+import type { CoverStyle } from "./cover-style";
+
 /**
  * Livro achado na busca, no mesmo formato para todas as fontes (Open Library,
  * Google Books e o nosso catálogo) e já limpo para caber nas colunas de books.
@@ -22,6 +24,8 @@ export type SearchResult = {
   catalogId?: string;
   /** Cor da capa, quando o livro já está no catálogo. */
   coverColor?: string | null;
+  /** Estilo da capa tipográfica, quando o livro já está no catálogo. */
+  coverStyle?: CoverStyle;
 };
 
 /** Limites das colunas de books: a migration do catálogo usa os mesmos. */

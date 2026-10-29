@@ -1,4 +1,5 @@
 import { bookColor, coverInk } from "@/features/books/lib/color";
+import { BAND } from "@/features/books/lib/cover-style";
 import type { BookVisual } from "@/features/books/types";
 import { ogColors } from "./theme";
 
@@ -63,6 +64,7 @@ export function OgCover({ book, width }: { book: OgBook; width: number }) {
     <div
       style={{
         display: "flex",
+        position: "relative",
         width,
         height,
         borderRadius: Math.max(3, Math.round(width / 60)),
@@ -81,38 +83,134 @@ export function OgCover({ book, width }: { book: OgBook; width: number }) {
           style={{ objectFit: "cover" }}
         />
       ) : (
+        <OgGeneratedCover book={book} width={width} ink={ink} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * A capa tipográfica no estilo do livro, como o GeneratedCover: as medidas
+ * são frações da largura (`cqi`), em px.
+ */
+function OgGeneratedCover({
+  book,
+  width,
+  ink,
+}: {
+  book: OgBook;
+  width: number;
+  ink: string;
+}) {
+  const cqi = (value: number) => Math.round((width * value) / 100);
+  const serif = (size: number) => ({
+    fontFamily: "Instrument Serif",
+    fontSize: cqi(size),
+    lineHeight: 1.05,
+  });
+  const mono = {
+    fontFamily: "Geist Mono",
+    fontSize: Math.max(10, cqi(6)),
+    letterSpacing: "0.06em",
+    textTransform: "uppercase" as const,
+  };
+  const author = book.authors[0] ?? "";
+
+  if (book.coverStyle === "framed") {
+    return (
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          height: "100%",
+          padding: cqi(7),
+        }}
+      >
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: cqi(5),
             width: "100%",
             height: "100%",
-            padding: Math.round(width * 0.09),
+            padding: `${cqi(9)}px ${cqi(7)}px`,
+            border: `${Math.max(1, cqi(0.9))}px solid ${ink}`,
             color: ink,
+            textAlign: "center",
           }}
         >
-          <span
+          <span style={serif(12)}>{book.title}</span>
+          <div
             style={{
-              fontFamily: "Instrument Serif",
-              fontSize: Math.round(width * 0.14),
-              lineHeight: 1.05,
+              width: cqi(16),
+              height: Math.max(1, cqi(0.6)),
+              backgroundColor: ink,
             }}
-          >
-            {book.title}
-          </span>
-          <span
-            style={{
-              fontFamily: "Geist Mono",
-              fontSize: Math.max(10, Math.round(width * 0.06)),
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-            }}
-          >
-            {book.authors[0] ?? ""}
-          </span>
+          />
+          <span style={mono}>{author}</span>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  if (book.coverStyle === "band") {
+    return (
+      <div
+        style={{ display: "flex", width: "100%", height: "100%", color: ink }}
+      >
+        <div
+          style={{
+            display: "flex",
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: `${BAND.top * 100}%`,
+            bottom: `${(1 - BAND.bottom) * 100}%`,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: `0 ${cqi(9)}px`,
+            backgroundColor: ogColors.paper,
+            color: ogColors.ink,
+            textAlign: "center",
+          }}
+        >
+          <span style={serif(11)}>{book.title}</span>
+        </div>
+        <span
+          style={{
+            ...mono,
+            position: "absolute",
+            left: cqi(9),
+            right: cqi(9),
+            bottom: cqi(9),
+            justifyContent: "center",
+          }}
+        >
+          {author}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection:
+          book.coverStyle === "minimal" ? "column-reverse" : "column",
+        justifyContent: "space-between",
+        width: "100%",
+        height: "100%",
+        padding: cqi(9),
+        color: ink,
+      }}
+    >
+      <span style={serif(book.coverStyle === "minimal" ? 15 : 14)}>
+        {book.title}
+      </span>
+      <span style={mono}>{author}</span>
     </div>
   );
 }

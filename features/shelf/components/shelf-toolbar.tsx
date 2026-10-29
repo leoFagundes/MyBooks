@@ -103,20 +103,24 @@ function ChoiceGroup<T extends string | number>({
  */
 export function ShelfToolbar({
   filters,
+  view,
   query,
   counts,
   genres,
   decades,
   onQueryChange,
   onChange,
+  onViewChange,
 }: {
   filters: ShelfFilters;
+  view: ShelfView;
   query: string;
   counts: Record<ShelfStatus | "all", number>;
   genres: readonly Choice<string>[];
   decades: readonly Choice<number>[];
   onQueryChange: (query: string) => void;
   onChange: (changes: Partial<ShelfFilters>) => void;
+  onViewChange: (view: ShelfView) => void;
 }) {
   const statusOptions = STATUS_LABELS.map((option) => ({
     ...option,
@@ -262,8 +266,8 @@ export function ShelfToolbar({
 
         <SegmentedControl<ShelfView>
           aria-label="Visualização"
-          value={filters.view}
-          onValueChange={(view) => onChange({ view })}
+          value={view}
+          onValueChange={onViewChange}
           options={shelfViewOptions}
         />
       </div>

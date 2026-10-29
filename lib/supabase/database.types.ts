@@ -77,6 +77,7 @@ export type Database = {
         Row: {
           authors: string[]
           cover_color: string | null
+          cover_style: string | null
           cover_url: string | null
           created_at: string
           created_by: string | null
@@ -96,6 +97,7 @@ export type Database = {
         Insert: {
           authors?: string[]
           cover_color?: string | null
+          cover_style?: string | null
           cover_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -115,6 +117,7 @@ export type Database = {
         Update: {
           authors?: string[]
           cover_color?: string | null
+          cover_style?: string | null
           cover_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -437,6 +440,32 @@ export type Database = {
           },
         ]
       }
+      profile_preferences: {
+        Row: {
+          preferences: Json
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          preferences?: Json
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          preferences?: Json
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_preferences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -624,6 +653,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      merge_preferences: { Args: { patch: Json }; Returns: Json }
       popular_collections: {
         Args: { max_results?: number }
         Returns: {
@@ -680,6 +710,7 @@ export type Database = {
         Returns: {
           authors: string[]
           cover_color: string | null
+          cover_style: string | null
           cover_url: string | null
           created_at: string
           created_by: string | null

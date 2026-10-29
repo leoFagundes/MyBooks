@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   reactCompiler: true,
   typedRoutes: true,
+  experimental: {
+    // A imagem da capa enviada no cadastro chega reduzida pelo navegador
+    // (lado maior de 1200px), bem abaixo disso; o servidor recusa acima de 2 MB
+    serverActions: { bodySizeLimit: "3mb" },
+  },
   // O perfil tem URL pública /@usuario, servida por app/(app)/u/[username]
   rewrites() {
     return [

@@ -64,7 +64,7 @@ export async function getCollection(
   const { data, error } = await supabase
     .from("collections")
     .select(
-      "id, title, emoji, description, visibility, is_collaborative, owner_id, copied_from_id, owner:profiles!collections_owner_id_fkey(username, display_name, avatar_url), copied_from_owner:profiles!collections_copied_from_owner_id_fkey(username), collection_members(user_id, created_at, profile:profiles(username, display_name, avatar_url)), collection_items(position, note, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)), collection_likes(count)",
+      "id, title, emoji, description, visibility, is_collaborative, owner_id, copied_from_id, owner:profiles!collections_owner_id_fkey(username, display_name, avatar_url), copied_from_owner:profiles!collections_copied_from_owner_id_fkey(username), collection_members(user_id, created_at, profile:profiles(username, display_name, avatar_url)), collection_items(position, note, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)), collection_likes(count)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -147,7 +147,7 @@ export async function getCollection(
 
 // As colunas de um card: capas pela ordem, curtidas, colaboradores e crédito
 const CARD_COLUMNS =
-  "id, title, emoji, description, visibility, is_collaborative, owner:profiles!collections_owner_id_fkey(username, display_name, avatar_url), copied_from_owner:profiles!collections_copied_from_owner_id_fkey(username), collection_members(created_at, profile:profiles(username, display_name, avatar_url)), collection_items(position, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)), collection_likes(count)";
+  "id, title, emoji, description, visibility, is_collaborative, owner:profiles!collections_owner_id_fkey(username, display_name, avatar_url), copied_from_owner:profiles!collections_copied_from_owner_id_fkey(username), collection_members(created_at, profile:profiles(username, display_name, avatar_url)), collection_items(position, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)), collection_likes(count)";
 
 type CardRow = {
   id: string;

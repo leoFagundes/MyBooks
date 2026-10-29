@@ -31,6 +31,7 @@ function catalogResult(row: Tables<"books">): SearchResult {
     coverUrl: visual.coverUrl,
     catalogId: row.id,
     coverColor: visual.coverColor,
+    coverStyle: visual.coverStyle,
   };
 }
 
@@ -137,8 +138,11 @@ export type BookDetails = BookVisual & {
   subtitle: string | null;
   description: string | null;
   isbn13: string | null;
+  isbn10: string | null;
   language: string | null;
   genres: string[];
+  /** Quem cadastrou à mão (só esse livro se edita); null nos das fontes. */
+  manualCreatorId: string | null;
 };
 
 /** O livro do catálogo, para a página dele. Id fora do formato: null (404). */
@@ -151,7 +155,7 @@ export async function getBook(id: string): Promise<BookDetails | null> {
   const { data, error } = await createPublicClient()
     .from("books")
     .select(
-      "id, title, subtitle, authors, description, page_count, published_year, isbn_13, language, genres, cover_url, cover_color",
+      "id, title, subtitle, authors, description, page_count, published_year, isbn_13, isbn_10, language, genres, cover_url, cover_color, cover_style, source, created_by",
     )
     .eq("id", id)
     .maybeSingle();
@@ -162,8 +166,10 @@ export async function getBook(id: string): Promise<BookDetails | null> {
     subtitle: data.subtitle,
     description: data.description,
     isbn13: data.isbn_13,
+    isbn10: data.isbn_10,
     language: data.language,
     genres: data.genres,
+    manualCreatorId: data.source === "manual" ? data.created_by : null,
   };
 }
 
@@ -348,7 +354,7 @@ export async function getTrendingBooks(limit = 12): Promise<TrendingBooks> {
   const { data, error } = await createPublicClient()
     .from("trending_books")
     .select(
-      "week_adds, total_adds, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+      "week_adds, total_adds, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
     )
     .order("week_adds", { ascending: false })
     .order("total_adds", { ascending: false })

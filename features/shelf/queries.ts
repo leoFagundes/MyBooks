@@ -36,7 +36,7 @@ export async function getShelf(userId: string): Promise<ShelfItem[]> {
   const { data, error } = await supabase
     .from("user_books")
     .select(
-      "status, rating, updated_at, current_page, book:books(id, title, authors, cover_url, cover_color, page_count, published_year, genres)",
+      "status, rating, updated_at, current_page, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year, genres)",
     )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
@@ -70,7 +70,7 @@ export async function readShelfBooks(
   let request = supabase
     .from("user_books")
     .select(
-      "book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+      "book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
     )
     .eq("user_id", userId);
   if (status) request = request.eq("status", status);
@@ -101,7 +101,7 @@ export async function getQuotes(userId: string): Promise<QuoteItem[]> {
   const { data, error } = await supabase
     .from("quotes")
     .select(
-      "id, text, page, book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+      "id, text, page, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });

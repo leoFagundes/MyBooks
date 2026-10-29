@@ -29,10 +29,13 @@ export function BookHero({
   book,
   description,
   pending = false,
+  actions,
 }: {
   book: BookVisual;
   description: string | null;
   pending?: boolean;
+  /** Embaixo do texto: o "Editar livro" de quem o cadastrou. */
+  actions?: React.ReactNode;
 }) {
   const meta = [
     book.publishedYear,
@@ -78,6 +81,7 @@ export function BookHero({
                 <Synopsis text={description} />
               </div>
             ) : null}
+            {actions}
           </>
         )}
       </div>

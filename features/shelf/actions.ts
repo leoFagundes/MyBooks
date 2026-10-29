@@ -29,6 +29,7 @@ import {
   type ShelfEntryUpdate,
   shelfEntryUpdateSchema,
 } from "./schemas";
+import { SHELF_VIEWS, type ShelfView } from "./lib/view";
 
 /**
  * O livro escolhido na paleta vai para a estante, com status, nota e data.
@@ -381,5 +382,26 @@ export async function finishImport(): Promise<ActionResult> {
   const viewer = await requireViewer();
   updateTag(`shelf:${viewer.id}`);
   updateTag("catalog");
+  return { ok: true, data: undefined };
+}
+
+const shelfViewSchema = z.enum(SHELF_VIEWS);
+
+/**
+ * A vista escolhida vai também para o perfil, para valer nos outros aparelhos
+ * (ao entrar na conta, ela reescreve o cookie). Nada na tela depende dela: sem
+ * updateTag, a página não é pedida de novo.
+ */
+export async function saveShelfView(view: ShelfView): Promise<ActionResult> {
+  const parsed = shelfViewSchema.safeParse(view);
+  if (!parsed.success) return { ok: false, error: "Vista desconhecida." };
+  await requireViewer();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("merge_preferences", {
+    patch: { shelfView: parsed.data },
+  });
+  if (error) {
+    return { ok: false, error: "Não deu para guardar a vista no perfil." };
+  }
   return { ok: true, data: undefined };
 }

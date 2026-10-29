@@ -10,6 +10,7 @@ import { BookBackLink } from "@/features/books/components/book-back-link";
 import { BookHero } from "@/features/books/components/book-hero";
 import { BookPageSkeleton } from "@/features/books/components/book-page-skeleton";
 import { CommunityBlock } from "@/features/books/components/community-block";
+import { EditBookButton } from "@/features/books/components/edit-book-button";
 import { bookColor } from "@/features/books/lib/color";
 import { AddToCollection } from "@/features/collections/components/add-to-collection";
 import { getEditableCollections } from "@/features/collections/queries";
@@ -67,7 +68,17 @@ async function BookContent({ params }: { params: Params }) {
       <AmbientGlow color={bookColor(book)} />
       <main className="mx-auto max-w-5xl px-6 pt-8 pb-32">
         <BookBackLink bookId={book.id} />
-        <BookHero book={book} description={book.description} />
+        <BookHero
+          book={book}
+          description={book.description}
+          actions={
+            book.manualCreatorId ? (
+              <Suspense fallback={null}>
+                <EditBookAction book={book} />
+              </Suspense>
+            ) : null
+          }
+        />
         <BookFacts book={book} />
         <div className="mt-14 grid grid-cols-1 items-start gap-12 lg:grid-cols-2">
           <Suspense fallback={<Skeleton className="h-72 rounded-card" />}>
@@ -85,6 +96,13 @@ async function BookContent({ params }: { params: Params }) {
       </main>
     </PageTransition>
   );
+}
+
+/** Quem cadastrou o livro à mão pode editá-lo (dados e capa). */
+async function EditBookAction({ book }: { book: BookDetails }) {
+  const viewer = await getViewer();
+  if (!viewer || viewer.id !== book.manualCreatorId) return null;
+  return <EditBookButton book={book} />;
 }
 
 /** Gêneros, ISBN e idioma, em mono e discretos, logo abaixo do topo. */

@@ -517,6 +517,26 @@ li[data-copy-item] {
   }
 }
 
+/* Troca de vista da estante (ShelfViews): cada livro é o mesmo nas três
+   vistas. Entre capas (vista-capa), a capa voa e muda de tamanho com a mola
+   smooth, e as duas fotos, da mesma imagem, se cruzam sem desfoque. Da
+   lombada para a capa e de volta, o giro pela quina é o mesmo da ida à
+   página do livro (vira-capa e vira-lombada). O livro que fica fora da tela
+   na vista nova não forma par e só esmaece onde estava. O stagger vem do
+   componente. */
+::view-transition-group(.vista-capa) {
+  animation-duration: var(--spring-smooth-duration);
+  animation-timing-function: var(--spring-smooth);
+}
+::view-transition-old(.vista-capa),
+::view-transition-new(.vista-capa) {
+  animation-duration: var(--duration-base);
+  animation-timing-function: var(--ease-standard);
+}
+::view-transition-old(.troca):only-child {
+  animation: sumir var(--duration-base) var(--ease-standard) both;
+}
+
 /* Ilustrações dos estados vazios: cada traço se desenha ao aparecer, na
    ordem dele (--i, 35ms cada), e o tracejado esmaece junto. Em CSS, para
    valer desde o HTML do servidor. Com o pathLength 1, o traço inteiro mede 1:
@@ -613,7 +633,8 @@ li[data-copy-item] {
   ::view-transition-group(.vira-capa),
   ::view-transition-group(.vira-lombada),
   ::view-transition-group(.titulo),
-  ::view-transition-group(.fica) {
+  ::view-transition-group(.fica),
+  ::view-transition-group(.vista-capa) {
     animation-duration: 0s;
     animation-delay: 0s;
   }
@@ -627,14 +648,16 @@ li[data-copy-item] {
   }
   ::view-transition-old(.pagina-sai),
   ::view-transition-old(.capa),
-  ::view-transition-old(.titulo) {
+  ::view-transition-old(.titulo),
+  ::view-transition-old(.vista-capa) {
     animation: sumir var(--duration-fast) var(--ease-standard) both;
   }
   ::view-transition-new(.pagina-entra),
   ::view-transition-new(.capa),
   ::view-transition-new(.vira-capa),
   ::view-transition-new(.vira-lombada),
-  ::view-transition-new(.titulo) {
+  ::view-transition-new(.titulo),
+  ::view-transition-new(.vista-capa) {
     animation: aparecer var(--duration-fast) var(--ease-standard) both;
   }
 }

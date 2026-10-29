@@ -2,7 +2,7 @@
 
 import { type MotionStyle, motion } from "motion/react";
 import { BookCover } from "@/features/books/components/book-cover";
-import { bookColor, coverInk } from "@/features/books/lib/color";
+import { SpineArt, spineColors } from "@/features/books/components/spine-art";
 import type { BookVisual } from "@/features/books/types";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +25,7 @@ export function BookBox({
   className?: string;
 }) {
   const width = Math.round(height / 1.5);
-  const { background, ink } = coverInk(bookColor(book));
-  const author = book.authors[0] ?? "";
+  const { background } = spineColors(book);
 
   return (
     <motion.div
@@ -40,11 +39,9 @@ export function BookBox({
       >
         <BookCover book={book} size="sm" tilt={false} className="w-full" />
       </div>
+      {/* Igual à BookSpine, que assume no fim */}
       <div
-        className={cn(
-          "spine absolute top-0 flex flex-col items-center justify-between gap-1.5 overflow-hidden rounded-cover bg-(--cover) py-3",
-          ink === "ink" ? "text-ink" : "text-paper",
-        )}
+        className="spine absolute top-0 overflow-hidden rounded-cover bg-(--cover)"
         style={
           {
             left: (width - spineWidth) / 2,
@@ -55,15 +52,7 @@ export function BookBox({
           } as React.CSSProperties
         }
       >
-        {/* Igual à BookSpine, que assume no fim */}
-        <span className="max-h-[calc(100%-3rem)] shrink-0 truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
-          {book.title}
-        </span>
-        {spineWidth >= 24 && author ? (
-          <span className="min-h-0 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
-            {author}
-          </span>
-        ) : null}
+        <SpineArt book={book} width={spineWidth} />
       </div>
     </motion.div>
   );

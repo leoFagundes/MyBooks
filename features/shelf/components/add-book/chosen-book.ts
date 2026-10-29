@@ -17,6 +17,7 @@ export function resultVisual(result: SearchResult): BookVisual {
     authors: result.authors,
     coverUrl: result.coverUrl,
     coverColor: result.coverColor ?? null,
+    coverStyle: result.coverStyle ?? "classic",
     pageCount: result.pageCount,
     publishedYear: result.publishedYear,
   };

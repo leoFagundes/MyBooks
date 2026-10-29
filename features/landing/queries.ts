@@ -17,7 +17,7 @@ export const SHOWCASE_BOOKS = 12;
 const MIN_SHOWCASE_BOOKS = 6;
 
 const BOOK_COLUMNS =
-  "id, title, authors, cover_url, cover_color, page_count, published_year";
+  "id, title, authors, cover_url, cover_color, cover_style, page_count, published_year";
 
 export type LandingShowcase = {
   profile: ProfileSummary;

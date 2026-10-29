@@ -12,7 +12,6 @@ import {
 import dynamic from "next/dynamic";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import {
-  Component,
   useEffect,
   useEffectEvent,
   useId,
@@ -38,6 +37,7 @@ import { frameBook, openFraming, type Rect, type Size } from "../lib/framing";
 import { pageLayout } from "../lib/pages";
 import { type BookPose, useBookPose } from "../lib/use-book-pose";
 import { useStageGestures } from "../lib/use-stage-gestures";
+import { SceneBoundary } from "./scene-boundary";
 import { type PillAction, ViewerPill } from "./viewer-pill";
 
 // three, R3F e drei só chegam quando o visualizador abre (spec §5.7)
@@ -529,24 +529,4 @@ export function BookViewer({
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
-}
-
-/** Sem WebGL, chunk que não chegou ou contexto perdido: vira o estado de erro. */
-class SceneBoundary extends Component<
-  { onError: () => void; children: React.ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  componentDidCatch() {
-    this.props.onError();
-  }
-
-  render() {
-    return this.state.failed ? null : this.props.children;
-  }
 }

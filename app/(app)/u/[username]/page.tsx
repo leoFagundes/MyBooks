@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -5,6 +6,11 @@ import { ReturningCover } from "@/features/books/components/returning-cover";
 import { PrivateProfileNotice } from "@/features/profile/components/private-profile-notice";
 import { getProfileTab } from "@/features/profile/queries";
 import { ProfileShelf } from "@/features/shelf/components/profile-shelf";
+import {
+  DEFAULT_SHELF_VIEW,
+  SHELF_VIEW_COOKIE,
+  shelfViewOf,
+} from "@/features/shelf/lib/view";
 import { getShelf } from "@/features/shelf/queries";
 import { getViewer } from "@/lib/auth";
 
@@ -35,9 +41,10 @@ async function ShelfTab({ params }: { params: Params }) {
   if (!tab.visible) {
     return <PrivateProfileNotice profile={profile} relation={relation} />;
   }
-  const [shelf, viewer] = await Promise.all([
+  const [shelf, viewer, jar] = await Promise.all([
     getShelf(profile.id),
     getViewer(),
+    cookies(),
   ]);
   // Na estante dos outros, quem vê compara com a própria
   const ownedIds =
@@ -52,6 +59,11 @@ async function ShelfTab({ params }: { params: Params }) {
         owner={relation === "self" ? null : firstName(profile.displayName)}
         ownerId={profile.id}
         ownedIds={ownedIds}
+        // A vista escolhida da última vez: a estante já nasce nela
+        initialView={
+          shelfViewOf(jar.get(SHELF_VIEW_COOKIE)?.value) ?? DEFAULT_SHELF_VIEW
+        }
+        signedIn={viewer !== null}
       />
     </PageTransition>
   );

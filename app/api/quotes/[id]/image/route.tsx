@@ -33,7 +33,7 @@ export async function GET(
   const { data } = await supabase
     .from("quotes")
     .select(
-      "text, page, user:profiles(username), book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+      "text, page, user:profiles(username), book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
     )
     .eq("id", id)
     .maybeSingle();

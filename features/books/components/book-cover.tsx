@@ -18,6 +18,7 @@ import { COVER_RADIUS_PX } from "../lib/cover";
 import { coverName } from "../lib/transition-names";
 import type { BookVisual } from "../types";
 import { useIsInsideSource, useTravelingCover } from "./cover-transition";
+import { GeneratedCover } from "./generated-cover";
 
 const MAX_TILT = 6;
 
@@ -46,13 +47,16 @@ const sizes = {
 // aparece na hora, sem repetir o fade.
 const arrivedCovers = new Set<string>();
 
+// A imagem escolhida no cadastro, antes de subir: vai direto, sem o loader
+const isLocalImage = (src: string) => /^(blob|data):/.test(src);
+
 /**
  * Pede a capa no tamanho do topo da página do livro, na intenção do clique
  * (hover, foco ou toque): quando a página abre, a versão grande já está a
  * caminho ou no cache. O React não repete o mesmo pedido.
  */
 export function preloadHeroCover(book: BookVisual) {
-  if (!book.coverUrl) return;
+  if (!book.coverUrl || isLocalImage(book.coverUrl)) return;
   const { props } = getImageProps({
     src: book.coverUrl,
     alt: "",
@@ -73,8 +77,6 @@ type BookCoverProps = {
   tilt?: boolean;
   /** Pré-carrega a imagem no <head>: só para a capa que é o LCP da página. */
   preload?: boolean;
-  /** Capas com o mesmo layoutId viajam de um lugar para outro (Motion). */
-  layoutId?: string;
   /**
    * Nome da viagem entre páginas (View Transitions). Dentro de um BookLink
    * vem sozinho, só na capa apertada.
@@ -101,7 +103,6 @@ export function BookCover({
   size = "md",
   tilt = true,
   preload = false,
-  layoutId,
   transitionName,
   transitionShare = "capa",
   sourceImage = false,
@@ -180,9 +181,6 @@ export function BookCover({
     >
       <ViewTransition name={name} share={transitionShare} default="none">
         <motion.div
-          layoutId={layoutId}
-          // Na troca de vista a capa nova assume na hora, sem esmaecer com a antiga
-          layoutCrossfade={false}
           onPointerMove={onPointerMove}
           onPointerLeave={onPointerLeave}
           onPointerDown={onPointerDown}
@@ -210,6 +208,7 @@ export function BookCover({
               draggable={false}
               fill
               sizes={sizes[size]}
+              unoptimized={isLocalImage(book.coverUrl ?? "")}
               preload={preload}
               onLoad={onLoad}
               onError={() => setFailed(true)}
@@ -229,34 +228,6 @@ export function BookCover({
           ) : null}
         </motion.div>
       </ViewTransition>
-    </div>
-  );
-}
-
-/** Capa tipográfica: título em Instrument Serif, autor em Geist Mono. */
-function GeneratedCover({
-  book,
-  ink,
-}: {
-  book: BookVisual;
-  ink: "ink" | "paper";
-}) {
-  return (
-    <div
-      role="img"
-      aria-label={`Capa de ${book.title}`}
-      // Com um botão no canto da capa (--capa-chip), o título começa abaixo dele
-      className={cn(
-        "@container absolute inset-0 flex flex-col justify-between p-[10%] pt-[max(10%,var(--capa-chip,0px))]",
-        ink === "ink" ? "text-ink" : "text-paper",
-      )}
-    >
-      <p className="line-clamp-5 font-serif text-[13cqi] leading-[1.05] tracking-tight text-balance">
-        {book.title}
-      </p>
-      <p className="line-clamp-2 font-mono text-[6.5cqi] leading-snug tracking-wider uppercase">
-        {book.authors.join(", ")}
-      </p>
     </div>
   );
 }

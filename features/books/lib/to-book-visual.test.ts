@@ -7,6 +7,7 @@ const row = {
   authors: ["Machado de Assis"],
   cover_url: "https://covers.openlibrary.org/b/id/647501-L.jpg",
   cover_color: "#ecc404",
+  cover_style: null,
   page_count: 268,
   published_year: 1899,
 };
@@ -19,6 +20,7 @@ describe("toBookVisual", () => {
       authors: ["Machado de Assis"],
       coverUrl: "https://covers.openlibrary.org/b/id/647501-L.jpg",
       coverColor: "#ecc404",
+      coverStyle: "classic",
       pageCount: 268,
       publishedYear: 1899,
     });

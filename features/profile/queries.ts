@@ -111,7 +111,7 @@ export async function getProfileCard(
     supabase
       .from("user_books")
       .select(
-        "book:books(id, title, authors, cover_url, cover_color, page_count, published_year)",
+        "book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
       )
       .eq("user_id", profile.id)
       .order("updated_at", { ascending: false })

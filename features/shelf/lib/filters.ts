@@ -1,6 +1,5 @@
 import { plain } from "@/features/books/lib/search-result";
 import { genreLabel } from "@/features/profile/genres";
-import type { ShelfView } from "../components/shelf-views";
 import type { ShelfStatus } from "../schemas";
 
 /** O mínimo que filtro e ordenação leem de cada livro da estante. */
@@ -45,8 +44,6 @@ export const RATING_LABEL: Record<RatingFilter, string> = {
   sem: "Sem nota",
 };
 
-const VIEWS: readonly ShelfView[] = ["estante", "grade", "lista"];
-
 export type ShelfFilters = {
   /** null: todos os status. */
   status: ShelfStatus | null;
@@ -58,7 +55,6 @@ export type ShelfFilters = {
   /** Só os livros que quem vê também tem (perfil de outra pessoa). */
   common: boolean;
   sort: ShelfSort;
-  view: ShelfView;
 };
 
 export const DEFAULT_FILTERS: ShelfFilters = {
@@ -69,7 +65,6 @@ export const DEFAULT_FILTERS: ShelfFilters = {
   decade: null,
   common: false,
   sort: "recentes",
-  view: "estante",
 };
 
 // A URL fala português: ?status=quero-ler&genero=classicos&ordem=titulo
@@ -102,7 +97,6 @@ export function filtersFromParams(params: URLSearchParams): ShelfFilters {
         : null,
     common: params.get("comum") === "1",
     sort: oneOf(SHELF_SORTS, params.get("ordem")) ?? DEFAULT_FILTERS.sort,
-    view: oneOf(VIEWS, params.get("vista")) ?? DEFAULT_FILTERS.view,
   };
 }
 
@@ -116,7 +110,6 @@ export function filtersToParams(filters: ShelfFilters): URLSearchParams {
   if (filters.decade) params.set("ano", String(filters.decade));
   if (filters.common) params.set("comum", "1");
   if (filters.sort !== DEFAULT_FILTERS.sort) params.set("ordem", filters.sort);
-  if (filters.view !== DEFAULT_FILTERS.view) params.set("vista", filters.view);
   return params;
 }
 

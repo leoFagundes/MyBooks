@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { COVER_STYLES } from "./lib/cover-style";
 import { BOOK_LIMITS, pickIsbns } from "./lib/search-result";
 
 const squish = (text: string) => text.replace(/\s+/g, " ").trim();
@@ -79,3 +80,15 @@ export const manualBookSchema = z
 
 export type ManualBookFields = z.input<typeof manualBookSchema>;
 export type ManualBook = z.output<typeof manualBookSchema>;
+
+/** A capa tipográfica escolhida no cadastro e na edição. */
+export const coverDesignSchema = z.object({
+  /** null: a cor automática, derivada do título. */
+  color: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/, "Escolha uma cor válida")
+    .nullable(),
+  style: z.enum(COVER_STYLES),
+});
+
+export type CoverDesign = z.infer<typeof coverDesignSchema>;

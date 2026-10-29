@@ -6,12 +6,12 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 import { springs } from "@/lib/motion";
 import { routes } from "@/lib/routes";
-import { cn } from "@/lib/utils";
-import { bookColor, coverInk } from "../lib/color";
 import { spineHeight, spineWidth } from "../lib/spine";
 import { coverName } from "../lib/transition-names";
 import type { BookVisual } from "../types";
 import { useBookLinkBehavior } from "./book-link";
+import { SpineArt, spineColors } from "./spine-art";
+import { ViewSwitchTarget } from "./view-switch";
 
 const MotionLink = motion.create(Link);
 
@@ -29,10 +29,11 @@ type BookSpineProps = {
 
 /**
  * Lombada (spec §4): cor da capa, título na vertical com contraste AA
- * garantido, largura pelas páginas e altura variando pelo id. O título
- * desce de cima para baixo, como pede a ABNT. Apertada, vira a origem da
- * viagem até a página do livro, onde se transforma na capa. Na volta, a
- * capa gira de novo até ela: a classe do par vem de quem chega.
+ * garantido, largura pelas páginas e altura variando pelo id, no estilo da
+ * capa (SpineArt). Apertada, vira a origem da viagem até a página do livro,
+ * onde se transforma na capa. Na volta, a capa gira de novo até ela: a
+ * classe do par vem de quem chega. Na troca de vista da estante, é o mesmo
+ * livro que a capa da Grade e da Lista (ViewSwitchTarget).
  */
 export function BookSpine({
   book,
@@ -42,7 +43,7 @@ export function BookSpine({
   onActivate,
   onDeactivate,
 }: BookSpineProps) {
-  const { background, ink } = coverInk(bookColor(book));
+  const { background } = spineColors(book);
   const width = spineWidth(book.pageCount);
   const author = book.authors[0] ?? "";
   const { source, props } = useBookLinkBehavior({
@@ -52,41 +53,31 @@ export function BookSpine({
   });
 
   return (
-    <ViewTransition
-      name={source.isSource ? coverName(book.id) : undefined}
-      share="vira-lombada"
-      default="none"
-    >
-      <MotionLink
-        href={href ?? routes.book(book.id)}
-        aria-label={author ? `${book.title}, ${author}` : book.title}
-        data-lifted={lifted}
-        {...props}
-        onPointerLeave={onDeactivate}
-        onBlur={onDeactivate}
-        animate={{ y: lifted ? -10 : 0, x: shift }}
-        transition={springs.smooth}
-        style={{
-          width,
-          height: spineHeight(book.id),
-          ...({ "--cover": background } as React.CSSProperties),
-        }}
-        className={cn(
-          "spine relative flex shrink-0 flex-col items-center justify-between gap-1.5 overflow-hidden rounded-cover bg-(--cover) py-3",
-          ink === "ink" ? "text-ink" : "text-paper",
-        )}
+    <ViewSwitchTarget book={book}>
+      <ViewTransition
+        name={source.isSource ? coverName(book.id) : undefined}
+        share="vira-lombada"
+        default="none"
       >
-        <span className="max-h-[calc(100%-3rem)] shrink-0 truncate font-serif text-[13px] leading-none [writing-mode:vertical-rl]">
-          {book.title}
-        </span>
-        {/* O espaço separa título e autor no texto (o flex não o desenha) */}{" "}
-        {/* O autor fica com o que o título deixa: inteiro nos títulos curtos */}
-        {width >= 24 && author ? (
-          <span className="min-h-0 truncate font-mono text-[8px] leading-none tracking-wider uppercase [writing-mode:vertical-rl]">
-            {author}
-          </span>
-        ) : null}
-      </MotionLink>
-    </ViewTransition>
+        <MotionLink
+          href={href ?? routes.book(book.id)}
+          aria-label={author ? `${book.title}, ${author}` : book.title}
+          data-lifted={lifted}
+          {...props}
+          onPointerLeave={onDeactivate}
+          onBlur={onDeactivate}
+          animate={{ y: lifted ? -10 : 0, x: shift }}
+          transition={springs.smooth}
+          style={{
+            width,
+            height: spineHeight(book.id),
+            ...({ "--cover": background } as React.CSSProperties),
+          }}
+          className="spine relative block shrink-0 overflow-hidden rounded-cover bg-(--cover)"
+        >
+          <SpineArt book={book} width={width} />
+        </MotionLink>
+      </ViewTransition>
+    </ViewSwitchTarget>
   );
 }

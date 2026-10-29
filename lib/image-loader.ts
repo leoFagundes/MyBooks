@@ -11,9 +11,10 @@ import { COVER_FILES } from "@/features/books/lib/cover";
 
 const OPEN_LIBRARY_COVER =
   /^(https:\/\/covers\.openlibrary\.org\/b\/(?:id|isbn|olid)\/[^/?#]+?)-[SML]\.jpg$/;
-// A pasta do livro no bucket covers (toBookVisual), sem o arquivo
+// A pasta do livro no bucket covers (toBookVisual), sem o arquivo; a imagem
+// enviada por quem cadastrou fica numa subpasta com a versão
 const BUCKET_COVER =
-  /^https:\/\/[^/]+\/storage\/v1\/object\/public\/covers\/[0-9a-f-]{36}$/;
+  /^https:\/\/[^/]+\/storage\/v1\/object\/public\/covers\/[0-9a-f-]{36}(?:\/[0-9a-z]{8})?$/;
 const LARGEST_FILE = COVER_FILES[2];
 
 type LoaderParams = { src: string; width: number; quality?: number };

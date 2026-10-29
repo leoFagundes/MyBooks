@@ -54,6 +54,9 @@ export function texturesKey(
   return [
     book.id,
     book.coverUrl ?? "",
+    // Na prévia do cadastro, cor e estilo mudam ao vivo
+    book.coverColor ?? "",
+    book.coverStyle,
     book.title,
     book.authors.join(","),
     description?.length ?? 0,
@@ -126,8 +129,10 @@ async function loadCoverImage(book: BookVisual): Promise<Texture | null> {
   try {
     const loader = new TextureLoader();
     loader.setCrossOrigin("anonymous");
+    // A imagem escolhida no cadastro, antes de subir, vai direto
+    const local = /^(blob|data):/.test(book.coverUrl);
     const texture = await loader.loadAsync(
-      imageLoader({ src: book.coverUrl, width: 480 }),
+      local ? book.coverUrl : imageLoader({ src: book.coverUrl, width: 480 }),
     );
     const { width, height } = texture.image as HTMLImageElement;
     const imageAspect = width / height;

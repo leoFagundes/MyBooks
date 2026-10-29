@@ -63,6 +63,7 @@ export function Shelf({
           ref={(node) => {
             items.current[index] = node;
           }}
+          data-view-item={book.id}
           data-copy-item={accessory ? "" : undefined}
           className={cn(
             "flex h-(--shelf-row) items-end",

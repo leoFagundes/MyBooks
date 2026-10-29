@@ -14,6 +14,7 @@ import {
   type ShelfView,
   ShelfViews,
   shelfViewOptions,
+  useShelfViewSwitch,
 } from "@/features/shelf/components/shelf-views";
 import { formatNumber } from "@/lib/format";
 import { initials } from "@/lib/initials";
@@ -66,18 +67,21 @@ function OrganizeDemo({ books }: { books: LandingShowcase["books"] }) {
   const box = useRef<HTMLDivElement>(null);
   const inView = useInView(box, { amount: 0.5 });
   const reduced = useReducedMotion();
-  const [view, setView] = useState<ShelfView>("estante");
+  const views = useShelfViewSwitch("estante");
   // Mexeu no controle, a demonstração para de trocar sozinha
   const [touched, setTouched] = useState(false);
+  const { view, setView } = views;
 
+  // Sozinha, a troca é só um fade: a viagem dos livros (View Transition)
+  // congelaria a página enquanto a pessoa rola a landing
   useEffect(() => {
     if (!inView || touched || reduced) return;
     const timer = window.setInterval(
-      () => setView((current) => NEXT_VIEW[current]),
+      () => setView(NEXT_VIEW[view]),
       VIEW_INTERVAL_MS,
     );
     return () => window.clearInterval(timer);
-  }, [inView, touched, reduced]);
+  }, [inView, touched, reduced, view, setView]);
 
   return (
     <div
@@ -89,13 +93,20 @@ function OrganizeDemo({ books }: { books: LandingShowcase["books"] }) {
         value={view}
         onValueChange={(next) => {
           setTouched(true);
-          setView(next);
+          views.change(next);
         }}
         options={shelfViewOptions}
         className="self-start"
       />
-      <motion.div layout transition={springs.smooth} className="min-h-52">
-        <ShelfViews books={books} view={view} />
+      {/* A altura acompanha a troca com fade; na viagem dos livros, quem
+          cuida da passagem é a View Transition */}
+      <motion.div
+        layout
+        layoutDependency={views.fades}
+        transition={springs.smooth}
+        className="min-h-52"
+      >
+        <ShelfViews books={books} switcher={views} />
       </motion.div>
     </div>
   );

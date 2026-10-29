@@ -307,7 +307,7 @@ export async function getHomeSuggestions(
   return getSuggestedReaders(limit);
 }
 
-const ACTIVITY_COLUMNS = `id, type, created_at, actor:profiles!activities_actor_id_fkey(${READER_COLUMNS}), book:books(id, title, authors, cover_url, cover_color, page_count, published_year), collection:collections(id, title, emoji), target:profiles!activities_target_user_id_fkey(${READER_COLUMNS})`;
+const ACTIVITY_COLUMNS = `id, type, created_at, actor:profiles!activities_actor_id_fkey(${READER_COLUMNS}), book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year), collection:collections(id, title, emoji), target:profiles!activities_target_user_id_fkey(${READER_COLUMNS})`;
 
 const isActivityType = (value: string): value is ActivityType =>
   (ACTIVITY_TYPES as readonly string[]).includes(value);

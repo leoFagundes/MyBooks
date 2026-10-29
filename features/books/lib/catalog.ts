@@ -83,29 +83,38 @@ async function downloadCover(
   }
 }
 
-const coverPaths = (bookId: string) =>
-  COVER_FILES.map((file) => `${bookId}/${file.name}.webp`);
+/** Os três arquivos de uma pasta de capa (`<id>` ou `<id>/<versão>`). */
+const coverPaths = (folder: string) =>
+  COVER_FILES.map((file) => `${folder}/${file.name}.webp`);
 
-/** Grava as três larguras; se uma falhar, apaga as outras e devolve false. */
-async function storeCover(
+/**
+ * Grava as três larguras na pasta (`<id>`, ou `<id>/<versão>` para a imagem
+ * enviada por quem cadastrou); se uma falhar, apaga as outras e devolve false.
+ */
+export async function storeCover(
   admin: Admin,
-  bookId: string,
+  folder: string,
   cover: ProcessedCover,
 ): Promise<boolean> {
   const uploads = await Promise.all(
     cover.files.map((file) =>
       admin.storage
         .from("covers")
-        .upload(`${bookId}/${file.name}.webp`, file.data, {
+        .upload(`${folder}/${file.name}.webp`, file.data, {
           contentType: "image/webp",
-          // O arquivo de um livro nunca muda
+          // O arquivo de uma pasta nunca muda: trocar a imagem é outra pasta
           cacheControl: "31536000",
         }),
     ),
   );
   if (uploads.every((upload) => !upload.error)) return true;
-  await admin.storage.from("covers").remove(coverPaths(bookId));
+  await removeCover(admin, folder);
   return false;
+}
+
+/** Apaga os três arquivos de uma pasta de capa. */
+export async function removeCover(admin: Admin, folder: string) {
+  await admin.storage.from("covers").remove(coverPaths(folder));
 }
 
 /**
@@ -177,7 +186,7 @@ export async function ensureCatalogBook(
   });
   if (!error) return id;
 
-  if (stored) await admin.storage.from("covers").remove(coverPaths(id));
+  if (stored) await removeCover(admin, id);
   // Outro pedido pôs a mesma obra (ou o mesmo ISBN) primeiro: vale o dele
   if (error.code === "23505") {
     const winner = await findBook(admin, result);

@@ -19,3 +19,22 @@ export const COVER_FILES = [
   { name: "M", width: 240 },
   { name: "L", width: 480 },
 ] as const;
+
+/**
+ * A imagem enviada por quem cadastrou fica numa pasta com versão
+ * (covers/<id>/<versão>/): trocar a imagem muda a URL, e o cache de um ano
+ * nunca serve a antiga. O check books_cover_source aceita o mesmo formato.
+ */
+export const COVER_VERSION = /^[0-9a-z]{8}$/;
+
+/**
+ * A pasta da capa no bucket (`<id>` ou `<id>/<versão>`), a partir do
+ * cover_url do livro; null se a capa não for do bucket.
+ */
+export function bucketCoverFolder(bookId: string, coverUrl: string) {
+  if (coverUrl === `covers/${bookId}`) return bookId;
+  const prefix = `covers/${bookId}/`;
+  if (!coverUrl.startsWith(prefix)) return null;
+  const version = coverUrl.slice(prefix.length);
+  return COVER_VERSION.test(version) ? `${bookId}/${version}` : null;
+}

@@ -18,6 +18,23 @@ const COVER_HOSTS = new Set([
 ]);
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
+/** O livro foi tirado do catálogo pela moderação (e não mesclado em outro). */
+export class RemovedBookError extends Error {}
+
+type Found = {
+  id: string;
+  deleted_at: string | null;
+  merged_into: string | null;
+};
+
+// A obra ou o ISBN acham também o livro excluído (com a chave secreta, sem
+// RLS): o mesclado leva ao que ficou; o excluído não volta ao catálogo
+function resolve(found: Found): string {
+  if (!found.deleted_at) return found.id;
+  if (found.merged_into) return found.merged_into;
+  throw new RemovedBookError("Livro tirado do catálogo");
+}
+
 async function findBook(
   admin: Admin,
   result: SearchResult,
@@ -25,21 +42,21 @@ async function findBook(
   if (result.source !== "manual") {
     const { data, error } = await admin
       .from("books")
-      .select("id")
+      .select("id, deleted_at, merged_into")
       .eq("source", result.source)
       .eq("source_id", result.sourceId)
       .maybeSingle();
     if (error) throw error;
-    if (data) return data.id;
+    if (data) return resolve(data);
   }
   if (result.isbn13) {
     const { data, error } = await admin
       .from("books")
-      .select("id")
+      .select("id, deleted_at, merged_into")
       .eq("isbn_13", result.isbn13)
       .maybeSingle();
     if (error) throw error;
-    if (data) return data.id;
+    if (data) return resolve(data);
   }
   return null;
 }

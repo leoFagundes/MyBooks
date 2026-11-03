@@ -4,7 +4,7 @@ import type { GenreSlug } from "@/features/profile/genres";
 import { type BookRef, DISCOVERY_ALL } from "@/features/shelf/schemas";
 import type { ActionResult } from "@/lib/action";
 import { findDiscoveryResult, findExternalResult } from "../queries";
-import { ensureCatalogBook } from "./catalog";
+import { ensureCatalogBook, RemovedBookError } from "./catalog";
 
 /**
  * O id do livro escolhido na paleta; um livro de fora entra no catálogo
@@ -35,10 +35,13 @@ export async function catalogIdFor(
     const id = await ensureCatalogBook(result, viewerId);
     updateTag("catalog");
     return { ok: true, data: id };
-  } catch {
+  } catch (error) {
     return {
       ok: false,
-      error: "Não deu para trazer esse livro. Tente de novo.",
+      error:
+        error instanceof RemovedBookError
+          ? "Esse livro foi tirado do catálogo do MyBooks."
+          : "Não deu para trazer esse livro. Tente de novo.",
     };
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { BookCheck } from "lucide-react";
+import { BookCheck, Lightbulb } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useTransition } from "react";
@@ -49,6 +49,19 @@ const VERB: Record<NotificationItem["type"], string> = {
   collection_copy: "copiou",
   collection_invite: "chamou você para",
   catalog_review: "",
+  forum_reply: "respondeu em",
+  forum_mention: "mencionou você em",
+  suggestion_status: "",
+};
+
+// O status das sugestões, como a página delas mostra
+const SUGGESTION_STATUS: Record<string, string> = {
+  nova: "nova",
+  em_analise: "em análise",
+  planejada: "planejada",
+  em_andamento: "em andamento",
+  concluida: "concluída",
+  recusada: "recusada",
 };
 
 // O que a equipe decidiu, numa frase (o título entra em destaque)
@@ -92,12 +105,17 @@ const WITHOUT_COLLECTION: Record<NotificationItem["type"], string> = {
   collection_copy: "uma coleção sua",
   collection_invite: "uma coleção",
   catalog_review: "",
+  forum_reply: "um tópico",
+  forum_mention: "um tópico",
+  suggestion_status: "",
 };
 
 function hrefOf(item: NotificationItem) {
   if (item.type === "catalog_review") {
     return item.review?.bookId ? routes.book(item.review.bookId) : null;
   }
+  if (item.forum) return routes.topic(item.forum.topicId);
+  if (item.suggestion) return routes.suggestion(item.suggestion.id);
   if (item.type !== "follow" && item.collection) {
     return routes.collection(item.collection.id);
   }
@@ -301,7 +319,27 @@ function ItemRow({
 }) {
   const href = hrefOf(item);
   const review = item.type === "catalog_review" ? item.review : null;
-  const content = review ? (
+  const suggestion = item.suggestion;
+  const content = suggestion ? (
+    <>
+      <span
+        aria-hidden
+        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted"
+      >
+        <Lightbulb className="size-4" strokeWidth={1.5} />
+      </span>
+      <p className="min-w-0 flex-1 text-sm text-pretty">
+        A sugestão <span className="font-medium">{suggestion.title}</span> agora
+        está {SUGGESTION_STATUS[suggestion.status] ?? suggestion.status}.{" "}
+        <RelativeTime iso={item.at} />
+      </p>
+      {fresh ? (
+        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground">
+          <span className="sr-only">Novo</span>
+        </span>
+      ) : null}
+    </>
+  ) : review ? (
     <>
       <span
         aria-hidden
@@ -338,7 +376,9 @@ function ItemRow({
         {item.type !== "follow" ? (
           <>
             {" "}
-            {item.collection ? (
+            {item.forum ? (
+              <span className="font-medium">{item.forum.title}</span>
+            ) : item.collection ? (
               <span className="font-medium">{item.collection.title}</span>
             ) : (
               WITHOUT_COLLECTION[item.type]

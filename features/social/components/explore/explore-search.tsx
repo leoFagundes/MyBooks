@@ -267,7 +267,12 @@ function Results({
 function ResultsSkeleton({ tab }: { tab: Tab }) {
   if (tab === "leitores") {
     return (
-      <div aria-busy aria-label="Buscando leitores" className="flex flex-col">
+      <div
+        role="status"
+        aria-busy
+        aria-label="Buscando leitores"
+        className="flex flex-col"
+      >
         {[0, 1, 2].map((row) => (
           <div key={row} className="flex items-center gap-3 py-3">
             <Skeleton className="size-10 rounded-full" />
@@ -283,6 +288,7 @@ function ResultsSkeleton({ tab }: { tab: Tab }) {
   if (tab === "colecoes") {
     return (
       <div
+        role="status"
         aria-busy
         aria-label="Buscando coleções"
         className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
@@ -294,7 +300,12 @@ function ResultsSkeleton({ tab }: { tab: Tab }) {
     );
   }
   return (
-    <div aria-busy aria-label="Buscando livros" className={COVER_GRID}>
+    <div
+      role="status"
+      aria-busy
+      aria-label="Buscando livros"
+      className={COVER_GRID}
+    >
       {[0, 1, 2, 3, 4, 5].map((cover) => (
         <Skeleton key={cover} className="aspect-2/3 rounded-cover" />
       ))}

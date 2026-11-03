@@ -10,6 +10,7 @@ import { useCommandPalette } from "./command-palette";
 import { EstanteLink } from "./estante-link";
 import { Logo } from "./logo";
 import {
+  communityNavItem,
   mainNavItems,
   NavIndicatorContext,
   NavLinks,
@@ -40,6 +41,7 @@ export function TopNav({ viewer, slots, preview = false }: TopNavProps) {
   const indicatorId = useId();
   const palette = useCommandPalette();
   const [inicio, explorar] = mainNavItems(null);
+  const comunidade = communityNavItem();
 
   return (
     <NavIndicatorContext value={indicatorId}>
@@ -61,7 +63,7 @@ export function TopNav({ viewer, slots, preview = false }: TopNavProps) {
             className="hidden items-center gap-1 md:flex"
           >
             <NavLinks
-              items={[inicio, explorar]}
+              items={[inicio, explorar, comunidade]}
               indicatorId={indicatorId}
               variant="top"
             />

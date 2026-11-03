@@ -28,7 +28,20 @@ export type NotificationType =
   | "collection_like"
   | "collection_copy"
   | "collection_invite"
-  | "catalog_review";
+  | "catalog_review"
+  | "forum_reply"
+  | "forum_mention"
+  | "suggestion_status";
+
+/** O tópico de um aviso do fórum (resposta ou menção). */
+export type ForumNotice = {
+  topicId: string;
+  title: string;
+  replyId: string | null;
+};
+
+/** A sugestão de um aviso de status (MELHORIAS 8.2). */
+export type SuggestionNotice = { id: string; title: string; status: string };
 
 /** O resultado de uma revisão da equipe (MELHORIAS 7), no aviso catalog_review. */
 export type ReviewNotice = {
@@ -55,6 +68,10 @@ export type NotificationItem = {
   collection: { id: string; title: string } | null;
   /** Só no catalog_review: o que a equipe decidiu. */
   review: ReviewNotice | null;
+  /** Só nos avisos do fórum. */
+  forum: ForumNotice | null;
+  /** Só no suggestion_status. */
+  suggestion: SuggestionNotice | null;
   at: string;
   unread: boolean;
 };

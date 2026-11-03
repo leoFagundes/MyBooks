@@ -28,6 +28,12 @@ import {
   ShelfEntryBlock,
 } from "@/features/shelf/components/shelf-entry-block";
 import { getMyBookEntry } from "@/features/shelf/queries";
+import { NewTopicButton } from "@/features/community/components/new-topic-button";
+import { TopicCard } from "@/features/community/components/topic-card";
+import {
+  getBookDiscussions,
+  getForumCategories,
+} from "@/features/community/queries";
 import { getViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 
@@ -102,6 +108,17 @@ async function BookContent({ params }: { params: Params }) {
             </Suspense>
           </section>
         </div>
+        <section
+          aria-labelledby="discussoes"
+          className="mt-14 flex flex-col gap-4"
+        >
+          <h2 id="discussoes" className="font-serif text-2xl tracking-tight">
+            Discussões
+          </h2>
+          <Suspense fallback={<Skeleton className="h-32 rounded-card" />}>
+            <Discussions book={book} />
+          </Suspense>
+        </section>
       </main>
     </PageTransition>
   );
@@ -133,6 +150,51 @@ async function BookActions({ book }: { book: BookDetails }) {
         </p>
       ) : null}
       <EditBookButton book={book} />
+    </div>
+  );
+}
+
+/**
+ * Os tópicos do fórum ligados ao livro (MELHORIAS 8) e o convite para abrir
+ * um, já com o livro e na categoria de discussões.
+ */
+async function Discussions({ book }: { book: BookDetails }) {
+  const [topics, categories, viewer] = await Promise.all([
+    getBookDiscussions(book.id),
+    getForumCategories(),
+    getViewer(),
+  ]);
+  const open = (
+    <NewTopicButton
+      signedIn={Boolean(viewer)}
+      categories={categories}
+      category="discussoes-de-livros"
+      book={book}
+      label="Abrir uma discussão"
+      variant="outline"
+      next={routes.book(book.id)}
+    />
+  );
+  if (topics.length === 0) {
+    return (
+      <div className="flex flex-col items-start gap-3 rounded-card border border-dashed border-border p-5">
+        <p className="text-sm text-pretty text-muted-foreground">
+          Ninguém abriu uma conversa sobre este livro ainda.
+        </p>
+        {open}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <ul className="flex flex-col divide-y divide-border">
+        {topics.map((topic) => (
+          <li key={topic.id}>
+            <TopicCard topic={topic} />
+          </li>
+        ))}
+      </ul>
+      <div>{open}</div>
     </div>
   );
 }

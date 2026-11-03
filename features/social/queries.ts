@@ -19,7 +19,9 @@ import {
   type NotificationsPayload,
   type Reader,
   type ReaderState,
+  type ForumNotice,
   type ReviewNotice,
+  type SuggestionNotice,
   type SuggestedReader,
 } from "./types";
 
@@ -152,7 +154,34 @@ const NOTIFICATION_TYPES = new Set<string>([
   "collection_copy",
   "collection_invite",
   "catalog_review",
+  "forum_reply",
+  "forum_mention",
+  "suggestion_status",
 ]);
+
+const text = (value: unknown) => (typeof value === "string" ? value : "");
+
+function forumOf(refs: unknown): ForumNotice | null {
+  const value = (refs ?? {}) as Record<string, unknown>;
+  return typeof value.topic_id === "string"
+    ? {
+        topicId: value.topic_id,
+        title: text(value.title),
+        replyId: typeof value.reply_id === "string" ? value.reply_id : null,
+      }
+    : null;
+}
+
+function suggestionOf(refs: unknown): SuggestionNotice | null {
+  const value = (refs ?? {}) as Record<string, unknown>;
+  return typeof value.suggestion_id === "string"
+    ? {
+        id: value.suggestion_id,
+        title: text(value.title),
+        status: text(value.status),
+      }
+    : null;
+}
 
 const REVIEW_KINDS = new Set<string>([
   "book_approved",
@@ -255,6 +284,12 @@ export async function readNotifications(
           actor: item.actor ? toReader(item.actor) : null,
           collection: collectionId ? (titles.get(collectionId) ?? null) : null,
           review: item.type === "catalog_review" ? reviewOf(item.refs) : null,
+          forum:
+            item.type === "forum_reply" || item.type === "forum_mention"
+              ? forumOf(item.refs)
+              : null,
+          suggestion:
+            item.type === "suggestion_status" ? suggestionOf(item.refs) : null,
           at: item.created_at,
           unread: item.read_at === null,
         },

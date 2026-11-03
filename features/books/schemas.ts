@@ -92,3 +92,57 @@ export const coverDesignSchema = z.object({
 });
 
 export type CoverDesign = z.infer<typeof coverDesignSchema>;
+
+const reason = z
+  .string({ error: "Conte o motivo" })
+  .trim()
+  .min(3, "Conte o motivo")
+  .max(1000, "Até 1.000 caracteres");
+
+/** Sugerir edição (MELHORIAS 7): os campos do livro, mais a sinopse, e o motivo. */
+export const suggestEditSchema = z.object({
+  bookId: z.uuid("Livro inválido"),
+  fields: manualBookSchema,
+  description: z
+    .string()
+    .trim()
+    .max(5000, "Até 5.000 caracteres")
+    .transform((description) => description || null),
+  reason,
+});
+
+export type SuggestEditInput = {
+  bookId: string;
+  fields: ManualBookFields;
+  description: string;
+  reason: string;
+};
+
+export const DELETE_KINDS = [
+  { value: "duplicado", label: "É duplicado de outro livro" },
+  { value: "improprio", label: "Conteúdo impróprio" },
+  { value: "inexistente", label: "O livro não existe" },
+  { value: "outro", label: "Outro motivo" },
+] as const;
+
+export type DeleteKind = (typeof DELETE_KINDS)[number]["value"];
+
+/** Sugerir exclusão: o duplicado leva o livro que fica (vira uma mescla). */
+export const suggestDeleteSchema = z
+  .object({
+    bookId: z.uuid("Livro inválido"),
+    kind: z.enum(
+      DELETE_KINDS.map((kind) => kind.value) as [DeleteKind, ...DeleteKind[]],
+      { error: "Escolha o motivo" },
+    ),
+    duplicateOf: z.uuid("Escolha o livro").nullable(),
+    reason,
+  })
+  .refine((input) => input.kind !== "duplicado" || input.duplicateOf, {
+    path: ["duplicateOf"],
+    message: "Escolha de qual livro ele é duplicado",
+  })
+  .refine((input) => input.duplicateOf !== input.bookId, {
+    path: ["duplicateOf"],
+    message: "Escolha outro livro",
+  });

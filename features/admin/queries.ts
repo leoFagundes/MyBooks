@@ -2,6 +2,8 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { toBookVisual } from "@/features/books/lib/to-book-visual";
+import type { BookVisual } from "@/features/books/types";
 import { avatarSrc } from "@/features/profile/lib/avatar";
 import { getViewer, type Viewer } from "@/lib/auth";
 import { getPublicEnv } from "@/lib/env";
@@ -64,7 +66,7 @@ export type Overview = {
   active: { week: number; month: number };
   books: { week: number; month: number; total: number };
   collections: { week: number; month: number; total: number };
-  pending: { genres: number };
+  pending: { genres: number; books: number; requests: number };
   growth: { week: string; users: number }[];
 };
 
@@ -290,6 +292,155 @@ export async function getAuditPage({
       after: row.after,
       reason: row.reason,
       createdAt: row.created_at,
+    })),
+  };
+}
+
+export type PendingBook = {
+  id: string;
+  visual: BookVisual;
+  subtitle: string | null;
+  description: string | null;
+  isbn13: string | null;
+  creator: string | null;
+  createdAt: string;
+  /** Em quantas estantes ele já está (todas, inclusive as privadas). */
+  shelves: number;
+};
+
+export type PendingRequest = {
+  id: string;
+  type: "edit" | "delete" | "merge";
+  reason: string;
+  createdAt: string;
+  requester: string | null;
+  book: { id: string; title: string; current: Record<string, unknown> };
+  changes: Record<string, unknown>;
+  base: Record<string, unknown>;
+  target: { id: string; title: string } | null;
+};
+
+export type PendingGenre = {
+  slug: string;
+  name: string;
+  creator: string | null;
+  createdAt: string;
+  favorites: number;
+};
+
+export type ModerationQueues = {
+  books: PendingBook[];
+  requests: PendingRequest[];
+  genres: PendingGenre[];
+};
+
+const record = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+/**
+ * As três filas da moderação (MELHORIAS 7): os livros manuais novos, as
+ * sugestões de edição, exclusão e mescla, e os gêneros criados por leitores.
+ * Com a chave secreta (o gênero pendente só quem criou vê pela RLS): só depois
+ * de conferir o papel (requireStaff na rota).
+ */
+export async function getModerationQueues(): Promise<ModerationQueues> {
+  const admin = createAdminClient();
+  const [books, requests, genres] = await Promise.all([
+    admin
+      .from("books")
+      .select(
+        "id, title, subtitle, authors, description, page_count, published_year, isbn_13, cover_url, cover_color, cover_style, created_at, creator:profiles!books_created_by_fkey(username)",
+      )
+      .eq("moderation_status", "pending")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true })
+      .limit(50),
+    admin
+      .from("book_change_requests")
+      .select(
+        "id, type, reason, changes, base_snapshot, created_at, requester:profiles!book_change_requests_user_id_fkey(username), book:books!book_change_requests_book_id_fkey(id, title, subtitle, authors, description, page_count, published_year, isbn_13), target:books!book_change_requests_target_book_id_fkey(id, title)",
+      )
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(50),
+    admin
+      .from("genres")
+      .select(
+        "id, slug, name, created_at, creator:profiles!genres_created_by_fkey(username)",
+      )
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(50),
+  ]);
+  if (books.error) throw books.error;
+  if (requests.error) throw requests.error;
+  if (genres.error) throw genres.error;
+
+  const bookIds = books.data.map((book) => book.id);
+  const genreIds = genres.data.map((genre) => genre.id);
+  const [shelves, favorites] = await Promise.all([
+    bookIds.length > 0
+      ? admin.from("user_books").select("book_id").in("book_id", bookIds)
+      : Promise.resolve({ data: [] as { book_id: string }[] }),
+    genreIds.length > 0
+      ? admin
+          .from("user_favorite_genres")
+          .select("genre_id")
+          .in("genre_id", genreIds)
+      : Promise.resolve({ data: [] as { genre_id: string }[] }),
+  ]);
+  const count = <T>(rows: T[] | null, key: (row: T) => string) => {
+    const counts = new Map<string, number>();
+    for (const row of rows ?? []) {
+      counts.set(key(row), (counts.get(key(row)) ?? 0) + 1);
+    }
+    return counts;
+  };
+  const shelfCounts = count(shelves.data, (row) => row.book_id);
+  const favoriteCounts = count(favorites.data, (row) => row.genre_id);
+
+  return {
+    books: books.data.map((book) => ({
+      id: book.id,
+      visual: toBookVisual(book),
+      subtitle: book.subtitle,
+      description: book.description,
+      isbn13: book.isbn_13,
+      creator: book.creator?.username ?? null,
+      createdAt: book.created_at,
+      shelves: shelfCounts.get(book.id) ?? 0,
+    })),
+    requests: requests.data.flatMap((request) => {
+      if (!request.book) return [];
+      const { id, title, ...current } = request.book;
+      const type =
+        request.type === "delete" || request.type === "merge"
+          ? request.type
+          : "edit";
+      return [
+        {
+          id: request.id,
+          type,
+          reason: request.reason,
+          createdAt: request.created_at,
+          requester: request.requester?.username ?? null,
+          book: { id, title, current: { title, ...current } },
+          changes: record(request.changes),
+          base: record(request.base_snapshot),
+          target: request.target
+            ? { id: request.target.id, title: request.target.title }
+            : null,
+        },
+      ];
+    }),
+    genres: genres.data.map((genre) => ({
+      slug: genre.slug,
+      name: genre.name,
+      creator: genre.creator?.username ?? null,
+      createdAt: genre.created_at,
+      favorites: favoriteCounts.get(genre.id) ?? 0,
     })),
   };
 }

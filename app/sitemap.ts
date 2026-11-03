@@ -20,6 +20,7 @@ async function publicPages() {
         supabase
           .from("books")
           .select("id, created_at")
+          .eq("moderation_status", "approved")
           .order("created_at", { ascending: false })
           .range(from, to),
       MAX_BOOKS,

@@ -175,6 +175,83 @@ export type Database = {
           },
         ]
       }
+      book_change_requests: {
+        Row: {
+          base_snapshot: Json
+          book_id: string
+          changes: Json
+          created_at: string
+          id: string
+          reason: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_book_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          base_snapshot?: Json
+          book_id: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          reason: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_book_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          base_snapshot?: Json
+          book_id?: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          reason?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_book_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_change_requests_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_change_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_change_requests_target_book_id_fkey"
+            columns: ["target_book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_change_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books: {
         Row: {
           authors: string[]
@@ -183,12 +260,16 @@ export type Database = {
           cover_url: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           genres: string[]
           id: string
           isbn_10: string | null
           isbn_13: string | null
           language: string | null
+          merged_into: string | null
+          moderation_note: string | null
+          moderation_status: string
           page_count: number | null
           published_year: number | null
           source: string
@@ -203,12 +284,16 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           genres?: string[]
           id?: string
           isbn_10?: string | null
           isbn_13?: string | null
           language?: string | null
+          merged_into?: string | null
+          moderation_note?: string | null
+          moderation_status?: string
           page_count?: number | null
           published_year?: number | null
           source: string
@@ -223,12 +308,16 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
           genres?: string[]
           id?: string
           isbn_10?: string | null
           isbn_13?: string | null
           language?: string | null
+          merged_into?: string | null
+          moderation_note?: string | null
+          moderation_status?: string
           page_count?: number | null
           published_year?: number | null
           source?: string
@@ -242,6 +331,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "books_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "books"
             referencedColumns: ["id"]
           },
         ]
@@ -889,6 +985,7 @@ export type Database = {
           username: string
         }[]
       }
+      book_redirect: { Args: { book: string }; Returns: string }
       copy_collection: { Args: { source: string }; Returns: string }
       feed_activities: {
         Args: { before_at?: string; before_id?: string; max_rows?: number }
@@ -962,6 +1059,24 @@ export type Database = {
           score: number
         }[]
       }
+      review_change_request: {
+        Args: { approve: boolean; note?: string; request: string }
+        Returns: undefined
+      }
+      review_genre: {
+        Args: { approve: boolean; genre_slug: string; note?: string }
+        Returns: undefined
+      }
+      review_manual_book: {
+        Args: {
+          book: string
+          changes?: Json
+          decision: string
+          duplicate_of?: string
+          note?: string
+        }
+        Returns: undefined
+      }
       search_catalog: {
         Args: { max_results?: number; q: string }
         Returns: {
@@ -971,12 +1086,16 @@ export type Database = {
           cover_url: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description: string | null
           genres: string[]
           id: string
           isbn_10: string | null
           isbn_13: string | null
           language: string | null
+          merged_into: string | null
+          moderation_note: string | null
+          moderation_status: string
           page_count: number | null
           published_year: number | null
           source: string

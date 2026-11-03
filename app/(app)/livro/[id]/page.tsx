@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { isFeatureOn } from "@/features/admin/queries";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { BookHero } from "@/features/books/components/book-hero";
 import { BookPageSkeleton } from "@/features/books/components/book-page-skeleton";
 import { CommunityBlock } from "@/features/books/components/community-block";
 import { EditBookButton } from "@/features/books/components/edit-book-button";
+import { SuggestBookActions } from "@/features/books/components/suggest-book";
 import { bookColor } from "@/features/books/lib/color";
 import { AddToCollection } from "@/features/collections/components/add-to-collection";
 import { getEditableCollections } from "@/features/collections/queries";
@@ -19,6 +20,7 @@ import {
   type BookDetails,
   getBook,
   getBookCommunity,
+  getBookRedirect,
 } from "@/features/books/queries";
 import { genreLabel } from "@/features/profile/genres";
 import {
@@ -61,8 +63,14 @@ export default function BookPage({ params }: PageProps<"/livro/[id]">) {
 }
 
 async function BookContent({ params }: { params: Params }) {
-  const book = await getBook((await params).id);
-  if (!book) notFound();
+  const { id } = await params;
+  const book = await getBook(id);
+  if (!book) {
+    // Mesclado com outro (MELHORIAS 7): a URL antiga leva ao que ficou
+    const target = await getBookRedirect(id);
+    if (target) permanentRedirect(routes.book(target));
+    notFound();
+  }
 
   return (
     <PageTransition className="relative isolate">
@@ -74,11 +82,9 @@ async function BookContent({ params }: { params: Params }) {
           description={book.description}
           viewer3d={await isFeatureOn("visualizador_3d")}
           actions={
-            book.manualCreatorId ? (
-              <Suspense fallback={null}>
-                <EditBookAction book={book} />
-              </Suspense>
-            ) : null
+            <Suspense fallback={null}>
+              <BookActions book={book} />
+            </Suspense>
           }
         />
         <BookFacts book={book} />
@@ -100,11 +106,34 @@ async function BookContent({ params }: { params: Params }) {
   );
 }
 
-/** Quem cadastrou o livro à mão pode editá-lo (dados e capa). */
-async function EditBookAction({ book }: { book: BookDetails }) {
+const REVIEW_NOTE = {
+  pending:
+    "Em análise: o livro já está na sua estante e entra na busca do MyBooks quando a equipe aprovar.",
+  rejected: "A equipe não aprovou este livro para a busca.",
+} as const;
+
+/**
+ * Quem cadastrou o livro à mão o edita (dados e capa) e vê a revisão dele;
+ * as outras pessoas com conta sugerem uma edição ou a exclusão (MELHORIAS 7).
+ */
+async function BookActions({ book }: { book: BookDetails }) {
   const viewer = await getViewer();
-  if (!viewer || viewer.id !== book.manualCreatorId) return null;
-  return <EditBookButton book={book} />;
+  if (!viewer) return null;
+  if (viewer.id !== book.manualCreatorId) {
+    return <SuggestBookActions book={book} />;
+  }
+  const { status, note } = book.moderation;
+  return (
+    <div className="flex flex-col gap-3">
+      {status !== "approved" ? (
+        <p className="max-w-md rounded-control border border-border px-3 py-2 text-sm text-pretty text-muted-foreground">
+          {REVIEW_NOTE[status]}
+          {status === "rejected" && note ? ` Motivo: ${note}` : ""}
+        </p>
+      ) : null}
+      <EditBookButton book={book} />
+    </div>
+  );
 }
 
 /** Gêneros, ISBN e idioma, em mono e discretos, logo abaixo do topo. */

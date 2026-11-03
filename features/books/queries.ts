@@ -47,7 +47,12 @@ async function catalogRows(query: string, max: number) {
   const supabase = createPublicClient();
   const isbn = isbnFromQuery(query);
   const { data, error } = isbn
-    ? await supabase.from("books").select("*").eq("isbn_13", isbn).limit(max)
+    ? await supabase
+        .from("books")
+        .select("*")
+        .eq("isbn_13", isbn)
+        .eq("moderation_status", "approved")
+        .limit(max)
     : await supabase.rpc("search_catalog", { q: query, max_results: max });
   if (error) throw error;
   return data;
@@ -189,6 +194,11 @@ export type BookDetails = BookVisual & {
   genres: string[];
   /** Quem cadastrou à mão (só esse livro se edita); null nos das fontes. */
   manualCreatorId: string | null;
+  /** A revisão do livro manual (MELHORIAS 7): pendente só aparece para quem criou na busca. */
+  moderation: {
+    status: "pending" | "approved" | "rejected";
+    note: string | null;
+  };
 };
 
 /** O livro do catálogo, para a página dele. Id fora do formato: null (404). */
@@ -201,7 +211,7 @@ export async function getBook(id: string): Promise<BookDetails | null> {
   const { data, error } = await createPublicClient()
     .from("books")
     .select(
-      "id, title, subtitle, authors, description, page_count, published_year, isbn_13, isbn_10, language, genres, cover_url, cover_color, cover_style, source, created_by",
+      "id, title, subtitle, authors, description, page_count, published_year, isbn_13, isbn_10, language, genres, cover_url, cover_color, cover_style, source, created_by, moderation_status, moderation_note",
     )
     .eq("id", id)
     .maybeSingle();
@@ -216,7 +226,27 @@ export async function getBook(id: string): Promise<BookDetails | null> {
     language: data.language,
     genres: data.genres,
     manualCreatorId: data.source === "manual" ? data.created_by : null,
+    moderation: {
+      status:
+        data.moderation_status === "pending" ||
+        data.moderation_status === "rejected"
+          ? data.moderation_status
+          : "approved",
+      note: data.moderation_note,
+    },
   };
+}
+
+/** Para onde foi um livro mesclado com outro (o id que fica), ou null. */
+export async function getBookRedirect(id: string): Promise<string | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`book:${id}`);
+  if (!UUID.test(id)) return null;
+  const { data } = await createPublicClient().rpc("book_redirect", {
+    book: id,
+  });
+  return typeof data === "string" ? data : null;
 }
 
 export type CommunityReader = {
@@ -400,14 +430,17 @@ export async function getTrendingBooks(limit = 12): Promise<TrendingBooks> {
   const { data, error } = await createPublicClient()
     .from("trending_books")
     .select(
-      "week_adds, total_adds, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
+      "week_adds, total_adds, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year, moderation_status)",
     )
     .order("week_adds", { ascending: false })
     .order("total_adds", { ascending: false })
     .limit(48);
   if (error) throw error;
+  // Livro manual ainda sem revisão não entra nas listas públicas
   const rows = data.flatMap(({ week_adds, total_adds, book }) =>
-    book ? [{ week: week_adds ?? 0, total: total_adds ?? 0, book }] : [],
+    book?.moderation_status === "approved"
+      ? [{ week: week_adds ?? 0, total: total_adds ?? 0, book }]
+      : [],
   );
   const week = rows.filter((row) => row.week > 0);
   const weekly = week.length >= MIN_WEEKLY_BOOKS;
@@ -450,14 +483,21 @@ async function catalogDiscovery(genre: GenreSlug | null) {
       .from("trending_books")
       .select("total_adds, book:books(*)")
       .order("total_adds", { ascending: false })
-      .limit(48);
+      .limit(60);
     if (error) throw error;
-    return withCommunity(data.flatMap(({ book }) => (book ? [book] : [])));
+    return withCommunity(
+      data
+        .flatMap(({ book }) =>
+          book?.moderation_status === "approved" ? [book] : [],
+        )
+        .slice(0, 48),
+    );
   }
   const { data, error } = await supabase
     .from("books")
     .select("*")
     .contains("genres", [genre])
+    .eq("moderation_status", "approved")
     .limit(60);
   if (error) throw error;
   const results = await withCommunity(data);

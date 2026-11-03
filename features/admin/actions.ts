@@ -4,7 +4,13 @@ import { updateTag } from "next/cache";
 import type { z } from "zod";
 import type { ActionResult } from "@/lib/action";
 import type { Json } from "@/lib/supabase/database.types";
+import { proposedFields } from "@/features/books/lib/book-changes";
+import {
+  type ManualBookFields,
+  manualBookSchema,
+} from "@/features/books/schemas";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { getStaff, type Staff, type StaffRole } from "./queries";
 import {
   bannerSchema,
@@ -13,6 +19,9 @@ import {
   maintenanceSchema,
   moderatorSchema,
   removeContentSchema,
+  reviewBookSchema,
+  reviewGenreSchema,
+  reviewRequestSchema,
   sanctionSchema,
 } from "./schemas";
 
@@ -339,4 +348,153 @@ export async function saveFeatures(input: unknown): Promise<ActionResult> {
   const parsed = featuresSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   return saveSetting("features", parsed.data);
+}
+
+// Quem tem o livro na estante: a mescla muda essas estantes de livro
+async function shelvesOf(admin: Admin, bookId: string) {
+  const { data } = await admin
+    .from("user_books")
+    .select("user_id")
+    .eq("book_id", bookId);
+  return (data ?? []).map((row) => row.user_id);
+}
+
+function refreshBooks(bookIds: (string | null)[], userIds: string[] = []) {
+  updateTag("catalog");
+  updateTag("explore");
+  for (const id of bookIds) if (id) updateTag(`book:${id}`);
+  for (const id of userIds) updateTag(`shelf:${id}`);
+}
+
+/**
+ * Revisa um livro manual: aprovar (com ou sem edição), rejeitar com o motivo
+ * ou mesclar com o livro de que ele é duplicado. A função do banco confere o
+ * papel de novo e avisa quem cadastrou.
+ */
+export async function reviewManualBook(
+  input: unknown,
+  edit?: { fields: ManualBookFields; description: string },
+): Promise<ActionResult> {
+  const parsed = reviewBookSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const staff = await staffWith("moderator");
+  if (!staff) return DENIED;
+  const data = parsed.data;
+
+  let changes: Record<string, unknown> | null = null;
+  if (edit && data.decision === "approve") {
+    const fields = manualBookSchema.safeParse(edit.fields);
+    if (!fields.success) return invalid(fields.error);
+    changes = proposedFields(fields.data, edit.description.trim() || null);
+  }
+  const admin = createAdminClient();
+  const moved =
+    data.decision === "merge" ? await shelvesOf(admin, data.bookId) : [];
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_manual_book", {
+    book: data.bookId,
+    decision: data.decision,
+    note: data.decision === "approve" ? undefined : (data.note ?? undefined),
+    changes: (changes ?? undefined) as Json | undefined,
+    duplicate_of: data.decision === "merge" ? data.duplicateOf : undefined,
+  });
+  if (error) return { ok: false, error: reviewError(error.message) };
+  try {
+    await audit(admin, staff, {
+      action: `livro.${data.decision === "approve" ? (changes ? "editar-e-aprovar" : "aprovar") : data.decision === "reject" ? "rejeitar" : "mesclar"}`,
+      targetType: "livro",
+      targetId: data.bookId,
+      after:
+        changes ??
+        (data.decision === "merge" ? { mesclado_em: data.duplicateOf } : null),
+      reason: data.decision === "approve" ? null : (data.note ?? null),
+    });
+  } catch {
+    // A decisão valeu; só o registro falhou
+  }
+  refreshBooks(
+    [data.bookId, data.decision === "merge" ? data.duplicateOf : null],
+    moved,
+  );
+  return { ok: true, data: undefined };
+}
+
+/** Aprova (aplica a mudança) ou rejeita (com a nota) uma sugestão. */
+export async function reviewChangeRequest(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = reviewRequestSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const staff = await staffWith("moderator");
+  if (!staff) return DENIED;
+  const { requestId, approve, note } = parsed.data;
+  const admin = createAdminClient();
+  const { data: request } = await admin
+    .from("book_change_requests")
+    .select("book_id, target_book_id, type, changes")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!request) return { ok: false, error: "Essa sugestão não existe mais." };
+  const moved =
+    approve && request.type === "merge"
+      ? await shelvesOf(admin, request.book_id)
+      : [];
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_change_request", {
+    request: requestId,
+    approve,
+    note: note || undefined,
+  });
+  if (error) return { ok: false, error: reviewError(error.message) };
+  try {
+    await audit(admin, staff, {
+      action: approve ? "sugestao.aprovar" : "sugestao.rejeitar",
+      targetType: "livro",
+      targetId: request.book_id,
+      after: { tipo: request.type, mudanca: request.changes },
+      reason: note || null,
+    });
+  } catch {
+    // Idem
+  }
+  refreshBooks([request.book_id, request.target_book_id], moved);
+  return { ok: true, data: undefined };
+}
+
+/** Aprova ou recusa um gênero criado por um leitor (MELHORIAS 5.4). */
+export async function reviewGenre(input: unknown): Promise<ActionResult> {
+  const parsed = reviewGenreSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const staff = await staffWith("moderator");
+  if (!staff) return DENIED;
+  const { slug, approve, note } = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_genre", {
+    genre_slug: slug,
+    approve,
+    note: note || undefined,
+  });
+  if (error) return { ok: false, error: reviewError(error.message) };
+  try {
+    await audit(createAdminClient(), staff, {
+      action: approve ? "genero.aprovar" : "genero.recusar",
+      targetType: "genero",
+      targetId: slug,
+      reason: note || null,
+    });
+  } catch {
+    // Idem
+  }
+  return { ok: true, data: undefined };
+}
+
+// As mensagens das funções do banco, em português, para a janela
+function reviewError(message: string) {
+  if (message.includes("não encontrad"))
+    return "Já foi revisado por outra pessoa.";
+  if (message.includes("diga o motivo")) return "Diga o motivo.";
+  if (message.includes("consigo mesmo")) return "Escolha outro livro.";
+  if (message.includes("não existe"))
+    return "O livro que fica não existe mais.";
+  return "Não deu para concluir agora. Tente de novo.";
 }

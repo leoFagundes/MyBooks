@@ -24,7 +24,26 @@ export type SuggestedReader = Reader & {
 export type FollowRequest = { reader: Reader; at: string };
 
 export type NotificationType =
-  "follow" | "collection_like" | "collection_copy" | "collection_invite";
+  | "follow"
+  | "collection_like"
+  | "collection_copy"
+  | "collection_invite"
+  | "catalog_review";
+
+/** O resultado de uma revisão da equipe (MELHORIAS 7), no aviso catalog_review. */
+export type ReviewNotice = {
+  kind:
+    | "book_approved"
+    | "book_rejected"
+    | "book_merged"
+    | "suggestion_approved"
+    | "suggestion_rejected"
+    | "genre_approved"
+    | "genre_rejected";
+  bookId: string | null;
+  title: string;
+  note: string | null;
+};
 
 /** Um aviso do popover (os pedidos para seguir vêm à parte). */
 export type NotificationItem = {
@@ -33,6 +52,8 @@ export type NotificationItem = {
   actor: Reader | null;
   /** A coleção curtida, copiada ou do convite, enquanto quem vê puder vê-la. */
   collection: { id: string; title: string } | null;
+  /** Só no catalog_review: o que a equipe decidiu. */
+  review: ReviewNotice | null;
   at: string;
   unread: boolean;
 };

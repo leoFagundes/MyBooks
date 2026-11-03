@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ScrollText,
   Settings2,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,6 +27,13 @@ const ITEMS = [
     href: routes.adminUsuarios,
     label: "Usuários",
     icon: Users,
+    admin: false,
+  },
+  {
+    segment: "moderacao",
+    href: routes.adminModeracao,
+    label: "Moderação",
+    icon: ShieldCheck,
     admin: false,
   },
   {

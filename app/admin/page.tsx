@@ -75,15 +75,20 @@ async function Overview() {
           value={collections.total}
           detail={`${formatNumber(collections.week)} na semana · ${formatNumber(collections.month)} em 30 dias`}
         />
-        <div className="flex flex-col gap-1 rounded-card border border-border p-5">
+        <Link
+          href={routes.adminModeracao}
+          className="flex flex-col gap-1 rounded-card border border-border p-5 transition-colors hover:bg-muted"
+        >
           <p className="text-sm text-muted-foreground">Esperando revisão</p>
           <p className="font-mono text-3xl tracking-tight">
-            {formatNumber(pending.genres)}
+            {formatNumber(pending.books + pending.requests + pending.genres)}
           </p>
           <p className="font-mono text-xs text-muted-foreground">
-            {pending.genres === 1 ? "gênero sugerido" : "gêneros sugeridos"}
+            {formatNumber(pending.books)} livros ·{" "}
+            {formatNumber(pending.requests)} sugestões ·{" "}
+            {formatNumber(pending.genres)} gêneros
           </p>
-        </div>
+        </Link>
       </section>
       <GrowthChart weeks={overview.growth} />
       <p className="text-sm text-muted-foreground">

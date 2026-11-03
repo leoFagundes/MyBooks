@@ -33,6 +33,14 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   "configuracao.banner": "Mudou o aviso",
   "configuracao.maintenance": "Mudou a manutenção",
   "configuracao.features": "Mudou as funcionalidades",
+  "livro.aprovar": "Aprovou um livro",
+  "livro.editar-e-aprovar": "Editou e aprovou um livro",
+  "livro.rejeitar": "Rejeitou um livro",
+  "livro.mesclar": "Juntou livros duplicados",
+  "sugestao.aprovar": "Aceitou uma sugestão",
+  "sugestao.rejeitar": "Recusou uma sugestão",
+  "genero.aprovar": "Aprovou um gênero",
+  "genero.recusar": "Recusou um gênero",
 };
 
 const when = new Intl.DateTimeFormat("pt-BR", {

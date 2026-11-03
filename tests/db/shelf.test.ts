@@ -60,10 +60,11 @@ describe("catálogo", () => {
         asUser(LIA),
         rejects(insert(BENTO), "inserir em nome de outra pessoa"),
         insert(LIA),
-        rejects(
-          `update public.books set title = 'Outro' where created_by = '${LIA}';`,
-          "editar o catálogo",
-        ),
+        // A edição de quem cadastrou é a da Fase 2 das melhorias; a dos
+        // outros, a RLS filtra sem erro (0 linhas)
+        asUser(BENTO),
+        `update public.books set title = 'Outro' where created_by = '${LIA}';`,
+        asUser(LIA),
         rejects(
           `delete from public.books where created_by = '${LIA}';`,
           "apagar do catálogo",
@@ -148,6 +149,8 @@ describe("catálogo", () => {
         `insert into public.books (id, title, authors, source) values
           ('${SAGARANA}', 'Sagarana', '{"João Guimarães Rosa"}', 'manual'),
           ('${ESTORIAS}', 'Primeiras Estórias', '{"João Guimarães Rosa"}', 'manual');`,
+        // Manual nasce pendente (Fase 7): a busca pública só acha aprovados
+        `update public.books set moderation_status = 'approved' where id in ('${SAGARANA}', '${ESTORIAS}');`,
         asAnon(),
         check(
           `exists (select 1 from public.search_catalog('sertao') where title = 'Grande Sertão: Veredas')`,

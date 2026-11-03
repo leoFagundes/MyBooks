@@ -60,7 +60,6 @@ export function ResultCard({
         <BookLink
           book={visual}
           href={routes.book(catalogId)}
-          aria-label={result.title}
           className="block rounded-cover"
         >
           <BookCover book={visual} size="fill" />
@@ -70,13 +69,15 @@ export function ResultCard({
           type="button"
           onClick={open}
           disabled={opening || !outside}
-          aria-label={`${result.title}, ainda fora do MyBooks`}
           className={cn(
             "block cursor-pointer rounded-cover text-left transition-opacity disabled:cursor-progress",
             opening && "opacity-60",
           )}
         >
           <BookCover book={visual} size="fill" />
+          {/* O nome vem da capa ("Capa de…"); um aria-label próprio não
+              conteria o texto visível da capa tipográfica (WCAG 2.5.3) */}
+          <span className="sr-only">, ainda fora do MyBooks</span>
         </button>
       )}
       <p className="mt-2 line-clamp-2 font-serif text-sm leading-tight text-balance">

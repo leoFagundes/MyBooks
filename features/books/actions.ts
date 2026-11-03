@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { type ActionResult, fieldErrorsFrom } from "@/lib/action";
 import { requireViewer } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import {
   removeUploadedCover,
@@ -12,6 +13,7 @@ import {
   type UploadedCover,
 } from "./lib/cover-upload";
 import { bookRefSchema } from "@/features/shelf/schemas";
+import { diffFields, proposedFields } from "./lib/book-changes";
 import { catalogIdFor } from "./lib/catalog-ref";
 import { toBookVisual } from "./lib/to-book-visual";
 import {
@@ -20,6 +22,9 @@ import {
   type ManualBook,
   type ManualBookFields,
   manualBookSchema,
+  type SuggestEditInput,
+  suggestDeleteSchema,
+  suggestEditSchema,
 } from "./schemas";
 import type { BookVisual } from "./types";
 
@@ -247,4 +252,108 @@ export async function openExternalBook(
   }
   const viewer = await requireViewer();
   return catalogIdFor(parsed.data, viewer.id);
+}
+
+const PENDING_LIMIT =
+  "Você já tem 5 sugestões esperando revisão. Espere a equipe olhar.";
+
+/**
+ * Sugere uma edição a um livro que não é seu (MELHORIAS 7). Guarda só os
+ * campos que mudaram e o que eles eram (o retrato, para a equipe ver se o
+ * livro mudou depois). Quem cadastrou à mão edita direto.
+ */
+export async function suggestBookEdit(
+  input: SuggestEditInput,
+): Promise<ActionResult> {
+  const parsed = suggestEditSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Confira os campos.",
+      fieldErrors: fieldErrorsFrom(parsed.error),
+    };
+  }
+  const viewer = await requireViewer();
+  const { bookId, fields, description, reason } = parsed.data;
+  const supabase = await createClient();
+  const { data: book } = await supabase
+    .from("books")
+    .select(
+      "source, created_by, title, subtitle, authors, description, page_count, published_year, isbn_13",
+    )
+    .eq("id", bookId)
+    .maybeSingle();
+  if (!book) return { ok: false, error: "Livro não encontrado." };
+  if (book.source === "manual" && book.created_by === viewer.id) {
+    return {
+      ok: false,
+      error: "Você cadastrou este livro: pode editá-lo direto.",
+    };
+  }
+  const { changes, base } = diffFields(
+    book,
+    proposedFields(fields, description),
+  );
+  if (Object.keys(changes).length === 0) {
+    return { ok: false, error: "Nada mudou ainda: altere algum campo." };
+  }
+  const { error } = await supabase.from("book_change_requests").insert({
+    book_id: bookId,
+    user_id: viewer.id,
+    type: "edit",
+    changes: changes as Json,
+    base_snapshot: base as Json,
+    reason,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === "42501"
+          ? PENDING_LIMIT
+          : "Não deu para enviar agora. Tente de novo.",
+    };
+  }
+  return { ok: true, data: undefined };
+}
+
+/** Sugere excluir um livro; o duplicado vira uma sugestão de mescla. */
+export async function suggestBookDeletion(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = suggestDeleteSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Confira os campos.",
+    };
+  }
+  const viewer = await requireViewer();
+  const { bookId, kind, duplicateOf, reason } = parsed.data;
+  const supabase = await createClient();
+  const { data: book } = await supabase
+    .from("books")
+    .select("title, authors")
+    .eq("id", bookId)
+    .maybeSingle();
+  if (!book) return { ok: false, error: "Livro não encontrado." };
+  const { error } = await supabase.from("book_change_requests").insert({
+    book_id: bookId,
+    user_id: viewer.id,
+    type: kind === "duplicado" ? "merge" : "delete",
+    target_book_id: kind === "duplicado" ? duplicateOf : null,
+    changes: { kind } as Json,
+    base_snapshot: book as Json,
+    reason,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === "42501"
+          ? PENDING_LIMIT
+          : "Não deu para enviar agora. Tente de novo.",
+    };
+  }
+  return { ok: true, data: undefined };
 }

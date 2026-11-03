@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { BookCheck } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useTransition } from "react";
@@ -24,6 +25,7 @@ import {
 import type {
   FollowRequest,
   NotificationItem,
+  ReviewNotice,
   NotificationsPayload,
   Reader,
 } from "../types";
@@ -46,7 +48,38 @@ const VERB: Record<NotificationItem["type"], string> = {
   collection_like: "curtiu",
   collection_copy: "copiou",
   collection_invite: "chamou você para",
+  catalog_review: "",
 };
+
+// O que a equipe decidiu, numa frase (o título entra em destaque)
+const REVIEW: Record<ReviewNotice["kind"], { before: string; after: string }> =
+  {
+    book_approved: {
+      before: "Seu livro",
+      after: "foi aprovado e já aparece na busca.",
+    },
+    book_rejected: {
+      before: "Seu livro",
+      after: "não foi aprovado para a busca.",
+    },
+    book_merged: {
+      before: "",
+      after: "era um duplicado e foi juntado ao livro certo.",
+    },
+    suggestion_approved: {
+      before: "Sua sugestão para",
+      after: "foi aceita. Obrigado!",
+    },
+    suggestion_rejected: {
+      before: "Sua sugestão para",
+      after: "não foi aceita.",
+    },
+    genre_approved: {
+      before: "O gênero",
+      after: "foi aprovado e já aparece para todos.",
+    },
+    genre_rejected: { before: "O gênero", after: "não foi aprovado." },
+  };
 
 // Sem a coleção (apagada ou fora do alcance), a frase fica completa assim mesmo
 const WITHOUT_COLLECTION: Record<NotificationItem["type"], string> = {
@@ -54,9 +87,13 @@ const WITHOUT_COLLECTION: Record<NotificationItem["type"], string> = {
   collection_like: "uma coleção sua",
   collection_copy: "uma coleção sua",
   collection_invite: "uma coleção",
+  catalog_review: "",
 };
 
 function hrefOf(item: NotificationItem) {
+  if (item.type === "catalog_review") {
+    return item.review?.bookId ? routes.book(item.review.bookId) : null;
+  }
   if (item.type !== "follow" && item.collection) {
     return routes.collection(item.collection.id);
   }
@@ -259,7 +296,34 @@ function ItemRow({
   onNavigate: () => void;
 }) {
   const href = hrefOf(item);
-  const content = (
+  const review = item.type === "catalog_review" ? item.review : null;
+  const content = review ? (
+    <>
+      <span
+        aria-hidden
+        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted"
+      >
+        <BookCheck className="size-4" strokeWidth={1.5} />
+      </span>
+      <p className="min-w-0 flex-1 text-sm text-pretty">
+        <span className="sr-only">Da equipe do MyBooks: </span>
+        {REVIEW[review.kind].before ? `${REVIEW[review.kind].before} ` : ""}
+        <span className="font-medium">{review.title}</span>{" "}
+        {REVIEW[review.kind].after}
+        {review.note ? (
+          <span className="mt-0.5 block text-muted-foreground">
+            {review.note}
+          </span>
+        ) : null}{" "}
+        <RelativeTime iso={item.at} />
+      </p>
+      {fresh ? (
+        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground">
+          <span className="sr-only">Novo</span>
+        </span>
+      ) : null}
+    </>
+  ) : (
     <>
       <ReaderAvatar reader={item.actor} />
       <p className="min-w-0 flex-1 text-sm text-pretty">

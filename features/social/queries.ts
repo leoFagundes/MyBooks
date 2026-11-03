@@ -19,6 +19,7 @@ import {
   type NotificationsPayload,
   type Reader,
   type ReaderState,
+  type ReviewNotice,
   type SuggestedReader,
 } from "./types";
 
@@ -150,7 +151,32 @@ const NOTIFICATION_TYPES = new Set<string>([
   "collection_like",
   "collection_copy",
   "collection_invite",
+  "catalog_review",
 ]);
+
+const REVIEW_KINDS = new Set<string>([
+  "book_approved",
+  "book_rejected",
+  "book_merged",
+  "suggestion_approved",
+  "suggestion_rejected",
+  "genre_approved",
+  "genre_rejected",
+]);
+
+function reviewOf(refs: unknown): ReviewNotice | null {
+  if (!refs || typeof refs !== "object") return null;
+  const value = refs as Record<string, unknown>;
+  if (typeof value.kind !== "string" || !REVIEW_KINDS.has(value.kind)) {
+    return null;
+  }
+  return {
+    kind: value.kind as ReviewNotice["kind"],
+    bookId: typeof value.book_id === "string" ? value.book_id : null,
+    title: typeof value.title === "string" ? value.title : "",
+    note: typeof value.note === "string" ? value.note : null,
+  };
+}
 
 const isNotificationType = (value: string): value is NotificationItem["type"] =>
   NOTIFICATION_TYPES.has(value);
@@ -227,6 +253,7 @@ export async function readNotifications(
           type: item.type,
           actor: item.actor ? toReader(item.actor) : null,
           collection: collectionId ? (titles.get(collectionId) ?? null) : null,
+          review: item.type === "catalog_review" ? reviewOf(item.refs) : null,
           at: item.created_at,
           unread: item.read_at === null,
         },

@@ -29,12 +29,15 @@ export function BookHero({
   book,
   description,
   pending = false,
+  subtitle = null,
   viewer3d = true,
   actions,
 }: {
   book: BookVisual;
   description: string | null;
   pending?: boolean;
+  /** Logo abaixo do título, antes da autoria. */
+  subtitle?: string | null;
   /** O "Ver em 3D" (a funcionalidade visualizador_3d, do /admin). */
   viewer3d?: boolean;
   /** Embaixo do texto: o "Editar livro" de quem o cadastrou. */
@@ -80,6 +83,11 @@ export function BookHero({
           <HeroTextSkeleton />
         ) : (
           <>
+            {subtitle ? (
+              <p className="-mt-2 font-serif text-xl leading-snug text-pretty text-muted-foreground sm:text-2xl">
+                {subtitle}
+              </p>
+            ) : null}
             <p className="text-lg">{book.authors.join(", ")}</p>
             {meta ? (
               <p className="font-mono text-xs tracking-wide text-muted-foreground">

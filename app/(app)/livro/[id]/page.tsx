@@ -80,6 +80,7 @@ async function BookContent({ params }: { params: Params }) {
         <BookHero
           book={book}
           description={book.description}
+          subtitle={book.subtitle}
           viewer3d={await isFeatureOn("visualizador_3d")}
           actions={
             <Suspense fallback={null}>
@@ -143,7 +144,6 @@ function BookFacts({ book }: { book: BookDetails }) {
     return label ? [label] : [];
   });
   const facts = [
-    book.subtitle,
     book.isbn13 ? `ISBN ${book.isbn13}` : null,
     book.language ? book.language.toUpperCase() : null,
   ].filter(Boolean);

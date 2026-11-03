@@ -8,6 +8,7 @@ import { requireViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isFeatureOn } from "@/features/admin/queries";
 import { type Genre, genreSlug } from "./lib/genre-name";
 import {
   deleteAccountSchema,
@@ -266,6 +267,9 @@ export async function createGenre(
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Nome inválido",
     };
+  }
+  if (!(await isFeatureOn("criar_generos"))) {
+    return { ok: false, error: "Criar gêneros está desligado por enquanto." };
   }
   const viewer = await requireViewer();
   const name = parsed.data;

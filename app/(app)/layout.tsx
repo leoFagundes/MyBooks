@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/shell/bottom-nav";
 import { EstanteLink } from "@/components/shell/estante-link";
 import type { NavViewer } from "@/components/shell/nav-links";
 import { TopNav } from "@/components/shell/top-nav";
+import { SiteBanner } from "@/features/admin/components/site-banner";
 import { getViewer } from "@/lib/auth";
 
 // Só o que a barra desenha vai para o cliente
@@ -46,6 +47,7 @@ function estanteSlot(variant: "top" | "pill") {
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <PageTransition className="flex min-h-dvh flex-col pb-28 md:pb-0">
+      <SiteBanner />
       <TopNav
         slots={{
           estante: estanteSlot("top"),

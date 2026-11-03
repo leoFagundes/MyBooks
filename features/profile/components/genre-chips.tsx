@@ -25,7 +25,13 @@ const chip =
 const on = "border-foreground bg-foreground text-background";
 const off = "border-border bg-surface text-foreground hover:bg-muted";
 
-type Lookup = { matches: Genre[]; same: Genre | null; similar: Genre | null };
+type Lookup = {
+  matches: Genre[];
+  same: Genre | null;
+  similar: Genre | null;
+  /** Criar gêneros ligado no /admin. */
+  creating: boolean;
+};
 
 async function lookup(query: string, signal: AbortSignal): Promise<Lookup> {
   const response = await fetch(`/api/genres?q=${encodeURIComponent(query)}`, {
@@ -161,7 +167,8 @@ function GenreSearch({
     data?.similar && !selected.includes(data.similar.slug)
       ? data.similar
       : null;
-  const canCreate = !data?.same && typed.length >= 2;
+  const canCreate =
+    data?.creating !== false && !data?.same && typed.length >= 2;
 
   function pick(genre: Genre) {
     onPick(genre);

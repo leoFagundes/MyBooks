@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { routes } from "@/lib/routes";
+import { isFeatureOn } from "@/features/admin/queries";
 import { authErrorMessage } from "../errors";
 import { AuthCard } from "./auth-card";
 import { SignInPanel } from "./sign-in-panel";
@@ -52,6 +53,24 @@ export async function SignUpCard({
   searchParams: SearchParams;
 }) {
   const next = single((await searchParams).next);
+  if (!(await isFeatureOn("cadastro"))) {
+    return (
+      <AuthCard
+        title="Cadastros fechados por enquanto"
+        description="Estamos recebendo leitores novos aos poucos. Volte em breve."
+        footer={
+          <>
+            Já tem conta?{" "}
+            <Link href={routes.entrar} className={linkClasses}>
+              Entrar
+            </Link>
+          </>
+        }
+      >
+        {null}
+      </AuthCard>
+    );
+  }
   return (
     <AuthCard
       title="Crie sua estante"

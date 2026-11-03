@@ -37,7 +37,7 @@ export function carryAuth(from: NextResponse, to: NextResponse): NextResponse {
   return to;
 }
 
-/** Renova a sessão no proxy e diz quem está vendo (id ou null). */
+/** Renova a sessão no proxy e diz quem está vendo (id ou null), com o cliente. */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { supabaseUrl, supabasePublishableKey } = getPublicEnv();
@@ -53,5 +53,5 @@ export async function updateSession(request: NextRequest) {
 
   // Antes de montar qualquer resposta: é aqui que o token vencido é renovado
   const { data } = await supabase.auth.getClaims();
-  return { response, userId: data?.claims.sub ?? null };
+  return { response, userId: data?.claims.sub ?? null, supabase };
 }

@@ -29,11 +29,14 @@ export function BookHero({
   book,
   description,
   pending = false,
+  viewer3d = true,
   actions,
 }: {
   book: BookVisual;
   description: string | null;
   pending?: boolean;
+  /** O "Ver em 3D" (a funcionalidade visualizador_3d, do /admin). */
+  viewer3d?: boolean;
   /** Embaixo do texto: o "Editar livro" de quem o cadastrou. */
   actions?: React.ReactNode;
 }) {
@@ -43,19 +46,26 @@ export function BookHero({
   ]
     .filter(Boolean)
     .join(" · ");
+  const cover = (
+    <BookCover
+      book={book}
+      size="hero"
+      preload
+      sourceImage
+      transitionName={coverName(book.id)}
+      transitionShare={coverShare}
+    />
+  );
 
   return (
     <section className="grid items-start gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
-      <ViewIn3D book={book} description={description} pending={pending}>
-        <BookCover
-          book={book}
-          size="hero"
-          preload
-          sourceImage
-          transitionName={coverName(book.id)}
-          transitionShare={coverShare}
-        />
-      </ViewIn3D>
+      {viewer3d ? (
+        <ViewIn3D book={book} description={description} pending={pending}>
+          {cover}
+        </ViewIn3D>
+      ) : (
+        cover
+      )}
       <div className="flex flex-col gap-4 sm:pt-6">
         <ViewTransition
           name={titleName(book.id)}

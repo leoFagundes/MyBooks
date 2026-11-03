@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isFeatureOn } from "@/features/admin/queries";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
@@ -44,10 +45,11 @@ export default function SettingsPage() {
 async function Settings() {
   const viewer = await requireViewer();
   if (!viewer.onboarded) redirect(routes.onboarding);
-  const [profile, email, genres] = await Promise.all([
+  const [profile, email, genres, importing] = await Promise.all([
     getProfileByUsername(viewer.username),
     getAccountEmail(viewer.username),
     getOwnFavoriteGenres(viewer),
+    isFeatureOn("importar_goodreads"),
   ]);
   if (!profile) notFound();
   return (
@@ -55,7 +57,9 @@ async function Settings() {
       profile={profile}
       genres={genres}
       email={email}
-      importer={<GoodreadsImport username={profile.username} />}
+      importer={
+        importing ? <GoodreadsImport username={profile.username} /> : undefined
+      }
     />
   );
 }

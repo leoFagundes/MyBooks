@@ -3,6 +3,7 @@ import {
   sameGenre,
   similarGenre,
 } from "@/features/profile/lib/genre-name";
+import { isFeatureOn } from "@/features/admin/queries";
 import { getVisibleGenres } from "@/features/profile/queries";
 import { foldText } from "@/lib/text-match";
 
@@ -16,10 +17,13 @@ export async function GET(request: Request) {
     .trim()
     .slice(0, 40);
   try {
-    const genres = await getVisibleGenres();
+    const [genres, creating] = await Promise.all([
+      getVisibleGenres(),
+      isFeatureOn("criar_generos"),
+    ]);
     if (query.length < 2) {
       return Response.json(
-        { matches: [], same: null, similar: null },
+        { matches: [], same: null, similar: null, creating },
         { headers },
       );
     }
@@ -34,7 +38,7 @@ export async function GET(request: Request) {
       .slice(0, 8);
     const same = sameGenre(query, genres);
     const similar = same ? null : similarGenre(query, genres);
-    return Response.json({ matches, same, similar }, { headers });
+    return Response.json({ matches, same, similar, creating }, { headers });
   } catch {
     return Response.json({}, { status: 502 });
   }

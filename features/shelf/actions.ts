@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { isFeatureOn } from "@/features/admin/queries";
 import { z } from "zod";
 import { catalogIdFor } from "@/features/books/lib/catalog-ref";
 import { findOrCreateBook } from "@/features/books/lib/match";
@@ -346,6 +347,9 @@ export async function importBooksBatch(
   const parsed = importBatchSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: "Esses livros vieram num formato estranho." };
+  }
+  if (!(await isFeatureOn("importar_goodreads"))) {
+    return { ok: false, error: "A importação está desligada por enquanto." };
   }
   const viewer = await requireViewer();
   const supabase = await createClient();

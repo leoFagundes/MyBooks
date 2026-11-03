@@ -1,6 +1,7 @@
 "use server";
 
 import type { Route } from "next";
+import { isFeatureOn } from "@/features/admin/queries";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { type ActionResult, fieldErrorsFrom } from "@/lib/action";
@@ -75,6 +76,9 @@ export async function signUp(
       error: INVALID,
       fieldErrors: fieldErrorsFrom(parsed.error),
     };
+  }
+  if (!(await isFeatureOn("cadastro"))) {
+    return { ok: false, error: "Os cadastros estão fechados por enquanto." };
   }
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

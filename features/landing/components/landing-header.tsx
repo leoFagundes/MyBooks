@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/shell/logo";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { SiteBanner } from "@/features/admin/components/site-banner";
 import { routes } from "@/lib/routes";
 
 const link =
@@ -11,6 +12,7 @@ const link =
 export function LandingHeader() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <SiteBanner />
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Logo />
         <nav aria-label="Principal" className="flex items-center gap-1">

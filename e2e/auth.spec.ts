@@ -106,14 +106,17 @@ test.describe("entrar", () => {
     await expect(page.getByText("Digite seu e-mail")).toBeVisible();
   });
 
-  test("sem o Google ligado no projeto, o botão avisa com calma", async ({
-    page,
-  }) => {
+  // O Google está ligado no projeto (Fase 4 das melhorias): o botão vai ao
+  // authorize do Supabase, com a volta pelo /auth/callback
+  test("Continuar com Google leva ao login do Google", async ({ page }) => {
     await openSignIn(page);
-    await page.getByRole("button", { name: "Continuar com Google" }).click();
-    await expect(formAlert(page)).toHaveText(
-      /O login com Google ainda não está ligado/,
+    const authorize = page.waitForRequest(
+      (request) =>
+        request.url().includes("/auth/v1/authorize?provider=google") &&
+        request.url().includes(encodeURIComponent("/auth/callback")),
     );
+    await page.getByRole("button", { name: "Continuar com Google" }).click();
+    await authorize;
   });
 });
 

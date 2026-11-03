@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isFeatureOn } from "@/features/admin/queries";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -71,6 +72,7 @@ async function BookContent({ params }: { params: Params }) {
         <BookHero
           book={book}
           description={book.description}
+          viewer3d={await isFeatureOn("visualizador_3d")}
           actions={
             book.manualCreatorId ? (
               <Suspense fallback={null}>

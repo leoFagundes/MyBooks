@@ -180,7 +180,49 @@ export async function searchBooks(
   if (scope !== "catalog") sources.push(externalResults(query));
   const answers = await Promise.all(sources);
   if (answers.every((answer) => answer === null)) return null;
-  return dedupeResults(answers.flatMap((answer) => answer ?? [])).slice(0, 20);
+  const results = dedupeResults(answers.flatMap((answer) => answer ?? []));
+  return (await withoutRemoved(results)).slice(0, 20);
+}
+
+// As chaves de um resultado de fora: a obra na fonte e o ISBN-13
+const outsideKeys = (result: SearchResult) => [
+  `${result.source}:${result.sourceId}`,
+  ...(result.isbn13 ? [`isbn:${result.isbn13}`] : []),
+];
+
+// Quais chaves são de livros que a moderação tirou (ou mesclou). Guardado
+// por conjunto de chaves; excluir ou restaurar atualiza a tag catalog
+async function removedKeys(keys: string[]): Promise<string[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("catalog");
+  if (keys.length === 0) return [];
+  const { data, error } = await createPublicClient().rpc("removed_book_keys", {
+    keys,
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Tira dos resultados de fora os livros que a moderação excluiu do catálogo:
+ * a Open Library ainda os tem, e escolhê-los não os traria de volta. Sem
+ * resposta do banco, nada sai.
+ */
+async function withoutRemoved(results: SearchResult[]) {
+  const keys = [
+    ...new Set(
+      results.flatMap((result) =>
+        result.catalogId ? [] : outsideKeys(result),
+      ),
+    ),
+  ].sort();
+  const removed = new Set(await removedKeys(keys).catch(() => []));
+  if (removed.size === 0) return results;
+  return results.filter(
+    (result) =>
+      result.catalogId || !outsideKeys(result).some((key) => removed.has(key)),
+  );
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -532,7 +574,7 @@ export async function getDiscoveryPool(
   const external = [...trending, ...bySubject.flat()].filter(
     (result) => result.coverUrl,
   );
-  return dedupeResults([...catalog, ...external]);
+  return withoutRemoved(dedupeResults([...catalog, ...external]));
 }
 
 /** O livro de fora que a grade mostrou, achado de novo no mesmo conjunto (do cache). */

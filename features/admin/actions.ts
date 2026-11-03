@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 import type { z } from "zod";
 import type { ActionResult } from "@/lib/action";
 import type { Json } from "@/lib/supabase/database.types";
-import { proposedFields } from "@/features/books/lib/book-changes";
+import { diffFields, proposedFields } from "@/features/books/lib/book-changes";
 import {
   type ManualBookFields,
   manualBookSchema,
@@ -17,6 +17,7 @@ import {
   featuresSchema,
   liftSanctionSchema,
   maintenanceSchema,
+  moderateBookSchema,
   moderatorSchema,
   removeContentSchema,
   reviewBookSchema,
@@ -497,4 +498,80 @@ function reviewError(message: string) {
   if (message.includes("não existe"))
     return "O livro que fica não existe mais.";
   return "Não deu para concluir agora. Tente de novo.";
+}
+
+/**
+ * Exclui (lógico, com o motivo), restaura ou edita um livro pela tela Livros
+ * do painel. A função do banco confere o papel e avisa quem cadastrou quando
+ * o livro sai do catálogo.
+ */
+export async function moderateBook(
+  input: unknown,
+  edit?: { fields: ManualBookFields; description: string },
+): Promise<ActionResult> {
+  const parsed = moderateBookSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const staff = await staffWith("moderator");
+  if (!staff) return DENIED;
+  const data = parsed.data;
+  const admin = createAdminClient();
+
+  let changes: Record<string, unknown> | null = null;
+  if (data.action === "edit") {
+    if (!edit) return { ok: false, error: "Nada mudou." };
+    const fields = manualBookSchema.safeParse(edit.fields);
+    if (!fields.success) return invalid(fields.error);
+    const { data: current } = await admin
+      .from("books")
+      .select(
+        "title, subtitle, authors, description, page_count, published_year, isbn_13",
+      )
+      .eq("id", data.bookId)
+      .maybeSingle();
+    if (!current) return { ok: false, error: "Livro não encontrado." };
+    changes = diffFields(
+      current,
+      proposedFields(fields.data, edit.description.trim() || null),
+    ).changes;
+    if (Object.keys(changes).length === 0) {
+      return { ok: false, error: "Nada mudou ainda: altere algum campo." };
+    }
+  }
+
+  const shelves = await shelvesOf(admin, data.bookId);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("moderate_book", {
+    book: data.bookId,
+    action: data.action,
+    note: data.action === "delete" ? data.note : undefined,
+    changes: (changes ?? undefined) as Json | undefined,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: error.message.includes("isbn")
+        ? "Esse ISBN já é de outro livro."
+        : reviewError(error.message),
+    };
+  }
+  const name =
+    data.action === "delete"
+      ? "excluir"
+      : data.action === "restore"
+        ? "restaurar"
+        : "editar";
+  try {
+    await audit(admin, staff, {
+      action: `livro.${name}`,
+      targetType: "livro",
+      targetId: data.bookId,
+      after: changes,
+      reason: data.action === "delete" ? data.note : null,
+    });
+  } catch {
+    // A decisão valeu; só o registro falhou
+  }
+  // A estante de quem tem o livro some ou volta com ele
+  refreshBooks([data.bookId], data.action === "edit" ? [] : shelves);
+  return { ok: true, data: undefined };
 }

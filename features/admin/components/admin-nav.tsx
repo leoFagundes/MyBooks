@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  BookCopy,
   LayoutDashboard,
   ScrollText,
   Settings2,
@@ -34,6 +35,13 @@ const ITEMS = [
     href: routes.adminModeracao,
     label: "Moderação",
     icon: ShieldCheck,
+    admin: false,
+  },
+  {
+    segment: "livros",
+    href: routes.adminLivros,
+    label: "Livros",
+    icon: BookCopy,
     admin: false,
   },
   {

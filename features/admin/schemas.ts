@@ -92,3 +92,14 @@ export const reviewGenreSchema = z.object({
   approve: z.boolean(),
   note: z.string().trim().max(500, "Até 500 caracteres"),
 });
+
+/** Excluir, restaurar ou editar um livro pelo painel. */
+export const moderateBookSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("delete"),
+    bookId: z.uuid("Livro inválido"),
+    note: reason,
+  }),
+  z.object({ action: z.literal("restore"), bookId: z.uuid("Livro inválido") }),
+  z.object({ action: z.literal("edit"), bookId: z.uuid("Livro inválido") }),
+]);

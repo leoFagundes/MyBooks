@@ -35,6 +35,7 @@ import { formatNumber } from "@/lib/format";
 import { routes } from "@/lib/routes";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { reviewChangeRequest, reviewGenre, reviewManualBook } from "../actions";
+import { BookFieldsForm } from "./book-fields-form";
 import type {
   ModerationQueues as Queues,
   PendingBook,
@@ -386,91 +387,31 @@ function EditAndApprove({
   book: PendingBook;
   onDone: () => void;
 }) {
-  const id = useId();
-  const { visual } = book;
-  const [values, setValues] = useState({
-    title: visual.title,
-    subtitle: book.subtitle ?? "",
-    authors: visual.authors.join(", "),
-    publishedYear: visual.publishedYear ? String(visual.publishedYear) : "",
-    pageCount: visual.pageCount ? String(visual.pageCount) : "",
-    isbn: book.isbn13 ?? "",
-    description: book.description ?? "",
-  });
-  const review = useReview();
-  const field = (key: keyof typeof values, label: string, mono = false) => (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={`${id}-${key}`}>{label}</Label>
-      <Input
-        id={`${id}-${key}`}
-        value={values[key]}
-        className={mono ? "font-mono" : undefined}
-        onChange={(event) =>
-          setValues((current) => ({ ...current, [key]: event.target.value }))
-        }
-      />
-    </div>
-  );
+  const queryClient = useQueryClient();
   return (
-    <form
-      className="flex flex-col gap-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const { description, ...fields } = values;
-        review.run(
-          () =>
-            reviewManualBook(
-              { decision: "approve", bookId: book.id },
-              { fields, description },
-            ),
-          "Livro editado e aprovado",
-          onDone,
-        );
+    <BookFieldsForm
+      title="Editar e aprovar"
+      description="Corrija o que precisar; o livro entra na busca assim."
+      confirm="Salvar e aprovar"
+      success="Livro editado e aprovado"
+      initial={{
+        ...book.visual,
+        subtitle: book.subtitle,
+        isbn13: book.isbn13,
+        description: book.description,
       }}
-    >
-      <DialogHeader>
-        <DialogTitle>Editar e aprovar</DialogTitle>
-        <DialogDescription>
-          Corrija o que precisar; o livro entra na busca assim.
-        </DialogDescription>
-      </DialogHeader>
-      {field("title", "Título")}
-      {field("subtitle", "Subtítulo")}
-      {field("authors", "Autoria (separe com vírgula)")}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {field("publishedYear", "Ano", true)}
-        {field("pageCount", "Páginas", true)}
-        {field("isbn", "ISBN", true)}
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${id}-description`}>Sinopse</Label>
-        <Textarea
-          id={`${id}-description`}
-          rows={4}
-          maxLength={5000}
-          value={values.description}
-          onChange={(event) =>
-            setValues((current) => ({
-              ...current,
-              description: event.target.value,
-            }))
-          }
-        />
-      </div>
-      <ErrorLine error={review.error} />
-      <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onDone}>
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          disabled={review.pending}
-          aria-busy={review.pending}
-        >
-          {review.pending ? "Salvando…" : "Salvar e aprovar"}
-        </Button>
-      </DialogFooter>
-    </form>
+      onSubmit={async (fields, description) => {
+        const result = await reviewManualBook(
+          { decision: "approve", bookId: book.id },
+          { fields, description },
+        );
+        if (result.ok) {
+          await queryClient.invalidateQueries({ queryKey: QUEUES_KEY });
+        }
+        return result;
+      }}
+      onDone={onDone}
+    />
   );
 }
 

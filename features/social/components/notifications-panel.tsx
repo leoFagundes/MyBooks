@@ -66,6 +66,10 @@ const REVIEW: Record<ReviewNotice["kind"], { before: string; after: string }> =
       before: "",
       after: "era um duplicado e foi juntado ao livro certo.",
     },
+    book_removed: {
+      before: "Seu livro",
+      after: "foi tirado do catálogo do MyBooks.",
+    },
     suggestion_approved: {
       before: "Sua sugestão para",
       after: "foi aceita. Obrigado!",

@@ -158,6 +158,7 @@ const REVIEW_KINDS = new Set<string>([
   "book_approved",
   "book_rejected",
   "book_merged",
+  "book_removed",
   "suggestion_approved",
   "suggestion_rejected",
   "genre_approved",

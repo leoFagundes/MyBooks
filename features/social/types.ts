@@ -36,6 +36,7 @@ export type ReviewNotice = {
     | "book_approved"
     | "book_rejected"
     | "book_merged"
+    | "book_removed"
     | "suggestion_approved"
     | "suggestion_rejected"
     | "genre_approved"

@@ -444,3 +444,101 @@ export async function getModerationQueues(): Promise<ModerationQueues> {
     })),
   };
 }
+
+export const BOOK_FILTERS = ["pendentes", "rejeitados", "excluidos"] as const;
+export type BookFilter = (typeof BOOK_FILTERS)[number];
+export const BOOK_SORTS = ["created_at", "title", "shelves"] as const;
+export type BookSort = (typeof BOOK_SORTS)[number];
+
+export type AdminBookRow = {
+  visual: BookVisual;
+  source: "manual" | "google" | "openlibrary";
+  status: "pending" | "approved" | "rejected";
+  note: string | null;
+  deletedAt: string | null;
+  mergedInto: { id: string; title: string } | null;
+  creator: string | null;
+  createdAt: string;
+  shelves: number;
+};
+
+/**
+ * Uma página dos livros do painel: os que não vieram da Open Library
+ * (cadastrados à mão e do Google Books) e, no filtro, os excluídos.
+ */
+export async function getBooksPage({
+  q,
+  filter,
+  sort,
+  direction,
+  page,
+  size,
+}: {
+  q: string;
+  filter: BookFilter | null;
+  sort: BookSort;
+  direction: "asc" | "desc";
+  page: number;
+  size: number;
+}): Promise<{ rows: AdminBookRow[]; total: number }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_books", {
+    q,
+    status_filter: filter ?? undefined,
+    sort,
+    direction,
+    page,
+    page_size: size,
+  });
+  if (error) throw error;
+  return {
+    total: Number(data[0]?.total ?? 0),
+    rows: data.map((row) => ({
+      visual: toBookVisual(row),
+      source:
+        row.source === "manual" || row.source === "google"
+          ? row.source
+          : "openlibrary",
+      status:
+        row.moderation_status === "pending" ||
+        row.moderation_status === "rejected"
+          ? row.moderation_status
+          : "approved",
+      note: row.moderation_note,
+      deletedAt: row.deleted_at,
+      mergedInto:
+        row.merged_into && row.merged_title
+          ? { id: row.merged_into, title: row.merged_title }
+          : null,
+      creator: row.creator,
+      createdAt: row.created_at,
+      shelves: Number(row.shelves),
+    })),
+  };
+}
+
+export type AdminBookDetails = {
+  id: string;
+  subtitle: string | null;
+  description: string | null;
+  isbn13: string | null;
+};
+
+/** Os campos que a edição do painel preenche (chave secreta: só depois do papel). */
+export async function getAdminBookDetails(
+  id: string,
+): Promise<AdminBookDetails | null> {
+  const { data } = await createAdminClient()
+    .from("books")
+    .select("id, subtitle, description, isbn_13")
+    .eq("id", id)
+    .maybeSingle();
+  return data
+    ? {
+        id: data.id,
+        subtitle: data.subtitle,
+        description: data.description,
+        isbn13: data.isbn_13,
+      }
+    : null;
+}

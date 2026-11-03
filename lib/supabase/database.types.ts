@@ -961,6 +961,36 @@ export type Database = {
       }
     }
     Functions: {
+      admin_books: {
+        Args: {
+          direction?: string
+          page?: number
+          page_size?: number
+          q?: string
+          sort?: string
+          status_filter?: string
+        }
+        Returns: {
+          authors: string[]
+          cover_color: string
+          cover_style: string
+          cover_url: string
+          created_at: string
+          creator: string
+          deleted_at: string
+          id: string
+          merged_into: string
+          merged_title: string
+          moderation_note: string
+          moderation_status: string
+          page_count: number
+          published_year: number
+          shelves: number
+          source: string
+          title: string
+          total: number
+        }[]
+      }
       admin_overview: { Args: never; Returns: Json }
       admin_users: {
         Args: {
@@ -1008,6 +1038,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       merge_preferences: { Args: { patch: Json }; Returns: Json }
+      moderate_book: {
+        Args: { action: string; book: string; changes?: Json; note?: string }
+        Returns: undefined
+      }
       popular_collections: {
         Args: { max_results?: number }
         Returns: {
@@ -1059,6 +1093,7 @@ export type Database = {
           score: number
         }[]
       }
+      removed_book_keys: { Args: { keys: string[] }; Returns: string[] }
       review_change_request: {
         Args: { approve: boolean; note?: string; request: string }
         Returns: undefined

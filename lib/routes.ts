@@ -17,6 +17,7 @@ export const routes = {
   admin: "/admin" as const satisfies Route,
   adminUsuarios: "/admin/usuarios" as const satisfies Route,
   adminModeracao: "/admin/moderacao" as const satisfies Route,
+  adminLivros: "/admin/livros" as const satisfies Route,
   adminConfiguracoes: "/admin/configuracoes" as const satisfies Route,
   adminAuditoria: "/admin/auditoria" as const satisfies Route,
   profile: (username: string) => `/@${username}` as Route,

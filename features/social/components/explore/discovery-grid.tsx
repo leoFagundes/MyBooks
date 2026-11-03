@@ -190,7 +190,12 @@ export function DiscoveryGrid() {
 
 function DiscoverySkeleton() {
   return (
-    <div aria-busy aria-label="Carregando livros" className={COVER_GRID}>
+    <div
+      role="status"
+      aria-busy
+      aria-label="Carregando livros"
+      className={COVER_GRID}
+    >
       {Array.from({ length: 12 }, (_, cover) => (
         <div key={cover} className="flex flex-col gap-2">
           <Skeleton className="aspect-2/3 rounded-cover" />

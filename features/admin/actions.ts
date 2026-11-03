@@ -1,7 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import type { z } from "zod";
+import { z } from "zod";
 import type { ActionResult } from "@/lib/action";
 import type { Json } from "@/lib/supabase/database.types";
 import { diffFields, proposedFields } from "@/features/books/lib/book-changes";
@@ -9,6 +9,7 @@ import {
   type ManualBookFields,
   manualBookSchema,
 } from "@/features/books/schemas";
+import { genreSlug } from "@/features/profile/lib/genre-name";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getStaff, type Staff, type StaffRole } from "./queries";
@@ -573,5 +574,111 @@ export async function moderateBook(
   }
   // A estante de quem tem o livro some ou volta com ele
   refreshBooks([data.bookId], data.action === "edit" ? [] : shelves);
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Revisa as denúncias de um alvo da comunidade: ocultar o conteúdo (e dar as
+ * denúncias por resolvidas) ou dispensar. A função do banco confere o papel.
+ */
+export async function reviewReport(
+  reportId: string,
+  hide: boolean,
+): Promise<ActionResult> {
+  const staff = await staffWith("moderator");
+  if (!staff) return DENIED;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_report", {
+    report: reportId,
+    hide,
+  });
+  if (error) return { ok: false, error: reviewError(error.message) };
+  try {
+    await audit(createAdminClient(), staff, {
+      action: hide ? "denuncia.ocultar" : "denuncia.dispensar",
+      targetType: "denuncia",
+      targetId: reportId,
+    });
+  } catch {
+    // A decisão valeu; só o registro falhou
+  }
+  updateTag("forum");
+  return { ok: true, data: undefined };
+}
+
+const categorySchema = z.object({
+  id: z.uuid().nullable(),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Um nome com pelo menos 2 letras")
+    .max(40, "Até 40 letras"),
+  description: z.string().trim().max(200, "Até 200 caracteres"),
+  position: z.coerce.number().int().min(0).max(999),
+});
+
+/** Cria ou muda uma categoria do fórum (só o admin). */
+export async function saveCategory(
+  input: z.input<typeof categorySchema>,
+): Promise<ActionResult> {
+  const parsed = categorySchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const staff = await staffWith("admin");
+  if (!staff) return DENIED;
+  const { id, name, description, position } = parsed.data;
+  const admin = createAdminClient();
+  const row = { name, description: description || null, position };
+  const { error } = id
+    ? await admin.from("forum_categories").update(row).eq("id", id)
+    : await admin
+        .from("forum_categories")
+        .insert({ ...row, slug: genreSlug(name) });
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === "23505"
+          ? "Já existe uma categoria com esse nome."
+          : "Não deu para salvar agora. Tente de novo.",
+    };
+  }
+  try {
+    await audit(admin, staff, {
+      action: id ? "categoria.editar" : "categoria.criar",
+      targetType: "categoria",
+      targetId: id,
+      after: row,
+    });
+  } catch {
+    // Idem
+  }
+  updateTag("forum");
+  return { ok: true, data: undefined };
+}
+
+/** Exclui uma categoria vazia (com tópicos, mova-os antes). */
+export async function deleteCategory(id: string): Promise<ActionResult> {
+  const staff = await staffWith("admin");
+  if (!staff) return DENIED;
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("forum_topics")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", id);
+  if ((count ?? 0) > 0) {
+    return { ok: false, error: "A categoria tem tópicos: mova-os antes." };
+  }
+  const { error } = await admin.from("forum_categories").delete().eq("id", id);
+  if (error) return FAILED;
+  try {
+    await audit(admin, staff, {
+      action: "categoria.excluir",
+      targetType: "categoria",
+      targetId: id,
+    });
+  } catch {
+    // Idem
+  }
+  updateTag("forum");
   return { ok: true, data: undefined };
 }

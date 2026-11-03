@@ -118,6 +118,25 @@ export function SettingsSections({
 
       <StaggerItem>
         <SettingsSection
+          id="sugestoes"
+          title="Ideias para o MyBooks"
+          description="Viu algo que podia ser melhor, ou um bug? Conte para a gente."
+        >
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link href={{ pathname: routes.sugestoes, query: { nova: "1" } }}>
+                Enviar sugestão
+              </Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href={routes.sugestoes}>Ver as sugestões</Link>
+            </Button>
+          </div>
+        </SettingsSection>
+      </StaggerItem>
+
+      <StaggerItem>
+        <SettingsSection
           id="excluir"
           title="Excluir conta"
           description="Para sempre: não dá para desfazer depois."

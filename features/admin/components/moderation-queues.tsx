@@ -30,16 +30,23 @@ import {
 } from "@/features/books/lib/book-changes";
 import type { SearchResult } from "@/features/books/lib/search-result";
 import { DELETE_KINDS } from "@/features/books/schemas";
+import { REPORT_REASONS } from "@/features/community/types";
 import type { ActionResult } from "@/lib/action";
 import { formatNumber } from "@/lib/format";
 import { routes } from "@/lib/routes";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import { reviewChangeRequest, reviewGenre, reviewManualBook } from "../actions";
+import {
+  reviewChangeRequest,
+  reviewGenre,
+  reviewManualBook,
+  reviewReport,
+} from "../actions";
 import { BookFieldsForm } from "./book-fields-form";
 import type {
   ModerationQueues as Queues,
   PendingBook,
   PendingGenre,
+  PendingReport,
   PendingRequest,
 } from "../queries";
 
@@ -124,7 +131,7 @@ export function ModerationQueues() {
       </div>
     );
   }
-  const { books, requests, genres } = queues.data;
+  const { books, requests, genres, reports } = queues.data;
 
   return (
     <Tabs defaultValue="livros">
@@ -137,6 +144,9 @@ export function ModerationQueues() {
         </TabsTrigger>
         <TabsTrigger value="generos">
           Gêneros · {formatNumber(genres.length)}
+        </TabsTrigger>
+        <TabsTrigger value="denuncias">
+          Denúncias · {formatNumber(reports.length)}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="livros" className="pt-6">
@@ -168,6 +178,17 @@ export function ModerationQueues() {
           <ul className="flex flex-col gap-4">
             {genres.map((genre) => (
               <GenreItem key={genre.slug} genre={genre} />
+            ))}
+          </ul>
+        )}
+      </TabsContent>
+      <TabsContent value="denuncias" className="pt-6">
+        {reports.length === 0 ? (
+          <Empty what="denúncia" />
+        ) : (
+          <ul className="flex flex-col gap-4">
+            {reports.map((report) => (
+              <ReportItem key={report.id} report={report} />
             ))}
           </ul>
         )}
@@ -739,6 +760,98 @@ function GenreItem({ genre }: { genre: PendingGenre }) {
           />
         </DialogContent>
       </Dialog>
+    </li>
+  );
+}
+
+const REASON_LABEL: Record<string, string> = Object.fromEntries(
+  REPORT_REASONS.map((item) => [item.value, item.label]),
+);
+
+const TARGET_LABEL: Record<PendingReport["targetType"], string> = {
+  topic: "Tópico",
+  reply: "Resposta",
+  suggestion: "Sugestão",
+  suggestion_comment: "Comentário",
+};
+
+/** Uma denúncia (todas as do mesmo alvo juntas): ocultar ou dispensar. */
+function ReportItem({ report }: { report: PendingReport }) {
+  const review = useReview();
+  return (
+    <li className={card}>
+      <div className="flex flex-col gap-1.5">
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="rounded-full border border-border px-2 py-px font-mono text-[11px]">
+            {TARGET_LABEL[report.targetType]}
+          </span>
+          {report.href ? (
+            <Link
+              href={report.href as typeof routes.comunidade}
+              target="_blank"
+              className="font-serif text-lg hover:underline"
+            >
+              {report.title}
+            </Link>
+          ) : (
+            <span className="font-serif text-lg">{report.title}</span>
+          )}
+        </p>
+        <Meta
+          by={report.author}
+          at={report.createdAt}
+          extra={`${formatNumber(report.count)} ${report.count === 1 ? "denúncia" : "denúncias"}`}
+        />
+      </div>
+      {report.excerpt ? (
+        <p className="rounded-control bg-muted px-3 py-2 text-sm text-pretty">
+          {report.excerpt}
+        </p>
+      ) : null}
+      <ul className="flex flex-wrap gap-1.5">
+        {report.reasons.map((item) => (
+          <li
+            key={item.reason}
+            className="rounded-full border border-border px-2.5 py-0.5 text-xs"
+          >
+            {REASON_LABEL[item.reason] ?? item.reason}
+            {item.count > 1 ? ` × ${formatNumber(item.count)}` : ""}
+          </li>
+        ))}
+      </ul>
+      {report.details.length > 0 ? (
+        <ul className="flex flex-col gap-1 text-sm text-pretty text-muted-foreground">
+          {report.details.map((detail, index) => (
+            <li key={index}>“{detail}”</li>
+          ))}
+        </ul>
+      ) : null}
+      <ErrorLine error={review.error} />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="destructive"
+          disabled={review.pending}
+          onClick={() =>
+            review.run(() => reviewReport(report.id, true), "Conteúdo ocultado")
+          }
+        >
+          Ocultar o conteúdo
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={review.pending}
+          onClick={() =>
+            review.run(
+              () => reviewReport(report.id, false),
+              "Denúncia dispensada",
+            )
+          }
+        >
+          Dispensar
+        </Button>
+      </div>
     </li>
   );
 }

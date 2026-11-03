@@ -1,6 +1,6 @@
 "use client";
 
-import { Compass, House, Library } from "lucide-react";
+import { Compass, House, Library, MessagesSquare } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { createContext, Suspense, use } from "react";
 import { isActivePath } from "@/lib/nav";
@@ -29,6 +29,11 @@ export function mainNavItems(viewer: NavViewer | null): NavItem[] {
     { href: routes.explorar, label: "Explorar", icon: Compass },
     estanteItem(viewer),
   ];
+}
+
+/** A comunidade (fórum e sugestões): na barra de cima, no computador. */
+export function communityNavItem(): NavItem {
+  return { href: routes.comunidade, label: "Comunidade", icon: MessagesSquare };
 }
 
 /**

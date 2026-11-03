@@ -116,6 +116,7 @@ async function AffinityReaders() {
 function CardsSkeleton() {
   return (
     <div
+      role="status"
       aria-busy
       aria-label="Carregando coleções"
       className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"

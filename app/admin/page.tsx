@@ -81,12 +81,18 @@ async function Overview() {
         >
           <p className="text-sm text-muted-foreground">Esperando revisão</p>
           <p className="font-mono text-3xl tracking-tight">
-            {formatNumber(pending.books + pending.requests + pending.genres)}
+            {formatNumber(
+              pending.books +
+                pending.requests +
+                pending.genres +
+                pending.reports,
+            )}
           </p>
           <p className="font-mono text-xs text-muted-foreground">
             {formatNumber(pending.books)} livros ·{" "}
             {formatNumber(pending.requests)} sugestões ·{" "}
-            {formatNumber(pending.genres)} gêneros
+            {formatNumber(pending.genres)} gêneros ·{" "}
+            {formatNumber(pending.reports)} denúncias
           </p>
         </Link>
       </section>

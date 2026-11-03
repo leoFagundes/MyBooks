@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { routes } from "@/lib/routes";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ExploreSearch } from "@/features/social/components/explore/explore-search";
 import { ExploreSections } from "@/features/social/components/explore/explore-sections";
@@ -22,7 +24,14 @@ export default function ExplorePage() {
             Explorar
           </h1>
           <p className="text-pretty text-muted-foreground">
-            Livros, leitores e coleções da comunidade.
+            Livros, leitores e coleções da comunidade.{" "}
+            <Link
+              href={routes.comunidade}
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Converse no fórum
+            </Link>
+            .
           </p>
         </header>
         <ExploreSearch>

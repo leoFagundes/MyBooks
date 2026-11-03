@@ -557,6 +557,129 @@ export type Database = {
           },
         ]
       }
+      content_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_suggestions: {
+        Row: {
+          author_id: string
+          body: string
+          category: string
+          comment_count: number
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          hidden_at: string | null
+          id: string
+          official_response: string | null
+          responded_at: string | null
+          responded_by: string | null
+          status: string
+          title: string
+          vote_count: number
+        }
+        Insert: {
+          author_id: string
+          body: string
+          category: string
+          comment_count?: number
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          official_response?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          title: string
+          vote_count?: number
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          category?: string
+          comment_count?: number
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          official_response?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          title?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_suggestions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_suggestions_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -589,6 +712,291 @@ export type Database = {
             columns: ["following_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          position: number
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          position?: number
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          position?: number
+          slug?: string
+        }
+        Relationships: []
+      }
+      forum_reactions: {
+        Row: {
+          created_at: string
+          kind: string
+          reply_id: string | null
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          reply_id?: string | null
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          reply_id?: string | null
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_reactions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_replies: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          hidden_at: string | null
+          id: string
+          like_count: number
+          parent_id: string | null
+          quoted_reply_id: string | null
+          topic_id: string
+          useful_count: number
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          like_count?: number
+          parent_id?: string | null
+          quoted_reply_id?: string | null
+          topic_id: string
+          useful_count?: number
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          like_count?: number
+          parent_id?: string | null
+          quoted_reply_id?: string | null
+          topic_id?: string
+          useful_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_replies_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_replies_quoted_reply_id_fkey"
+            columns: ["quoted_reply_id"]
+            isOneToOne: false
+            referencedRelation: "forum_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_replies_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_subscriptions: {
+        Row: {
+          created_at: string
+          topic_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          topic_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          topic_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_subscriptions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_topic_books: {
+        Row: {
+          book_id: string
+          topic_id: string
+        }
+        Insert: {
+          book_id: string
+          topic_id: string
+        }
+        Update: {
+          book_id?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_topic_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_topic_books_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_topics: {
+        Row: {
+          author_id: string
+          body: string
+          category_id: string
+          contains_spoilers: boolean
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          hidden_at: string | null
+          id: string
+          last_activity_at: string
+          like_count: number
+          locked: boolean
+          pinned: boolean
+          reply_count: number
+          tags: string[]
+          title: string
+          useful_count: number
+        }
+        Insert: {
+          author_id: string
+          body: string
+          category_id: string
+          contains_spoilers?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          last_activity_at?: string
+          like_count?: number
+          locked?: boolean
+          pinned?: boolean
+          reply_count?: number
+          tags?: string[]
+          title: string
+          useful_count?: number
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          category_id?: string
+          contains_spoilers?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          last_activity_at?: string
+          like_count?: number
+          locked?: boolean
+          pinned?: boolean
+          reply_count?: number
+          tags?: string[]
+          title?: string
+          useful_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_topics_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_topics_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "forum_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -806,6 +1214,87 @@ export type Database = {
           {
             foreignKeyName: "site_settings_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suggestion_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          hidden_at: string | null
+          id: string
+          suggestion_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          suggestion_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          hidden_at?: string | null
+          id?: string
+          suggestion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestion_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_comments_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "feature_suggestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suggestion_votes: {
+        Row: {
+          created_at: string
+          suggestion_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          suggestion_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          suggestion_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestion_votes_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "feature_suggestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_votes_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1042,6 +1531,10 @@ export type Database = {
         Args: { action: string; book: string; changes?: Json; note?: string }
         Returns: undefined
       }
+      moderate_topic: {
+        Args: { action: string; category?: string; topic: string }
+        Returns: undefined
+      }
       popular_collections: {
         Args: { max_results?: number }
         Returns: {
@@ -1110,6 +1603,10 @@ export type Database = {
           duplicate_of?: string
           note?: string
         }
+        Returns: undefined
+      }
+      review_report: {
+        Args: { hide: boolean; report: string }
         Returns: undefined
       }
       search_catalog: {
@@ -1193,6 +1690,19 @@ export type Database = {
         Returns: number
       }
       set_favorite_genres: { Args: { slugs: string[] }; Returns: undefined }
+      set_suggestion_status: {
+        Args: { new_status: string; response?: string; suggestion: string }
+        Returns: undefined
+      }
+      similar_suggestions: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          id: string
+          status: string
+          title: string
+          vote_count: number
+        }[]
+      }
       suggested_readers: {
         Args: { max_results?: number }
         Returns: {

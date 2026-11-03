@@ -9,9 +9,10 @@ import {
   House,
   Library,
   LibraryBig,
+  Lightbulb,
   LoaderCircle,
   LogIn,
-  type LucideIcon,
+  MessagesSquare,
   Quote,
   ScanBarcode,
   Search,
@@ -20,6 +21,7 @@ import {
   Shuffle,
   SunMoon,
   UserPlus,
+  type LucideIcon,
 } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -318,6 +320,20 @@ function PaletteBody({
           label: "Explorar",
           icon: Compass,
           run: () => go(routes.explorar),
+        },
+        {
+          id: "comunidade",
+          label: "Comunidade",
+          keywords: "fórum tópicos discussões",
+          icon: MessagesSquare,
+          run: () => go(routes.comunidade),
+        },
+        {
+          id: "sugestoes",
+          label: "Sugestões para o MyBooks",
+          keywords: "ideias bugs melhorias",
+          icon: Lightbulb,
+          run: () => go(routes.sugestoes),
         },
         {
           id: "estante",

@@ -66,15 +66,26 @@ export type Overview = {
   active: { week: number; month: number };
   books: { week: number; month: number; total: number };
   collections: { week: number; month: number; total: number };
-  pending: { genres: number; books: number; requests: number };
+  pending: { genres: number; books: number; requests: number; reports: number };
   growth: { week: string; users: number }[];
 };
 
 export async function getOverview(): Promise<Overview> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_overview");
+  const [{ data, error }, reports] = await Promise.all([
+    supabase.rpc("admin_overview"),
+    // As denúncias da comunidade (a RLS deixa a equipe ver todas)
+    supabase
+      .from("content_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
   if (error) throw error;
-  return data as unknown as Overview;
+  const overview = data as unknown as Overview;
+  return {
+    ...overview,
+    pending: { ...overview.pending, reports: reports.count ?? 0 },
+  };
 }
 
 export const USER_FILTERS = ["suspensos", "banidos", "moderadores"] as const;
@@ -332,6 +343,7 @@ export type ModerationQueues = {
   books: PendingBook[];
   requests: PendingRequest[];
   genres: PendingGenre[];
+  reports: PendingReport[];
 };
 
 const record = (value: unknown): Record<string, unknown> =>
@@ -401,7 +413,9 @@ export async function getModerationQueues(): Promise<ModerationQueues> {
   const shelfCounts = count(shelves.data, (row) => row.book_id);
   const favoriteCounts = count(favorites.data, (row) => row.genre_id);
 
+  const reports = await getPendingReports();
   return {
+    reports,
     books: books.data.map((book) => ({
       id: book.id,
       visual: toBookVisual(book),
@@ -541,4 +555,171 @@ export async function getAdminBookDetails(
         isbn13: data.isbn_13,
       }
     : null;
+}
+
+export type PendingReport = {
+  /** A denúncia mais antiga do alvo (as outras vão junto na revisão). */
+  id: string;
+  targetType: "topic" | "reply" | "suggestion" | "suggestion_comment";
+  targetId: string;
+  /** Para onde levar: o tópico ou a sugestão. */
+  href: string | null;
+  title: string;
+  excerpt: string;
+  author: string | null;
+  reasons: { reason: string; count: number }[];
+  details: string[];
+  count: number;
+  createdAt: string;
+};
+
+/**
+ * A fila de denúncias da comunidade (MELHORIAS 8), agrupada por alvo: o que
+ * foi denunciado, por quais motivos e quantas vezes. Com a chave secreta,
+ * depois do papel (o alvo pode estar oculto).
+ */
+export async function getPendingReports(): Promise<PendingReport[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("content_reports")
+    .select("id, target_type, target_id, reason, details, created_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .limit(300);
+  if (error) throw error;
+  const groups = new Map<string, typeof data>();
+  for (const row of data) {
+    const key = `${row.target_type}:${row.target_id}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  const ids = (type: string) =>
+    [...groups.values()]
+      .filter((rows) => rows[0]?.target_type === type)
+      .map((rows) => rows[0]?.target_id as string);
+  const [topics, replies, suggestions, comments] = await Promise.all([
+    ids("topic").length
+      ? admin
+          .from("forum_topics")
+          .select(
+            "id, title, body, author:profiles!forum_topics_author_id_fkey(username)",
+          )
+          .in("id", ids("topic"))
+      : Promise.resolve({ data: [] }),
+    ids("reply").length
+      ? admin
+          .from("forum_replies")
+          .select(
+            "id, topic_id, body, author:profiles!forum_replies_author_id_fkey(username), topic:forum_topics!forum_replies_topic_id_fkey(title)",
+          )
+          .in("id", ids("reply"))
+      : Promise.resolve({ data: [] }),
+    ids("suggestion").length
+      ? admin
+          .from("feature_suggestions")
+          .select(
+            "id, title, body, author:profiles!feature_suggestions_author_id_fkey(username)",
+          )
+          .in("id", ids("suggestion"))
+      : Promise.resolve({ data: [] }),
+    ids("suggestion_comment").length
+      ? admin
+          .from("suggestion_comments")
+          .select(
+            "id, suggestion_id, body, author:profiles!suggestion_comments_author_id_fkey(username), suggestion:feature_suggestions!suggestion_comments_suggestion_id_fkey(title)",
+          )
+          .in("id", ids("suggestion_comment"))
+      : Promise.resolve({ data: [] }),
+  ]);
+  type Target = {
+    title: string;
+    body: string;
+    author: string | null;
+    href: string | null;
+  };
+  const targets = new Map<string, Target>();
+  for (const row of topics.data ?? []) {
+    targets.set(`topic:${row.id}`, {
+      title: row.title,
+      body: row.body,
+      author: row.author?.username ?? null,
+      href: `/comunidade/${row.id}`,
+    });
+  }
+  for (const row of replies.data ?? []) {
+    targets.set(`reply:${row.id}`, {
+      title: `Resposta em ${row.topic?.title ?? "um tópico"}`,
+      body: row.body,
+      author: row.author?.username ?? null,
+      href: `/comunidade/${row.topic_id}`,
+    });
+  }
+  for (const row of suggestions.data ?? []) {
+    targets.set(`suggestion:${row.id}`, {
+      title: row.title,
+      body: row.body,
+      author: row.author?.username ?? null,
+      href: `/sugestoes/${row.id}`,
+    });
+  }
+  for (const row of comments.data ?? []) {
+    targets.set(`suggestion_comment:${row.id}`, {
+      title: `Comentário em ${row.suggestion?.title ?? "uma sugestão"}`,
+      body: row.body,
+      author: row.author?.username ?? null,
+      href: `/sugestoes/${row.suggestion_id}`,
+    });
+  }
+  return [...groups.entries()].flatMap(([key, rows]) => {
+    const first = rows[0];
+    const target = targets.get(key);
+    if (!first) return [];
+    const reasons = new Map<string, number>();
+    for (const row of rows)
+      reasons.set(row.reason, (reasons.get(row.reason) ?? 0) + 1);
+    const text = target ? target.body.replace(/\s+/g, " ").trim() : "";
+    return [
+      {
+        id: first.id,
+        targetType: first.target_type as PendingReport["targetType"],
+        targetId: first.target_id,
+        href: target?.href ?? null,
+        title: target?.title ?? "Conteúdo excluído",
+        excerpt: text.length > 280 ? `${text.slice(0, 279)}…` : text,
+        author: target?.author ?? null,
+        reasons: [...reasons].map(([reason, count]) => ({ reason, count })),
+        details: rows.flatMap((row) => (row.details ? [row.details] : [])),
+        count: rows.length,
+        createdAt: first.created_at,
+      },
+    ];
+  });
+}
+
+export type AdminCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  position: number;
+  topics: number;
+};
+
+/** As categorias do fórum, com quantos tópicos cada uma tem (o painel). */
+export async function getAdminCategories(): Promise<AdminCategory[]> {
+  const admin = createAdminClient();
+  const [{ data: categories }, { data: topics }] = await Promise.all([
+    admin
+      .from("forum_categories")
+      .select("id, slug, name, description, position")
+      .order("position")
+      .order("name"),
+    admin.from("forum_topics").select("category_id").is("deleted_at", null),
+  ]);
+  const counts = new Map<string, number>();
+  for (const row of topics ?? [])
+    counts.set(row.category_id, (counts.get(row.category_id) ?? 0) + 1);
+  return (categories ?? []).map((category) => ({
+    ...category,
+    topics: counts.get(category.id) ?? 0,
+  }));
 }

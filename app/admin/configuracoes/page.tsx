@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { AdminPage } from "@/features/admin/components/admin-page";
 import { SiteSettingsForm } from "@/features/admin/components/site-settings-form";
-import { getSiteSettings, requireStaff } from "@/features/admin/queries";
+import { ForumCategoriesForm } from "@/features/admin/components/forum-categories-form";
+import {
+  getAdminCategories,
+  getSiteSettings,
+  requireStaff,
+} from "@/features/admin/queries";
 
 export const metadata: Metadata = { title: "Configurações do site" };
 
@@ -19,5 +24,14 @@ export default function AdminSettingsPage() {
 
 async function Settings() {
   await requireStaff("admin");
-  return <SiteSettingsForm settings={await getSiteSettings()} />;
+  const [settings, categories] = await Promise.all([
+    getSiteSettings(),
+    getAdminCategories(),
+  ]);
+  return (
+    <div className="flex flex-col gap-6">
+      <SiteSettingsForm settings={settings} />
+      <ForumCategoriesForm categories={categories} />
+    </div>
+  );
 }

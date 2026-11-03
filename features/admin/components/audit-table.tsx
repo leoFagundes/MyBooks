@@ -44,6 +44,21 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   "sugestao.rejeitar": "Recusou uma sugestão",
   "genero.aprovar": "Aprovou um gênero",
   "genero.recusar": "Recusou um gênero",
+  "denuncia.ocultar": "Ocultou o denunciado",
+  "denuncia.dispensar": "Dispensou uma denúncia",
+  "categoria.criar": "Criou uma categoria",
+  "categoria.editar": "Editou uma categoria",
+  "categoria.excluir": "Excluiu uma categoria",
+  "forum.pin": "Fixou um tópico",
+  "forum.unpin": "Desafixou um tópico",
+  "forum.lock": "Trancou um tópico",
+  "forum.unlock": "Destrancou um tópico",
+  "forum.hide": "Ocultou um tópico",
+  "forum.unhide": "Mostrou um tópico",
+  "forum.move": "Moveu um tópico",
+  "forum.ocultar-resposta": "Ocultou uma resposta",
+  "forum.mostrar-resposta": "Mostrou uma resposta",
+  "sugestao.status": "Mudou o status de uma sugestão",
 };
 
 const when = new Intl.DateTimeFormat("pt-BR", {

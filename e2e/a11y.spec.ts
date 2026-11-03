@@ -41,6 +41,8 @@ const PUBLIC_PAGES = [
   `/livro/${seedId("book", "dom-casmurro")}`,
   "/@ana",
   `/colecao/${seedId("collection", "classicos-brasileiros")}`,
+  "/comunidade",
+  "/sugestoes",
 ];
 
 for (const theme of ["light", "dark"] as const) {

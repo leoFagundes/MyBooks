@@ -59,7 +59,7 @@ test.describe("capas, lombadas e prateleira", () => {
 });
 
 // Spec §8 (contraste AA): mede o contraste efetivo de cada texto sobre a cor
-// do livro, contando a opacidade, contra o primeiro fundo opaco acima dele
+// do livro, contando a opacidade, contra o primeiro fundo opaco acima do texto
 test.describe("contraste do texto sobre as capas", () => {
   for (const [name, selector] of [
     ["lombadas", '[aria-label="Prateleira"] a'],
@@ -85,9 +85,12 @@ test.describe("contraste do texto sobre as capas", () => {
         };
         return nodes.flatMap((node) =>
           [...node.querySelectorAll("span, p")].flatMap((text) => {
+            // Os fios da Moldura não têm texto
+            if (!text.textContent?.trim()) return [];
             const style = getComputedStyle(text);
             const fg = rgba(style.color);
-            const bg = background(node);
+            // O fundo de cada texto: o painel de papel da Faixa, ou a cor do livro
+            const bg = background(text);
             const alpha = Number(style.opacity) * (fg[3] ?? 1);
             const seen = fg
               .slice(0, 3)

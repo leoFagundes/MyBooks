@@ -395,6 +395,44 @@ export type Database = {
           },
         ]
       }
+      genres: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_official: boolean
+          name: string
+          slug: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_official?: boolean
+          name: string
+          slug: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_official?: boolean
+          name?: string
+          slug?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genres_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_id: string | null
@@ -614,6 +652,42 @@ export type Database = {
           },
         ]
       }
+      user_favorite_genres: {
+        Row: {
+          created_at: string
+          genre_id: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          genre_id: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          genre_id?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_favorite_genres_genre_id_fkey"
+            columns: ["genre_id"]
+            isOneToOne: false
+            referencedRelation: "genres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_favorite_genres_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       trending_books: {
@@ -781,6 +855,7 @@ export type Database = {
         Args: { book_ids: string[]; positions: string[]; target: string }
         Returns: number
       }
+      set_favorite_genres: { Args: { slugs: string[] }; Returns: undefined }
       suggested_readers: {
         Args: { max_results?: number }
         Returns: {

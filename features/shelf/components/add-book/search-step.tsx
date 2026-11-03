@@ -20,6 +20,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { BookCover } from "@/features/books/components/book-cover";
+import { BookOrigin } from "@/features/books/components/book-origin";
 import { useCanScan } from "../../lib/use-can-scan";
 import {
   byline,
@@ -169,6 +170,7 @@ export function SearchStep({
                     <span className="truncate font-mono text-xs text-muted-foreground">
                       {byline(visual)}
                     </span>
+                    <BookOrigin origin={result} className="mt-1" />
                   </span>
                   {picked?.has(resultKey(result)) ? (
                     <span className="flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">

@@ -6,7 +6,9 @@ import { getViewer } from "@/lib/auth";
 import { getPublicEnv } from "@/lib/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
+import { genreLabel } from "./genres";
 import { avatarSrc } from "./lib/avatar";
+import type { Genre } from "./lib/genre-name";
 
 export type OwnProfile = {
   id: string;
@@ -14,8 +16,32 @@ export type OwnProfile = {
   /** Vazio quando a pessoa ainda não disse o nome (o cadastro por e-mail). */
   displayName: string;
   avatarUrl: string | null;
-  favoriteGenres: string[];
+  /** Os favoritos com nome, inclusive os gêneros criados e ainda pendentes. */
+  favoriteGenres: Genre[];
 };
+
+type FavoriteRow = {
+  position: number;
+  genre: { slug: string; name: string; status: string } | null;
+};
+
+const favoritesFrom = (rows: FavoriteRow[]): Genre[] =>
+  [...rows]
+    .sort((a, b) => a.position - b.position)
+    .flatMap(({ genre }) =>
+      genre
+        ? [
+            {
+              slug: genre.slug,
+              name: genre.name,
+              pending: genre.status !== "approved",
+            },
+          ]
+        : [],
+    );
+
+const FAVORITES =
+  "user_favorite_genres(position, genre:genres(slug, name, status))";
 
 /** O perfil de quem está vendo, como o onboarding precisa. */
 export async function getOwnProfile(
@@ -27,7 +53,7 @@ export async function getOwnProfile(
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("username, display_name, avatar_url, favorite_genres")
+    .select(`username, display_name, avatar_url, ${FAVORITES}`)
     .eq("id", userId)
     .maybeSingle();
   if (!data) return null;
@@ -38,8 +64,62 @@ export async function getOwnProfile(
     username: data.username,
     displayName: data.display_name ?? "",
     avatarUrl: avatarSrc(data.avatar_url, getPublicEnv().supabaseUrl),
-    favoriteGenres: data.favorite_genres,
+    favoriteGenres: favoritesFrom(data.user_favorite_genres),
   };
+}
+
+/**
+ * Os gêneros favoritos de quem está vendo, com nome e na ordem dela,
+ * inclusive os que ela criou e ainda esperam aprovação (Editar perfil).
+ */
+export async function getOwnFavoriteGenres(viewer: {
+  id: string;
+  username: string;
+}): Promise<Genre[]> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`profile:${viewer.username}`);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_favorite_genres")
+    .select("position, genre:genres(slug, name, status)")
+    .eq("user_id", viewer.id);
+  if (error) throw error;
+  return favoritesFrom(data);
+}
+
+/**
+ * Os gêneros que quem vê pode escolher: os aprovados de todos e os que ela
+ * mesma criou (a RLS decide). Sem cache: um gênero criado agora já aparece.
+ */
+export async function getVisibleGenres(): Promise<Genre[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("genres")
+    .select("slug, name, status")
+    .order("name");
+  if (error) throw error;
+  return data.map((genre) => ({
+    slug: genre.slug,
+    name: genre.name,
+    pending: genre.status !== "approved",
+  }));
+}
+
+// Os nomes dos gêneros de leitores (aprovados) que um perfil favoritou: os
+// oficiais têm nome no código
+async function customGenreNames(
+  slugs: string[],
+): Promise<Record<string, string>> {
+  const custom = slugs.filter((slug) => !genreLabel(slug));
+  if (custom.length === 0) return {};
+  const { data } = await createPublicClient()
+    .from("genres")
+    .select("slug, name")
+    .in("slug", custom);
+  return Object.fromEntries(
+    (data ?? []).map((genre) => [genre.slug, genre.name]),
+  );
 }
 
 const USERNAME = /^[a-z0-9_]{3,20}$/;
@@ -50,7 +130,10 @@ export type ProfileSummary = {
   displayName: string;
   avatarUrl: string | null;
   bio: string | null;
+  /** Os favoritos aprovados (slugs), na ordem da pessoa. */
   favoriteGenres: string[];
+  /** O nome dos favoritos criados por leitores (os oficiais têm no código). */
+  genreNames?: Record<string, string>;
   isPrivate: boolean;
 };
 
@@ -79,6 +162,7 @@ export async function getProfileByUsername(
     avatarUrl: avatarSrc(data.avatar_url, getPublicEnv().supabaseUrl),
     bio: data.bio,
     favoriteGenres: data.favorite_genres,
+    genreNames: await customGenreNames(data.favorite_genres),
     isPrivate: data.is_private,
   };
 }

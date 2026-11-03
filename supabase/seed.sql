@@ -18,11 +18,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Ana Souza',
   bio = 'Machado no ônibus, Clarice antes de dormir.',
-  favorite_genres = array['literatura-brasileira', 'classicos', 'contos'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '210 days'),
   created_at = now() - interval '210 days'
 where id = '8f557e4a-1bd6-500d-956f-20aca9f39731';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select '8f557e4a-1bd6-500d-956f-20aca9f39731', g.id, (s.ord - 1)::smallint
+from unnest(array['literatura-brasileira', 'classicos', 'contos']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -40,11 +45,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Bia Lima',
   bio = 'Fantasia de dia, ficção científica de madrugada.',
-  favorite_genres = array['fantasia', 'ficcao-cientifica', 'distopia'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '200 days'),
   created_at = now() - interval '200 days'
 where id = 'f362edf4-53ed-5763-aca5-367ea784f749';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select 'f362edf4-53ed-5763-aca5-367ea784f749', g.id, (s.ord - 1)::smallint
+from unnest(array['fantasia', 'ficcao-cientifica', 'distopia']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -62,11 +72,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Caio Andrade',
   bio = 'Distopias e não ficção. Perfil fechado, mas aceito pedidos.',
-  favorite_genres = array['distopia', 'historia', 'ciencia'],
   is_private = true,
   onboarded_at = coalesce(onboarded_at, now() - interval '240 days'),
   created_at = now() - interval '240 days'
 where id = '662411c7-eeab-59a4-930c-a1e09cf8ab33';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select '662411c7-eeab-59a4-930c-a1e09cf8ab33', g.id, (s.ord - 1)::smallint
+from unnest(array['distopia', 'historia', 'ciencia']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -84,11 +99,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Duda Rocha',
   bio = 'Romances que doem e clássicos que ensinam.',
-  favorite_genres = array['romance', 'classicos', 'realismo-magico'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '180 days'),
   created_at = now() - interval '180 days'
 where id = 'b20bdce3-bcf4-5eed-9a85-7b0fa2eba1fc';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select 'b20bdce3-bcf4-5eed-9a85-7b0fa2eba1fc', g.id, (s.ord - 1)::smallint
+from unnest(array['romance', 'classicos', 'realismo-magico']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -106,11 +126,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Enzo Martins',
   bio = 'Se tem fantasma, eu leio.',
-  favorite_genres = array['terror', 'misterio', 'classicos'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '170 days'),
   created_at = now() - interval '170 days'
 where id = 'e42289dd-2468-50e1-b1c6-1ed46d5a942c';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select 'e42289dd-2468-50e1-b1c6-1ed46d5a942c', g.id, (s.ord - 1)::smallint
+from unnest(array['terror', 'misterio', 'classicos']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -128,11 +153,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Flor Nunes',
   bio = 'Poesia no bolso e um conto por dia.',
-  favorite_genres = array['poesia', 'contos', 'literatura-brasileira'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '160 days'),
   created_at = now() - interval '160 days'
 where id = 'e3c9d64d-7529-5687-ba47-db045c7b638a';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select 'e3c9d64d-7529-5687-ba47-db045c7b638a', g.id, (s.ord - 1)::smallint
+from unnest(array['poesia', 'contos', 'literatura-brasileira']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -150,11 +180,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Gael Ribeiro',
   bio = 'Quadrinhos, memórias e histórias que aconteceram de verdade.',
-  favorite_genres = array['quadrinhos', 'biografia', 'historia'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '150 days'),
   created_at = now() - interval '150 days'
 where id = 'f5771a8e-f340-54a6-acb5-31f0efdbd0d2';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select 'f5771a8e-f340-54a6-acb5-31f0efdbd0d2', g.id, (s.ord - 1)::smallint
+from unnest(array['quadrinhos', 'biografia', 'historia']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -172,11 +207,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = 'Helena Prado',
   bio = 'Realismo mágico e livros de mais de quinhentas páginas.',
-  favorite_genres = array['realismo-magico', 'ficcao', 'classicos'],
   is_private = false,
   onboarded_at = coalesce(onboarded_at, now() - interval '230 days'),
   created_at = now() - interval '230 days'
 where id = 'b1c25f00-2b61-5bd5-af55-3bf0f55ddadc';
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select 'b1c25f00-2b61-5bd5-af55-3bf0f55ddadc', g.id, (s.ord - 1)::smallint
+from unnest(array['realismo-magico', 'ficcao', 'classicos']) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;
 
 -- Catálogo (dados da Open Library: obra, capa, páginas e ISBN)
 insert into public.books (

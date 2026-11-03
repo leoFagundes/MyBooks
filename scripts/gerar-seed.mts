@@ -242,11 +242,16 @@ on conflict (provider_id, provider) do nothing;
 update public.profiles set
   display_name = ${lit(reader.displayName)},
   bio = ${lit(reader.bio)},
-  favorite_genres = ${textArray(reader.genres)},
   is_private = ${reader.isPrivate ? "true" : "false"},
   onboarded_at = coalesce(onboarded_at, ${ago(reader.joinedDaysAgo)}),
   created_at = ${ago(reader.joinedDaysAgo)}
-where id = ${lit(id)};`;
+where id = ${lit(id)};
+-- Os favoritos moram em user_favorite_genres; o array do perfil é espelho
+insert into public.user_favorite_genres (user_id, genre_id, position)
+select ${lit(id)}, g.id, (s.ord - 1)::smallint
+from unnest(${textArray(reader.genres)}) with ordinality as s (slug, ord)
+join public.genres as g on g.slug = s.slug
+on conflict do nothing;`;
   }).join("\n\n");
 }
 

@@ -1,9 +1,24 @@
-import type { SearchResult } from "@/features/books/lib/search-result";
+import type {
+  ResultOrigin,
+  SearchResult,
+} from "@/features/books/lib/search-result";
 import type { BookVisual } from "@/features/books/types";
 import type { BookRef } from "../../schemas";
 
 /** O livro escolhido: como desenhá-lo e como o servidor o acha. */
-export type ChosenBook = { ref: BookRef; visual: BookVisual };
+export type ChosenBook = {
+  ref: BookRef;
+  visual: BookVisual;
+  /** De onde veio, quando veio da busca. */
+  origin?: ResultOrigin;
+};
+
+const originOf = ({
+  source,
+  catalogId,
+  addedBy,
+  shelves,
+}: SearchResult): ResultOrigin => ({ source, catalogId, addedBy, shelves });
 
 /** Chave estável de um resultado, esteja ele no catálogo ou não. */
 export function resultKey(result: SearchResult): string {
@@ -32,12 +47,15 @@ export function chooseResult(
   query: string,
 ): ChosenBook | null {
   const visual = resultVisual(result);
-  if (result.catalogId) return { ref: { catalogId: result.catalogId }, visual };
+  const origin = originOf(result);
+  if (result.catalogId)
+    return { ref: { catalogId: result.catalogId }, visual, origin };
   // Livro manual só existe no catálogo, e então tem catalogId
   if (result.source === "manual") return null;
   return {
     ref: { source: result.source, sourceId: result.sourceId, query },
     visual,
+    origin,
   };
 }
 

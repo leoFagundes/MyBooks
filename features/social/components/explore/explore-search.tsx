@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,17 +10,17 @@ import { SearchIllustration } from "@/components/ui/illustrations";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookCover } from "@/features/books/components/book-cover";
-import { BookLink } from "@/features/books/components/book-link";
-import type { BookVisual } from "@/features/books/types";
 import { CollectionCard } from "@/features/collections/components/collection-card";
 import type { CollectionVisual } from "@/features/collections/types";
 
+import { useBookSearch } from "@/features/shelf/components/add-book/use-book-search";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { routes } from "@/lib/routes";
 import { readsLine } from "../../lib/reads-line";
 import type { ReaderListItem } from "../../queries";
 import { ReaderRow } from "../reader-row";
+import { replaceExploreParams, useExploreSearchParams } from "./explore-url";
+import { COVER_GRID, ResultCard } from "./result-card";
 
 const TABS = [
   { value: "livros", label: "Livros" },
@@ -33,7 +33,6 @@ type Tab = (typeof TABS)[number]["value"];
 type SearchState = { q: string; tab: Tab };
 
 type ExploreResults = {
-  books?: BookVisual[];
   readers?: ReaderListItem[];
   collections?: CollectionVisual[];
 };
@@ -44,11 +43,6 @@ function readUrl(search: string): SearchState {
   return { q: (params.get("q") ?? "").slice(0, 100), tab: tab ?? "livros" };
 }
 
-// A URL só é lida no navegador; no servidor e na hidratação, busca vazia
-const noSubscription = () => () => {};
-const readSearch = () => window.location.search;
-const serverSearch = () => "";
-
 async function fetchResults(query: string, tab: Tab): Promise<ExploreResults> {
   const params = new URLSearchParams({ q: query, aba: tab });
   const response = await fetch(`/api/explore/search?${params}`);
@@ -58,11 +52,12 @@ async function fetchResults(query: string, tab: Tab): Promise<ExploreResults> {
 
 /**
  * A busca única do Explorar (spec §5.9), com as abas Livros, Leitores e
- * Coleções. A busca e a aba ficam na URL (?q=&aba=) sem ida ao servidor;
- * sem busca, aparecem as seções (children).
+ * Coleções. Livros busca no catálogo (na hora) e na Open Library (logo
+ * depois), como a paleta. A busca e a aba ficam na URL (?q=&aba=) sem ida
+ * ao servidor; sem busca, aparecem as seções (children).
  */
 export function ExploreSearch({ children }: { children: React.ReactNode }) {
-  const search = useSyncExternalStore(noSubscription, readSearch, serverSearch);
+  const search = useExploreSearchParams();
   const [edited, setEdited] = useState<SearchState | null>(null);
   const current = edited ?? readUrl(search);
   const query = useDebouncedValue(current.q.trim(), 200);
@@ -70,14 +65,10 @@ export function ExploreSearch({ children }: { children: React.ReactNode }) {
 
   function update(next: SearchState) {
     setEdited(next);
-    const params = new URLSearchParams();
-    if (next.q.trim()) params.set("q", next.q);
-    if (next.tab !== "livros") params.set("aba", next.tab);
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${params.size > 0 ? `?${params}` : ""}`,
-    );
+    replaceExploreParams({
+      q: next.q.trim() ? next.q : null,
+      aba: next.tab !== "livros" ? next.tab : null,
+    });
   }
 
   return (
@@ -110,16 +101,85 @@ export function ExploreSearch({ children }: { children: React.ReactNode }) {
             ))}
           </TabsList>
           <TabsContent value={current.tab}>
-            <Results
-              query={query}
-              tab={current.tab}
-              onClear={() => update({ q: "", tab: current.tab })}
-            />
+            {current.tab === "livros" ? (
+              <BookResults
+                raw={current.q}
+                onClear={() => update({ q: "", tab: current.tab })}
+              />
+            ) : (
+              <Results
+                query={query}
+                tab={current.tab}
+                onClear={() => update({ q: "", tab: current.tab })}
+              />
+            )}
           </TabsContent>
         </Tabs>
       ) : (
         children
       )}
+    </div>
+  );
+}
+
+/**
+ * Livros: o catálogo primeiro (na hora) e a Open Library logo depois, sem
+ * repetidos (fica a versão do catálogo), cada um com o selo da origem.
+ */
+function BookResults({ raw, onClear }: { raw: string; onClear: () => void }) {
+  const search = useBookSearch(raw);
+  if (search.idle) return null;
+  if (search.catalogPending && search.results.length === 0) {
+    return <ResultsSkeleton tab="livros" />;
+  }
+  if (search.results.length === 0 && !search.externalPending) {
+    return (
+      <EmptyState
+        illustration={SearchIllustration}
+        title={`Nada com “${search.query}” em Livros`}
+        description="Tente outra palavra ou veja as outras abas."
+        action={
+          <Button variant="outline" onClick={onClear}>
+            Limpar busca
+          </Button>
+        }
+      />
+    );
+  }
+  return (
+    <div className="flex flex-col gap-6">
+      {search.results.length > 0 ? (
+        <Stagger key={search.query} className={COVER_GRID}>
+          {search.results.map((result) => (
+            <StaggerItem
+              key={result.catalogId ?? `${result.source}:${result.sourceId}`}
+            >
+              <ResultCard
+                result={result}
+                outside={
+                  !result.catalogId && result.source !== "manual"
+                    ? {
+                        source: result.source,
+                        sourceId: result.sourceId,
+                        query: search.query,
+                      }
+                    : null
+                }
+              />
+            </StaggerItem>
+          ))}
+        </Stagger>
+      ) : null}
+      {search.externalPending ? (
+        <p className="font-mono text-xs text-muted-foreground">
+          Procurando na Open Library…
+        </p>
+      ) : search.externalFailed ? (
+        <p className="font-mono text-xs text-muted-foreground">
+          A Open Library não respondeu agora. Por enquanto, só o que já está no
+          MyBooks.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -130,7 +190,7 @@ function Results({
   onClear,
 }: {
   query: string;
-  tab: Tab;
+  tab: Exclude<Tab, "livros">;
   onClear: () => void;
 }) {
   const result = useQuery({
@@ -158,11 +218,7 @@ function Results({
   if (!result.data) return <ResultsSkeleton tab={tab} />;
 
   const items =
-    (tab === "livros"
-      ? result.data.books
-      : tab === "leitores"
-        ? result.data.readers
-        : result.data.collections) ?? [];
+    (tab === "leitores" ? result.data.readers : result.data.collections) ?? [];
   if (items.length === 0) {
     const label = TABS.find((item) => item.value === tab)?.label ?? "";
     return (
@@ -179,35 +235,6 @@ function Results({
     );
   }
 
-  if (tab === "livros") {
-    return (
-      <Stagger
-        key={query}
-        className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6"
-      >
-        {(result.data.books ?? []).map((book) => (
-          <StaggerItem key={book.id}>
-            <BookLink
-              book={book}
-              href={routes.book(book.id)}
-              aria-label={book.title}
-              className="block rounded-cover"
-            >
-              <BookCover book={book} size="fill" />
-            </BookLink>
-            <p className="mt-2 line-clamp-2 font-serif text-sm leading-tight text-balance">
-              {book.title}
-            </p>
-            {book.authors[0] ? (
-              <p className="mt-0.5 line-clamp-2 font-mono text-[11px] text-muted-foreground">
-                {book.authors[0]}
-              </p>
-            ) : null}
-          </StaggerItem>
-        ))}
-      </Stagger>
-    );
-  }
   if (tab === "leitores") {
     return (
       <Stagger key={query} className="flex flex-col divide-y divide-border">
@@ -267,11 +294,7 @@ function ResultsSkeleton({ tab }: { tab: Tab }) {
     );
   }
   return (
-    <div
-      aria-busy
-      aria-label="Buscando livros"
-      className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6"
-    >
+    <div aria-busy aria-label="Buscando livros" className={COVER_GRID}>
       {[0, 1, 2, 3, 4, 5].map((cover) => (
         <Skeleton key={cover} className="aspect-2/3 rounded-cover" />
       ))}

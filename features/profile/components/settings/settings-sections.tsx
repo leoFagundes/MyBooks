@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { initials } from "@/lib/initials";
 import { routes } from "@/lib/routes";
+import type { Genre } from "../../lib/genre-name";
 import type { ProfileSummary } from "../../queries";
 import { EditProfileSheet } from "../edit-profile-sheet";
 import { DeleteAccount } from "./delete-account";
@@ -22,10 +23,13 @@ import { UsernameSetting } from "./username-setting";
  */
 export function SettingsSections({
   profile,
+  genres,
   email,
   importer,
 }: {
   profile: ProfileSummary;
+  /** Os favoritos com nome, inclusive os criados e ainda em análise. */
+  genres: Genre[];
   email: string | null;
   /** A importação do Goodreads, que mora na estante. */
   importer?: React.ReactNode;
@@ -55,7 +59,7 @@ export function SettingsSections({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <EditProfileSheet profile={profile} />
+            <EditProfileSheet profile={profile} genres={genres} />
             <Button variant="ghost" asChild>
               <Link href={routes.profile(profile.username)}>
                 Ver meu perfil

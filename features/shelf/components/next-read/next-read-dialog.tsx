@@ -10,13 +10,19 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EmptyShelfIllustration } from "@/components/ui/illustrations";
 import type { BookVisual } from "@/features/books/types";
 import { formatNumber } from "@/lib/format";
-import { tweens } from "@/lib/motion";
+import { pressScale, springs, tweens } from "@/lib/motion";
 import { routes } from "@/lib/routes";
+import {
+  type DrawBook,
+  drawGenres,
+  filterByGenres,
+} from "../../lib/draw-genres";
 import { pickRandom } from "../../lib/pick-random";
 import { fetchWantList, WANT_LIST_KEY } from "../../lib/want-list";
 import { byline } from "../add-book/chosen-book";
 import { CardDeck } from "./card-deck";
 import { DeckSkeleton } from "./deck-skeleton";
+import { cn } from "@/lib/utils";
 
 type DrawActions = {
   onStart: (book: BookVisual) => void;
@@ -129,6 +135,72 @@ function Draw({
 }
 
 /**
+ * O sorteio com o filtro de gênero (MELHORIAS 5.5): os gêneros da fila, com
+ * a contagem, escolhidos à vontade (vale o livro que tiver qualquer um). Cada
+ * mudança embaralha de novo o que sobrou.
+ */
+function FilteredDraw({
+  books,
+  ...actions
+}: DrawActions & { books: DrawBook[] }) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const genres = drawGenres(books);
+  const pool = filterByGenres(books, selected);
+
+  function toggle(slug: string) {
+    setSelected((current) =>
+      current.includes(slug)
+        ? current.filter((item) => item !== slug)
+        : [...current, slug],
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {genres.length >= 2 ? (
+        <ul
+          aria-label="Sortear só entre os gêneros"
+          className="flex flex-wrap justify-center gap-2"
+        >
+          {genres.map((genre) => {
+            const on = selected.includes(genre.slug);
+            return (
+              <li key={genre.slug}>
+                <motion.button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(genre.slug)}
+                  whileTap={{ scale: pressScale }}
+                  transition={springs.snappy}
+                  className={cn(
+                    "flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
+                    on
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-surface text-foreground hover:bg-muted",
+                  )}
+                >
+                  {genre.label}
+                  <span className="font-mono text-xs opacity-70">
+                    {formatNumber(genre.count)}
+                  </span>
+                </motion.button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {selected.length > 0 && pool.length === 1 ? (
+        <p className="text-center text-sm text-pretty text-muted-foreground">
+          Com esse filtro, só sobrou um livro na fila. Parece que ele já estava
+          esperando por você.
+        </p>
+      ) : null}
+      <Draw key={selected.join(",")} books={pool} {...actions} />
+    </div>
+  );
+}
+
+/**
  * O corpo do sorteio, baixado só quando alguém abre: busca a fila de Quero
  * ler (se não veio pronta), e mostra o baralho, a fila vazia ou o erro.
  */
@@ -139,7 +211,7 @@ export function NextReadDialog({
   onClose,
 }: DrawActions & {
   /** Os livros do sorteio; null busca a fila de Quero ler. */
-  books: BookVisual[] | null;
+  books: DrawBook[] | null;
   onFindBook: () => void;
 }) {
   const queue = useQuery({
@@ -175,5 +247,5 @@ export function NextReadDialog({
       />
     );
   }
-  return <Draw books={list} onStart={onStart} onClose={onClose} />;
+  return <FilteredDraw books={list} onStart={onStart} onClose={onClose} />;
 }

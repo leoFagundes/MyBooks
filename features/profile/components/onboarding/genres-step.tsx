@@ -4,18 +4,21 @@ import { useState, useTransition } from "react";
 import { SwapText } from "@/components/motion/swap-text";
 import { Button } from "@/components/ui/button";
 import { saveGenres } from "../../actions";
-import type { GenreSlug } from "../../genres";
+import type { Genre } from "../../lib/genre-name";
 import { GenreChips } from "../genre-chips";
 import { StepFrame } from "./step-frame";
 
 export function GenresStep({
   value,
+  known,
   onChange,
   onBack,
   onDone,
 }: {
-  value: GenreSlug[];
-  onChange: (genres: GenreSlug[]) => void;
+  value: string[];
+  /** Os favoritos já salvos, com nome (os criados por leitores também). */
+  known: Genre[];
+  onChange: (genres: string[]) => void;
   onBack: () => void;
   onDone: () => void;
 }) {
@@ -54,7 +57,7 @@ export function GenresStep({
       }
     >
       <div className="flex flex-col gap-4">
-        <GenreChips value={value} onChange={onChange} />
+        <GenreChips value={value} onChange={onChange} known={known} />
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}

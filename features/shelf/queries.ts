@@ -66,11 +66,11 @@ export async function readShelfBooks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   status?: ShelfStatus,
-): Promise<BookVisual[]> {
+): Promise<(BookVisual & { genres: string[] })[]> {
   let request = supabase
     .from("user_books")
     .select(
-      "book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
+      "book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year, genres)",
     )
     .eq("user_id", userId);
   if (status) request = request.eq("status", status);
@@ -78,7 +78,10 @@ export async function readShelfBooks(
     ascending: false,
   });
   if (error) throw error;
-  return data.flatMap(({ book }) => (book ? [toBookVisual(book)] : []));
+  // Os gêneros vão junto: o sorteio filtra por eles
+  return data.flatMap(({ book }) =>
+    book ? [{ ...toBookVisual(book), genres: book.genres }] : [],
+  );
 }
 
 export type QuoteItem = {

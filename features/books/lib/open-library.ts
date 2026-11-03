@@ -107,6 +107,17 @@ export async function searchOpenLibrary(
   url.searchParams.set("q", query);
   url.searchParams.set("fields", FIELDS);
   url.searchParams.set("limit", "20");
+  const body = await fetchJson(url, fetcher, timeoutMs);
+  if (body === null) return null;
+  return normalizeDocs(isRecord(body) ? list(body.docs) : []);
+}
+
+/** Um pedido à Open Library, na vez dele; null quando falha ou demora. */
+async function fetchJson(
+  url: URL,
+  fetcher: typeof fetch,
+  timeoutMs: number,
+): Promise<unknown> {
   await waitTurn();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -119,14 +130,60 @@ export async function searchOpenLibrary(
       signal: controller.signal,
     });
     if (!response.ok) return null;
-    const body: unknown = await response.json();
-    const docs = isRecord(body) ? list(body.docs) : [];
-    return dedupeResults(
-      docs.map(normalizeOpenLibraryDoc).filter((result) => result !== null),
-    );
+    return (await response.json()) as unknown;
   } catch {
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+const normalizeDocs = (docs: unknown[]) =>
+  dedupeResults(
+    docs.map(normalizeOpenLibraryDoc).filter((result) => result !== null),
+  );
+
+/** As obras mais procuradas da semana na Open Library, ou null. */
+export async function openLibraryTrending(
+  limit = 40,
+  fetcher: typeof fetch = fetch,
+  timeoutMs = SOURCE_TIMEOUT_MS,
+): Promise<SearchResult[] | null> {
+  const url = new URL("https://openlibrary.org/trending/weekly.json");
+  url.searchParams.set("limit", String(limit));
+  const body = await fetchJson(url, fetcher, timeoutMs);
+  if (body === null) return null;
+  return normalizeDocs(isRecord(body) ? list(body.works) : []);
+}
+
+/**
+ * As obras de um assunto da Open Library (subjects/<assunto>.json), ou null.
+ * O formato é outro (authors com nome, cover_id): vira o da busca.
+ */
+export async function openLibrarySubject(
+  subject: string,
+  limit = 30,
+  fetcher: typeof fetch = fetch,
+  timeoutMs = SOURCE_TIMEOUT_MS,
+): Promise<SearchResult[] | null> {
+  const url = new URL(
+    `https://openlibrary.org/subjects/${encodeURIComponent(subject)}.json`,
+  );
+  url.searchParams.set("limit", String(limit));
+  const body = await fetchJson(url, fetcher, timeoutMs);
+  if (body === null) return null;
+  const works = isRecord(body) ? list(body.works) : [];
+  return normalizeDocs(
+    works.map((work) =>
+      isRecord(work)
+        ? {
+            ...work,
+            author_name: list(work.authors).map((author) =>
+              isRecord(author) ? author.name : null,
+            ),
+            cover_i: work.cover_id,
+          }
+        : work,
+    ),
+  );
 }

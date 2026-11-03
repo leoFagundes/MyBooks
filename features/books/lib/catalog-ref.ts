@@ -1,8 +1,9 @@
 import "server-only";
 import { updateTag } from "next/cache";
-import type { BookRef } from "@/features/shelf/schemas";
+import type { GenreSlug } from "@/features/profile/genres";
+import { type BookRef, DISCOVERY_ALL } from "@/features/shelf/schemas";
 import type { ActionResult } from "@/lib/action";
-import { findExternalResult } from "../queries";
+import { findDiscoveryResult, findExternalResult } from "../queries";
 import { ensureCatalogBook } from "./catalog";
 
 /**
@@ -15,11 +16,15 @@ export async function catalogIdFor(
   viewerId: string,
 ): Promise<ActionResult<string>> {
   if ("catalogId" in book) return { ok: true, data: book.catalogId };
-  const result = await findExternalResult(
-    book.query,
-    book.source,
-    book.sourceId,
-  );
+  const result =
+    "discovery" in book
+      ? await findDiscoveryResult(
+          book.discovery === DISCOVERY_ALL
+            ? null
+            : (book.discovery as GenreSlug),
+          book.sourceId,
+        )
+      : await findExternalResult(book.query, book.source, book.sourceId);
   if (!result) {
     return {
       ok: false,

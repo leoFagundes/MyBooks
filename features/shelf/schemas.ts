@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GENRE_SLUGS } from "@/features/profile/genres";
 
 export const SHELF_STATUSES = ["read", "reading", "want", "abandoned"] as const;
 
@@ -154,12 +155,28 @@ export type ShelfDetails = z.infer<typeof shelfDetailsSchema>;
  * busca que a achou. Os dados do livro nunca vêm do cliente: o servidor refaz
  * a busca (que está no cache) e pega o resultado de lá.
  */
+/** O conjunto da grade de descobertas do Explorar: um gênero ou "todos". */
+export const DISCOVERY_ALL = "todos";
+
 export const bookRefSchema = z.union([
   z.object({ catalogId: z.uuid("Livro inválido") }),
   z.object({
     source: z.enum(["openlibrary", "google"], { error: "Fonte inválida" }),
     sourceId: z.string().trim().min(1).max(64),
     query: z.string().trim().min(2).max(100),
+  }),
+  // Da grade de descobertas: o servidor acha o livro no mesmo conjunto
+  z.object({
+    source: z.literal("openlibrary", { error: "Fonte inválida" }),
+    sourceId: z.string().trim().min(1).max(64),
+    discovery: z
+      .string()
+      .refine(
+        (value) =>
+          value === DISCOVERY_ALL ||
+          (GENRE_SLUGS as readonly string[]).includes(value),
+        "Gênero inválido",
+      ),
   }),
 ]);
 

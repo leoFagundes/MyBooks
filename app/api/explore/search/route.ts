@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { searchCatalogBooks } from "@/features/books/queries";
 import { searchCollections } from "@/features/collections/queries";
 import {
   followStates,
@@ -8,10 +7,11 @@ import {
 } from "@/features/social/queries";
 import { createClient } from "@/lib/supabase/server";
 
-const tabSchema = z.enum(["livros", "leitores", "colecoes"]);
+const tabSchema = z.enum(["leitores", "colecoes"]);
 const headers = { "Cache-Control": "private, no-store" };
 
-// A busca do Explorar, uma aba por vez. Leitura por GET, não por Server
+// A busca do Explorar em Leitores e Coleções, uma aba por vez (Livros usa a
+// busca da paleta, /api/books/search). Leitura por GET, não por Server
 // Action: o cliente despacha actions uma por vez, e a busca anda a cada letra
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
@@ -20,12 +20,6 @@ export async function GET(request: Request) {
   if (!tab.success) return Response.json({}, { status: 400 });
   if (query.length < 2) return Response.json({}, { headers });
   try {
-    if (tab.data === "livros") {
-      return Response.json(
-        { books: await searchCatalogBooks(query) },
-        { headers },
-      );
-    }
     if (tab.data === "colecoes") {
       return Response.json(
         { collections: await searchCollections(query) },

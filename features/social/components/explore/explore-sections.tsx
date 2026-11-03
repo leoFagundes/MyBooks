@@ -3,14 +3,9 @@ import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   CollectionsIllustration,
-  EmptyShelfIllustration,
   ReadersIllustration,
 } from "@/components/ui/illustrations";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookCover } from "@/features/books/components/book-cover";
-import { BookLink } from "@/features/books/components/book-link";
-import { ReturningCover } from "@/features/books/components/returning-cover";
-import { getTrendingBooks } from "@/features/books/queries";
 import { CollectionCard } from "@/features/collections/components/collection-card";
 import { NewCollectionButton } from "@/features/collections/components/new-collection-button";
 import { getPopularCollections } from "@/features/collections/queries";
@@ -18,6 +13,7 @@ import { formatNumber } from "@/lib/format";
 import { routes } from "@/lib/routes";
 import { getAffinityReaders } from "../../queries";
 import { ReaderRow } from "../reader-row";
+import { DiscoveryGrid } from "./discovery-grid";
 
 function Section({
   id,
@@ -39,21 +35,20 @@ function Section({
 }
 
 /**
- * As seções do Explorar sem busca (spec §5.9): coleções populares, livros
- * em alta e, com conta, leitores com afinidade. As duas primeiras são
- * públicas e ficam em cache; a terceira depende de quem vê.
+ * As seções do Explorar sem busca (spec §5.9 e MELHORIAS 5.3): a grade
+ * "Populares e descobertas", as coleções populares e, com conta, leitores
+ * com afinidade. As coleções são públicas e ficam em cache; a grade vem do
+ * navegador (a ordem é da sessão de quem vê); os leitores dependem de quem vê.
  */
 export function ExploreSections() {
   return (
     <div className="flex flex-col gap-14">
+      <DiscoveryGrid />
       <Section id="colecoes-populares" title="Coleções populares">
         <Suspense fallback={<CardsSkeleton />}>
           <PopularCollections />
         </Suspense>
       </Section>
-      <Suspense fallback={<CoversSkeleton />}>
-        <TrendingBooks />
-      </Suspense>
       <Suspense fallback={null}>
         <AffinityReaders />
       </Suspense>
@@ -84,46 +79,6 @@ export async function PopularCollections({ limit = 6 }: { limit?: number }) {
         </StaggerItem>
       ))}
     </Stagger>
-  );
-}
-
-async function TrendingBooks() {
-  const { weekly, books } = await getTrendingBooks(12);
-  const title = weekly
-    ? "Livros mais adicionados na semana"
-    : "Livros mais adicionados";
-  return (
-    <Section id="livros-em-alta" title={title}>
-      {books.length === 0 ? (
-        <EmptyState
-          illustration={EmptyShelfIllustration}
-          title="Ainda não há livros em alta"
-          description="Quando as estantes crescerem, os mais adicionados aparecem aqui."
-        />
-      ) : (
-        <Stagger className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6">
-          {books.map((book) => (
-            <StaggerItem key={book.id}>
-              <BookLink
-                book={book}
-                href={routes.book(book.id)}
-                aria-label={book.title}
-                className="block rounded-cover"
-              >
-                <BookCover book={book} size="fill" />
-              </BookLink>
-              <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                {weekly
-                  ? `${formatNumber(book.adds)} esta semana`
-                  : book.adds === 1
-                    ? "1 estante"
-                    : `${formatNumber(book.adds)} estantes`}
-              </p>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      )}
-    </Section>
   );
 }
 
@@ -168,24 +123,6 @@ function CardsSkeleton() {
       {[0, 1, 2].map((card) => (
         <Skeleton key={card} className="h-64 rounded-card" />
       ))}
-    </div>
-  );
-}
-
-function CoversSkeleton() {
-  return (
-    <div
-      aria-busy
-      aria-label="Carregando livros"
-      className="flex flex-col gap-5"
-    >
-      <Skeleton className="h-7 w-72" />
-      <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6">
-        {[0, 1, 2, 3, 4, 5].map((cover) => (
-          <Skeleton key={cover} className="aspect-2/3 rounded-cover" />
-        ))}
-      </div>
-      <ReturningCover />
     </div>
   );
 }

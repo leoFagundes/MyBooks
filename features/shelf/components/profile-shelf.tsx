@@ -203,7 +203,14 @@ export function ProfileShelf({
             </p>
             <Button
               variant="outline"
-              onClick={() => nextRead.open(visible.map((entry) => entry.book))}
+              onClick={() =>
+                nextRead.open(
+                  visible.map((entry) => ({
+                    ...entry.book,
+                    genres: entry.genres,
+                  })),
+                )
+              }
             >
               <Shuffle />
               Sortear próxima leitura

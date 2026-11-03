@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { PASSWORD_MIN } from "@/features/auth/schemas";
-import { GENRE_SLUGS, type GenreSlug } from "./genres";
+import {
+  GENRE_NAME_MAX,
+  GENRE_NAME_MIN,
+  genreSlug,
+  isOffensive,
+  normalizeGenreName,
+} from "./lib/genre-name";
 import { RESERVED_USERNAMES } from "./lib/username";
 
 // As mesmas regras dos checks de profiles (migration dos perfis)
@@ -26,17 +32,29 @@ export const profileStepSchema = z.object({
 
 export type ProfileStepValues = z.input<typeof profileStepSchema>;
 
+// Os favoritos são slugs (os oficiais e os criados por leitores): o banco
+// confere que o gênero existe e que quem salva o enxerga
 export const genresSchema = z
   .array(
-    z.enum(GENRE_SLUGS as [GenreSlug, ...GenreSlug[]], {
-      error: "Gênero desconhecido",
-    }),
+    z
+      .string()
+      .max(GENRE_NAME_MAX, "Gênero desconhecido")
+      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Gênero desconhecido"),
   )
   .transform((genres) => [...new Set(genres)])
+  .pipe(z.array(z.string()).max(10, "Escolha até 10"));
+
+/** O nome de um gênero novo: tamanho, letras de verdade e nada de palavrão. */
+export const genreNameSchema = z
+  .string({ error: "Dê um nome ao gênero" })
+  .transform(normalizeGenreName)
   .pipe(
     z
-      .array(z.enum(GENRE_SLUGS as [GenreSlug, ...GenreSlug[]]))
-      .max(10, "Escolha até 10"),
+      .string()
+      .min(GENRE_NAME_MIN, "Pelo menos 2 letras")
+      .max(GENRE_NAME_MAX, "Até 40 letras")
+      .refine((name) => genreSlug(name).length >= 2, "Use letras ou números")
+      .refine((name) => !isOffensive(name), "Esse nome não pode virar gênero"),
   );
 
 /** O que a gaveta "Editar perfil" muda (o @ fica para as configurações). */

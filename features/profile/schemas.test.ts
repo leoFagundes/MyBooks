@@ -75,12 +75,14 @@ describe("passo do perfil", () => {
 });
 
 describe("gêneros", () => {
-  test("só os gêneros do MyBooks, sem repetir, até 10", () => {
+  // Os criados por leitores também valem: o banco confere que o gênero existe
+  test("slugs de gênero, sem repetir, até 10", () => {
     expect(genresSchema.parse(["poesia", "poesia", "contos"])).toEqual([
       "poesia",
       "contos",
     ]);
-    expect(message(genresSchema.safeParse(["nao-existe"]))).toBe(
+    expect(genresSchema.parse(["sertanejo-raiz"])).toEqual(["sertanejo-raiz"]);
+    expect(message(genresSchema.safeParse(["Não é slug"]))).toBe(
       "Gênero desconhecido",
     );
     expect(
@@ -122,12 +124,12 @@ describe("editar perfil", () => {
     expect(message(edit({ bio: "a".repeat(161) }))).toBe("Até 160 caracteres");
   });
 
-  test("nome obrigatório, gêneros conhecidos e privacidade sim ou não", () => {
+  test("nome obrigatório, gêneros em slug e privacidade sim ou não", () => {
     expect(message(edit({ displayName: " " }))).toBe("Diga seu nome");
     expect(
       edit({ genres: ["poesia", "poesia", "contos"] }).data?.genres,
     ).toEqual(["poesia", "contos"]);
-    expect(edit({ genres: ["sertanejo"] }).success).toBe(false);
+    expect(edit({ genres: ["Sertanejo!"] }).success).toBe(false);
     expect(edit({ isPrivate: "sim" }).success).toBe(false);
     expect(edit({ isPrivate: true }).data?.isPrivate).toBe(true);
   });

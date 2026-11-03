@@ -62,7 +62,7 @@ export function ProfileHeader({
   titleAs?: "h1" | "h2";
 }) {
   const genres = profile.favoriteGenres.flatMap((slug) => {
-    const label = genreLabel(slug);
+    const label = genreLabel(slug) ?? profile.genreNames?.[slug];
     return label ? [{ slug, label }] : [];
   });
 

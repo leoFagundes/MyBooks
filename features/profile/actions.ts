@@ -8,10 +8,12 @@ import { requireViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { type Genre, genreSlug } from "./lib/genre-name";
 import {
   deleteAccountSchema,
   type EditProfileValues,
   editProfileSchema,
+  genreNameSchema,
   genresSchema,
   type PasswordChangeValues,
   passwordChangeSchema,
@@ -74,10 +76,9 @@ export async function saveGenres(input: string[]): Promise<ActionResult> {
   }
   const viewer = await requireViewer();
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ favorite_genres: parsed.data })
-    .eq("id", viewer.id);
+  const { error } = await supabase.rpc("set_favorite_genres", {
+    slugs: parsed.data,
+  });
   if (error) {
     return {
       ok: false,
@@ -126,12 +127,15 @@ export async function updateProfile(
     .update({
       display_name: displayName,
       bio,
-      favorite_genres: genres,
       is_private: isPrivate,
       ...(avatarPath ? { avatar_url: avatarPath } : {}),
     })
     .eq("id", viewer.id);
-  if (error)
+  // Os favoritos moram em user_favorite_genres (o array do perfil é espelho)
+  const saved = error
+    ? null
+    : await supabase.rpc("set_favorite_genres", { slugs: genres });
+  if (error || saved?.error)
     return { ok: false, error: "Não deu para salvar agora. Tente de novo." };
 
   updateTag(`profile:${viewer.username}`);
@@ -246,4 +250,55 @@ export async function deleteAccount(input: {
   updateTag(`profile:${viewer.username}`);
   updateTag(`shelf:${viewer.id}`);
   return { ok: true, data: undefined };
+}
+
+/**
+ * Cria um gênero (MELHORIAS 5.4). Nasce pendente: só quem criou o vê até um
+ * admin aprovar. Se já existe um com o mesmo nome (sem acento nem caixa), é
+ * esse que volta, e nada se cria.
+ */
+export async function createGenre(
+  input: unknown,
+): Promise<ActionResult<Genre>> {
+  const parsed = genreNameSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Nome inválido",
+    };
+  }
+  const viewer = await requireViewer();
+  const name = parsed.data;
+  const slug = genreSlug(name);
+  const supabase = await createClient();
+  const existing = await supabase
+    .from("genres")
+    .select("slug, name, status")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (existing.data) {
+    return {
+      ok: true,
+      data: {
+        slug: existing.data.slug,
+        name: existing.data.name,
+        pending: existing.data.status !== "approved",
+      },
+    };
+  }
+  const { error } = await supabase
+    .from("genres")
+    .insert({ name, slug, created_by: viewer.id });
+  if (error) {
+    // Outra pessoa já criou esse e ele espera aprovação: a RLS o esconde, e o
+    // slug único barra o repetido
+    return {
+      ok: false,
+      error:
+        error.code === UNIQUE_VIOLATION
+          ? "Esse gênero já foi sugerido e espera aprovação."
+          : "Não deu para criar o gênero agora. Tente de novo.",
+    };
+  }
+  return { ok: true, data: { slug, name, pending: true } };
 }

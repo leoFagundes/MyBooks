@@ -8,6 +8,7 @@ import {
 } from "@/features/profile/components/settings/settings-sections";
 import {
   getAccountEmail,
+  getOwnFavoriteGenres,
   getProfileByUsername,
 } from "@/features/profile/queries";
 import { GoodreadsImport } from "@/features/shelf/components/goodreads-import";
@@ -43,14 +44,16 @@ export default function SettingsPage() {
 async function Settings() {
   const viewer = await requireViewer();
   if (!viewer.onboarded) redirect(routes.onboarding);
-  const [profile, email] = await Promise.all([
+  const [profile, email, genres] = await Promise.all([
     getProfileByUsername(viewer.username),
     getAccountEmail(viewer.username),
+    getOwnFavoriteGenres(viewer),
   ]);
   if (!profile) notFound();
   return (
     <SettingsSections
       profile={profile}
+      genres={genres}
       email={email}
       importer={<GoodreadsImport username={profile.username} />}
     />

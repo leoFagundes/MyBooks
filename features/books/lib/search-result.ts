@@ -26,7 +26,17 @@ export type SearchResult = {
   coverColor?: string | null;
   /** Estilo da capa tipográfica, quando o livro já está no catálogo. */
   coverStyle?: CoverStyle;
+  /** O @ de quem cadastrou, nos livros manuais do catálogo. */
+  addedBy?: string | null;
+  /** Em quantas estantes (que quem busca pode ver) o livro já está. */
+  shelves?: number;
 };
+
+/** De onde veio o resultado: o selo da busca (MELHORIAS 5.2). */
+export type ResultOrigin = Pick<
+  SearchResult,
+  "source" | "catalogId" | "addedBy" | "shelves"
+>;
 
 /** Limites das colunas de books: a migration do catálogo usa os mesmos. */
 export const BOOK_LIMITS = {

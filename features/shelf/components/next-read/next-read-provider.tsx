@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { BookVisual } from "@/features/books/types";
 import { actionErrorMessage, unwrapAction } from "@/lib/action";
 import { startReading, updateShelfEntry } from "../../actions";
+import type { DrawBook } from "../../lib/draw-genres";
 import { today } from "../../lib/today";
 import { WANT_LIST_KEY } from "../../lib/want-list";
 import { useAddBook } from "../add-book/add-book-provider";
@@ -21,7 +22,7 @@ const NextReadDialog = dynamic(
 
 type NextReadContextValue = {
   /** Sorteia entre os livros dados; sem eles, busca a fila de Quero ler. */
-  open: (books?: BookVisual[]) => void;
+  open: (books?: DrawBook[]) => void;
   /** Há conta: o item do ⌘K funciona. */
   enabled: boolean;
 };
@@ -34,7 +35,7 @@ const NextReadContext = createContext<NextReadContextValue | null>(null);
  */
 export function NextReadProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [books, setBooks] = useState<BookVisual[] | null>(null);
+  const [books, setBooks] = useState<DrawBook[] | null>(null);
   const [, startTransition] = useTransition();
   const addBook = useAddBook();
   const queryClient = useQueryClient();

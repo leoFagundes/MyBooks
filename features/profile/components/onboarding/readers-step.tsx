@@ -9,7 +9,7 @@ import { FollowButton } from "@/features/social/components/follow-button";
 import type { FollowState, SuggestedReader } from "@/features/social/types";
 import { initials } from "@/lib/initials";
 import { finishOnboarding } from "../../actions";
-import { genreLabel, type GenreSlug } from "../../genres";
+import { genreLabel } from "../../genres";
 import { StepFrame } from "./step-frame";
 
 type Suggestions =
@@ -40,9 +40,9 @@ function useSuggestions(): Suggestions {
 const list = new Intl.ListFormat("pt-BR", { type: "conjunction" });
 
 // "Também lê Clássicos e Contos"; sem gênero em comum, o que a pessoa lê
-function tasteLine(reader: SuggestedReader, genres: GenreSlug[]) {
+function tasteLine(reader: SuggestedReader, genres: string[]) {
   const shared = reader.favoriteGenres.filter((genre) =>
-    (genres as string[]).includes(genre),
+    genres.includes(genre),
   );
   const labels = (shared.length > 0 ? shared : reader.favoriteGenres)
     .slice(0, 3)
@@ -58,7 +58,7 @@ export function ReadersStep({
   onChange,
   onBack,
 }: {
-  genres: GenreSlug[];
+  genres: string[];
   follows: Record<string, FollowState>;
   onChange: React.Dispatch<React.SetStateAction<Record<string, FollowState>>>;
   onBack: () => void;

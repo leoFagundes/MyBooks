@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { useState } from "react";
-import { GENRE_SLUGS, type GenreSlug } from "@/features/profile/genres";
 import type { OwnProfile } from "@/features/profile/queries";
 import type { ShelfStatus } from "@/features/shelf/schemas";
 import { springs, tweens } from "@/lib/motion";
@@ -73,10 +72,8 @@ export function OnboardingWizard({
     username: profile.username,
     avatar: { path: null, preview: profile.avatarUrl },
   });
-  const [genres, setGenres] = useState<GenreSlug[]>(
-    profile.favoriteGenres.filter((slug): slug is GenreSlug =>
-      (GENRE_SLUGS as readonly string[]).includes(slug),
-    ),
+  const [genres, setGenres] = useState<string[]>(
+    profile.favoriteGenres.map((genre) => genre.slug),
   );
   const [books, setBooks] = useState(shelf);
   const [follows, setFollows] = useState<Record<string, FollowState>>({});
@@ -114,6 +111,7 @@ export function OnboardingWizard({
             ) : step === 1 ? (
               <GenresStep
                 value={genres}
+                known={profile.favoriteGenres}
                 onChange={setGenres}
                 onBack={() => go(0)}
                 onDone={() => go(2)}

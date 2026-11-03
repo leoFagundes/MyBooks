@@ -13,6 +13,7 @@ import {
 } from "@/features/profile/components/profile-tabs";
 import {
   canSeeContent,
+  getOwnFavoriteGenres,
   getProfileCounts,
   getProfileFromParam,
   getProfileRelation,
@@ -78,6 +79,9 @@ async function ProfileTop({ params }: { params: Params }) {
     getViewer(),
   ]);
   const visible = canSeeContent(profile, relation);
+  // Na gaveta "Editar perfil", os favoritos com nome, inclusive os em análise
+  const ownGenres =
+    relation === "self" && viewer ? await getOwnFavoriteGenres(viewer) : [];
   // A afinidade é com quem vê, no perfil dos outros que ela pode ver
   const affinity =
     viewer && relation !== "self" && visible
@@ -94,7 +98,7 @@ async function ProfileTop({ params }: { params: Params }) {
         affinity={affinity}
         action={
           relation === "self" ? (
-            <EditProfileSheet profile={profile} />
+            <EditProfileSheet profile={profile} genres={ownGenres} />
           ) : (
             <FollowButton
               reader={{

@@ -22,8 +22,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { updateProfile } from "../actions";
-import { GENRE_SLUGS, type GenreSlug } from "../genres";
 import type { ProfileSummary } from "../queries";
+import type { Genre } from "../lib/genre-name";
 import { editProfileSchema } from "../schemas";
 import { GenreChips } from "./genre-chips";
 import { type AvatarValue, AvatarPicker } from "./onboarding/avatar-picker";
@@ -49,7 +49,14 @@ type EditableProfile = Pick<
  * "Editar perfil": nome, bio, foto, gêneros e privacidade, com as mesmas
  * peças do onboarding. Gaveta de baixo no celular e lateral no resto.
  */
-export function EditProfileSheet({ profile }: { profile: EditableProfile }) {
+export function EditProfileSheet({
+  profile,
+  genres,
+}: {
+  profile: EditableProfile;
+  /** Os favoritos com nome, inclusive os criados e ainda em análise. */
+  genres: Genre[];
+}) {
   const wide = useMediaQuery("(min-width: 640px)");
   const [open, setOpen] = useState(false);
 
@@ -65,7 +72,11 @@ export function EditProfileSheet({ profile }: { profile: EditableProfile }) {
         <SheetHeader>
           <SheetTitle>Editar perfil</SheetTitle>
         </SheetHeader>
-        <EditProfileForm profile={profile} onSaved={() => setOpen(false)} />
+        <EditProfileForm
+          profile={profile}
+          genres={genres}
+          onSaved={() => setOpen(false)}
+        />
       </SheetContent>
     </Sheet>
   );
@@ -73,9 +84,11 @@ export function EditProfileSheet({ profile }: { profile: EditableProfile }) {
 
 function EditProfileForm({
   profile,
+  genres,
   onSaved,
 }: {
   profile: EditableProfile;
+  genres: Genre[];
   onSaved: () => void;
 }) {
   const id = useId();
@@ -97,9 +110,7 @@ function EditProfileForm({
     defaultValues: {
       displayName: profile.displayName,
       bio: profile.bio ?? "",
-      genres: profile.favoriteGenres.filter((slug): slug is GenreSlug =>
-        (GENRE_SLUGS as readonly string[]).includes(slug),
-      ),
+      genres: genres.map((genre) => genre.slug),
       isPrivate: profile.isPrivate,
     },
   });
@@ -198,8 +209,9 @@ function EditProfileForm({
             name="genres"
             render={({ field }) => (
               <GenreChips
-                value={field.value as GenreSlug[]}
+                value={field.value}
                 onChange={field.onChange}
+                known={genres}
               />
             )}
           />

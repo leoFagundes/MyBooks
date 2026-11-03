@@ -11,6 +11,8 @@ import {
   storeUploadedCover,
   type UploadedCover,
 } from "./lib/cover-upload";
+import { bookRefSchema } from "@/features/shelf/schemas";
+import { catalogIdFor } from "./lib/catalog-ref";
 import { toBookVisual } from "./lib/to-book-visual";
 import {
   type CoverDesign,
@@ -229,4 +231,20 @@ export async function updateManualBook(
   return saved
     ? { ok: true, data: toBookVisual(saved) }
     : { ok: false, error: "Não deu para salvar o livro. Tente de novo." };
+}
+
+/**
+ * Abre um livro de fora achado no Explorar (na busca ou nas descobertas): ele
+ * entra no catálogo agora e devolve o id, para a página dele. Os dados nunca
+ * vêm do cliente: o servidor acha o livro de novo, do cache.
+ */
+export async function openExternalBook(
+  input: unknown,
+): Promise<ActionResult<string>> {
+  const parsed = bookRefSchema.safeParse(input);
+  if (!parsed.success || "catalogId" in parsed.data) {
+    return { ok: false, error: "Livro inválido." };
+  }
+  const viewer = await requireViewer();
+  return catalogIdFor(parsed.data, viewer.id);
 }

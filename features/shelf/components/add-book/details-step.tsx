@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { BookCover } from "@/features/books/components/book-cover";
+import { BookOrigin } from "@/features/books/components/book-origin";
 import { StarRating } from "@/features/books/components/star-rating";
 import {
   type ShelfDetails,
@@ -116,6 +117,9 @@ export function DetailsStep({
           <p className="font-mono text-xs text-muted-foreground">
             {byline(book.visual)}
           </p>
+          {book.origin ? (
+            <BookOrigin origin={book.origin} linkCreator className="mt-1" />
+          ) : null}
         </div>
       </div>
 

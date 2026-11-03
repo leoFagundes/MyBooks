@@ -112,6 +112,21 @@ function renderInline(nodes: Inline[], books: Books): React.ReactNode[] {
 
 function renderBlocks(blocks: Block[], books: Books): React.ReactNode[] {
   return blocks.map((block, index) => {
+    // O título do tópico já é o h1 da página
+    if (block.t === "h") {
+      const Heading = block.level === 1 ? "h2" : "h3";
+      return (
+        <Heading
+          key={index}
+          className={cn(
+            "font-serif tracking-tight text-balance",
+            block.level === 1 ? "mt-2 text-3xl" : "mt-1 text-2xl",
+          )}
+        >
+          {renderInline(block.c, books)}
+        </Heading>
+      );
+    }
     if (block.t === "quote") {
       return (
         <blockquote

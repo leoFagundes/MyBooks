@@ -10,6 +10,21 @@ import {
 const BOOK = "3d4f4713-d94b-593f-b462-10acf3328e40";
 
 describe("markdown leve", () => {
+  test("títulos numa linha só deles, mesmo sem linha em branco", () => {
+    expect(parseMarkdown("# Capitu\n## O olhar\ntexto\n#sem espaço")).toEqual([
+      { t: "h", level: 1, c: [{ t: "text", v: "Capitu" }] },
+      { t: "h", level: 2, c: [{ t: "text", v: "O olhar" }] },
+      {
+        t: "p",
+        c: [
+          { t: "text", v: "texto" },
+          { t: "br" },
+          { t: "text", v: "#sem espaço" },
+        ],
+      },
+    ]);
+  });
+
   test("negrito, itálico, spoiler e menção", () => {
     expect(
       parseInline("**forte** e *leve* com ||segredo|| para @Ana_1"),

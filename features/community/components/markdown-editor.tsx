@@ -5,6 +5,8 @@ import {
   Bold,
   BookOpen,
   EyeOff,
+  Heading1,
+  Heading2,
   Italic,
   Link2,
   List,
@@ -34,11 +36,26 @@ type Wrap = {
   block?: boolean;
 };
 
-const TOOLS: {
+type Tool = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   wrap: Wrap;
-}[] = [
+};
+
+const HEADING_TOOLS: Tool[] = [
+  {
+    label: "Título 1",
+    icon: Heading1,
+    wrap: { before: "# ", after: "", placeholder: "Título", block: true },
+  },
+  {
+    label: "Título 2",
+    icon: Heading2,
+    wrap: { before: "## ", after: "", placeholder: "Título", block: true },
+  },
+];
+
+const TOOLS: Tool[] = [
   {
     label: "Negrito",
     icon: Bold,
@@ -153,6 +170,7 @@ export function MarkdownEditor({
   placeholder,
   invalid,
   describedBy,
+  headings = false,
 }: {
   id: string;
   value: string;
@@ -165,6 +183,8 @@ export function MarkdownEditor({
   placeholder?: string;
   invalid?: boolean;
   describedBy?: string;
+  /** Os botões de título (só no tópico). */
+  headings?: boolean;
 }) {
   const area = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
@@ -205,7 +225,7 @@ export function MarkdownEditor({
           aria-label="Formatação"
           className="flex flex-wrap items-center gap-0.5"
         >
-          {TOOLS.map((tool) => (
+          {(headings ? [...HEADING_TOOLS, ...TOOLS] : TOOLS).map((tool) => (
             <Button
               key={tool.label}
               type="button"
@@ -269,8 +289,8 @@ export function MarkdownEditor({
         />
       )}
       <p className="font-mono text-[11px] text-muted-foreground">
-        **negrito** · *itálico* · [link](https://…) · &gt; citação · - lista ·
-        ||spoiler|| · @usuário
+        {headings ? "# título · ## subtítulo · " : null}**negrito** · *itálico*
+        · [link](https://…) · &gt; citação · - lista · ||spoiler|| · @usuário
       </p>
     </div>
   );

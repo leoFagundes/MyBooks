@@ -1,5 +1,5 @@
-// Markdown leve da comunidade (MELHORIAS 8): negrito, itálico, links,
-// citações, listas, ||spoiler||, @menções e livros ([[livro:<id>]]). Vira uma
+// Markdown leve da comunidade (MELHORIAS 8): títulos (# e ##), negrito,
+// itálico, links, citações, listas, ||spoiler||, @menções e livros ([[livro:<id>]]). Vira uma
 // árvore própria, que o RichText desenha como elementos React: nenhum HTML de
 // quem escreveu chega à página, e link só com http ou https.
 
@@ -14,6 +14,7 @@ export type Inline =
   | { t: "book"; id: string };
 
 export type Block =
+  | { t: "h"; level: 1 | 2; c: Inline[] }
   | { t: "p"; c: Inline[] }
   | { t: "quote"; c: Block[] }
   | { t: "ul"; items: Inline[][] }
@@ -100,17 +101,46 @@ function lines(text: string): Inline[] {
   return out;
 }
 
+const HEADING = /^(#{1,2})\s+(.+)$/;
 const QUOTE = /^>\s?/;
 const BULLET = /^[-*]\s+/;
 const NUMBER = /^\d+[.)]\s+/;
 
-/** O texto inteiro em blocos: parágrafos, citações e listas. */
+/** Os pedaços entre linhas em branco, com cada título numa linha só dele. */
+function chunks(text: string): string[] {
+  const out: string[] = [];
+  for (const chunk of text.split(/\n{2,}/)) {
+    let rest: string[] = [];
+    for (const row of chunk.split("\n")) {
+      if (!HEADING.test(row)) {
+        rest.push(row);
+        continue;
+      }
+      if (rest.length) out.push(rest.join("\n"));
+      out.push(row);
+      rest = [];
+    }
+    if (rest.length) out.push(rest.join("\n"));
+  }
+  return out;
+}
+
+/** O texto inteiro em blocos: títulos, parágrafos, citações e listas. */
 export function parseMarkdown(source: string, depth = 0): Block[] {
   const text = source.replace(/\r\n?/g, "\n").trim();
   if (!text) return [];
   const blocks: Block[] = [];
-  for (const chunk of text.split(/\n{2,}/)) {
+  for (const chunk of chunks(text)) {
     const rows = chunk.split("\n");
+    const heading = HEADING.exec(chunk);
+    if (heading) {
+      blocks.push({
+        t: "h",
+        level: heading[1] === "#" ? 1 : 2,
+        c: parseInline((heading[2] as string).trim()),
+      });
+      continue;
+    }
     if (depth < 3 && rows.every((row) => QUOTE.test(row))) {
       blocks.push({
         t: "quote",

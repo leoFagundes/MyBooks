@@ -196,6 +196,7 @@ function TopicForm({
             books={bookMap}
             onBook={addBook}
             maxLength={20000}
+            headings
             invalid={Boolean(errors.body)}
             describedBy={errors.body ? `${id}-texto-erro` : undefined}
           />

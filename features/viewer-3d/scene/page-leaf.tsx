@@ -15,6 +15,7 @@ import {
   Uint16BufferAttribute,
   Vector3,
 } from "three";
+import { leafTurn } from "../lib/hinge";
 
 const SEGMENTS = 24;
 export const LEAF_THICKNESS = 0.004;
@@ -132,7 +133,9 @@ export function PageLeaf({
 
   useFrame(() => {
     const { mesh, bones } = rig.current;
-    const t = turned.get();
+    // A mola que passa do fim deitaria a folha dentro da capa; a que passa do
+    // começo, dentro do miolo
+    const t = leafTurn(turned.get());
     mesh.position.z = position[2] + t * lift;
     const root = bones[0];
     if (root) root.rotation.y = -t * rest;

@@ -8,14 +8,14 @@ const AMBIENT = 1.3;
 const KEY = 2;
 
 /**
- * Estúdio suave (spec §5.7): painéis de luz renderizados uma vez num mapa de
- * ambiente, sem HDR para baixar, e a sombra de contato no chão. A luz
- * principal vem do alto, à direita: de frente, a capa recebe o mesmo que a
- * imagem 2D e o crossfade não muda de cor; girada para 3/4, ela se volta para
- * a luz e reflete o painel da direita (o brilho), e a lombada fica na sombra.
- * Nenhum painel fica atrás da câmera.
+ * A luz do estúdio (spec §5.7): painéis renderizados uma vez num mapa de
+ * ambiente, sem HDR para baixar. A luz principal vem do alto, à direita: de
+ * frente, a face recebe o mesmo que a imagem 2D, e a troca do 2D para o 3D
+ * não muda de cor; girada para 3/4, ela se volta para a luz e reflete o
+ * painel da direita (o brilho). Nenhum painel fica atrás da câmera. A mesma
+ * luz vale no visualizador e na landing.
  */
-export function Studio({ floorY }: { floorY: number }) {
+export function StudioLights() {
   return (
     <>
       <ambientLight intensity={AMBIENT} />
@@ -50,6 +50,15 @@ export function Studio({ floorY }: { floorY: number }) {
           target={[0, 0, 0]}
         />
       </Environment>
+    </>
+  );
+}
+
+/** O estúdio do visualizador: a luz e a sombra de contato no chão. */
+export function Studio({ floorY }: { floorY: number }) {
+  return (
+    <>
+      <StudioLights />
       <ContactShadows
         position={[0, floorY, 0]}
         scale={10}

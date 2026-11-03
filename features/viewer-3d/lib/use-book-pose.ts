@@ -242,14 +242,17 @@ export function useBookPose(reduced: boolean): BookPose {
     goTo(SETTLE_POSE.yaw, SETTLE_POSE.pitch, springs.gentle);
   }
 
-  function close(transition: Transition) {
+  // A capa e as folhas fecham pela curva padrão, sem mola: uma mola com
+  // rebote passaria do zero, e a capa entraria no miolo. O deslize do livro
+  // segue a mola de quem fecha
+  function close(transition: Transition, fold: Transition) {
     setOpened(false);
     openLimits.current = null;
     turned.current = 0;
     return [
-      to(values.open, 0, transition),
+      to(values.open, 0, fold),
       to(values.shift, 0, transition),
-      ...values.leaves.map((leaf) => to(leaf, 0, transition)),
+      ...values.leaves.map((leaf) => to(leaf, 0, fold)),
     ];
   }
 
@@ -264,7 +267,7 @@ export function useBookPose(reduced: boolean): BookPose {
   }
 
   function reset() {
-    close(springs.smooth);
+    close(springs.smooth, tweens.slow);
     settle();
   }
 
@@ -290,7 +293,7 @@ export function useBookPose(reduced: boolean): BookPose {
   function toFront() {
     return settled([
       ...goTo(0, 0, springs.snappy),
-      ...close(springs.snappy),
+      ...close(springs.snappy, tweens.base),
       to(values.tiltYaw, 0, springs.snappy),
       to(values.tiltPitch, 0, springs.snappy),
     ]);

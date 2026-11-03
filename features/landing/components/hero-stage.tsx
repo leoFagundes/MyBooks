@@ -2,72 +2,25 @@
 
 import { ArrowDown } from "lucide-react";
 import {
-  animate,
-  cubicBezier,
   type MotionValue,
   motion,
-  useMotionValue,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
 } from "motion/react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { splitWords } from "@/components/motion/split-words";
 import { Button } from "@/components/ui/button";
 import { Shelf } from "@/features/books/components/shelf";
-import type { BookVisual } from "@/features/books/types";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
-import { easing, springs, staggerDelay, tweens } from "@/lib/motion";
+import { staggerDelay } from "@/lib/motion";
 import { routes } from "@/lib/routes";
-import { CAN_HOVER, useMediaQuery } from "@/lib/use-media-query";
+import { LINE, PROFILE, SWAP, TITLE_OUT } from "../lib/story";
 import type { LandingShowcase } from "../queries";
-import { BookBox } from "./book-box";
+import { HeroBooks } from "./hero-books";
 
 const TITLE = "Sua vida de leitor, em uma estante só.";
-const WIDE = "(min-width: 640px)";
-const ease = cubicBezier(...easing);
-
-// Onde cada capa flutua no começo: x e y em fração do palco, e a
-// profundidade (perto é maior e nítido; longe, menor e um pouco desfocado)
-type Slot = { x: number; y: number; depth: number };
-const WIDE_SLOTS: Slot[] = [
-  { x: 0.08, y: 0.2, depth: 0.8 },
-  { x: 0.2, y: 0.1, depth: 1 },
-  { x: 0.35, y: 0.15, depth: 0.62 },
-  { x: 0.65, y: 0.12, depth: 0.7 },
-  { x: 0.8, y: 0.1, depth: 1.05 },
-  { x: 0.93, y: 0.26, depth: 0.78 },
-  { x: 0.06, y: 0.58, depth: 1.08 },
-  { x: 0.94, y: 0.62, depth: 0.92 },
-  { x: 0.14, y: 0.88, depth: 0.72 },
-  { x: 0.32, y: 0.94, depth: 0.95 },
-  { x: 0.7, y: 0.92, depth: 0.66 },
-  { x: 0.86, y: 0.86, depth: 1.1 },
-];
-const NARROW_SLOTS: Slot[] = [
-  { x: 0.12, y: 0.12, depth: 0.9 },
-  { x: 0.4, y: 0.07, depth: 0.66 },
-  { x: 0.66, y: 0.1, depth: 1 },
-  { x: 0.92, y: 0.15, depth: 0.74 },
-  { x: 0.08, y: 0.88, depth: 0.76 },
-  { x: 0.36, y: 0.94, depth: 1.02 },
-  { x: 0.64, y: 0.91, depth: 0.7 },
-  { x: 0.9, y: 0.86, depth: 0.94 },
-];
-
-// A história, em trechos da rolagem da seção (0 a 1)
-const TITLE_OUT = [0.03, 0.18];
-const FLIGHT_START = 0.08;
-const FLIGHT_SPREAD = 0.22;
-const FLIGHT_LENGTH = 0.32;
-const LINE = [0.48, 0.62];
-const SWAP = [0.63, 0.69];
-const PROFILE = [0.69, 0.82];
-
-type Target = { x: number; y: number; width: number; height: number };
-type Layout = { width: number; height: number; targets: Target[] };
 
 /** Entrada só em CSS: o título aparece sem esperar o JavaScript (é o LCP). */
 const entering =
@@ -76,205 +29,12 @@ const delay = (step: number) => ({
   animationDelay: `${Math.round(step * staggerDelay * 1000)}ms`,
 });
 
-function FlyingBook({
-  book,
-  index,
-  total,
-  slot,
-  target,
-  stage,
-  wide,
-  progress,
-  mouseX,
-  mouseY,
-}: {
-  book: BookVisual;
-  index: number;
-  total: number;
-  slot: Slot;
-  target: Target;
-  stage: { width: number; height: number };
-  wide: boolean;
-  progress: MotionValue<number>;
-  mouseX: MotionValue<number>;
-  mouseY: MotionValue<number>;
-}) {
-  const width = target.height / 1.5;
-  const begin =
-    FLIGHT_START + (total > 1 ? (index / (total - 1)) * FLIGHT_SPREAD : 0);
-  const flight = useTransform(
-    progress,
-    [begin, begin + FLIGHT_LENGTH],
-    [0, 1],
-    {
-      ease,
-    },
-  );
-  // O tamanho do palco muda (giro do celular, fontes chegando) sem remontar
-  const geometry = useMotionValue({
-    startX: slot.x * stage.width,
-    startY: slot.y * stage.height,
-    target,
-  });
-  useEffect(() => {
-    geometry.set({
-      startX: slot.x * stage.width,
-      startY: slot.y * stage.height,
-      target,
-    });
-  }, [geometry, slot, stage, target]);
-
-  // Solta, a capa segue o mouse conforme a profundidade; voando, vai largando
-  const x = useTransform(() => {
-    const k = flight.get();
-    const { startX, target: end } = geometry.get();
-    const loose = startX + mouseX.get() * 28 * slot.depth * (1 - k);
-    return loose + (end.x - loose) * k - width / 2;
-  });
-  const y = useTransform(() => {
-    const k = flight.get();
-    const { startY, target: end } = geometry.get();
-    const loose = startY + mouseY.get() * 18 * slot.depth * (1 - k);
-    return loose + (end.y - loose) * k - end.height / 2;
-  });
-  // Girando 90°, a lombada vem para a frente; o recuo de meia capa a deixa
-  // no plano da prateleira, sem a lente da perspectiva aumentar
-  const rotateY = useTransform(flight, [0, 1], [0, 90]);
-  const z = useTransform(flight, [0, 1], [0, -width / 2]);
-  const scale = useTransform(
-    flight,
-    [0, 1],
-    [slot.depth * (wide ? 0.95 : 0.6), 1],
-  );
-  const blur = slot.depth < 0.7 ? 1.5 : slot.depth < 0.85 ? 0.6 : 0;
-  const filter = useTransform(flight, (k) =>
-    blur > 0 && k < 1 ? `blur(${(blur * (1 - k)).toFixed(2)}px)` : "none",
-  );
-  // No fim, a caixa dá lugar à lombada de verdade, que fica no mesmo lugar
-  const swap = useTransform(progress, SWAP, [1, 0]);
-  const appear = useMotionValue(0);
-  useEffect(() => {
-    const controls = animate(appear, 1, {
-      ...tweens.slow,
-      delay: index * staggerDelay,
-    });
-    return () => controls.stop();
-  }, [appear, index]);
-  const opacity = useTransform(() => appear.get() * swap.get());
-
-  // A posição fica num invólucro: a perspectiva da caixa nasce do centro
-  // dela, e a capa solta aparece de frente, não de lado
-  return (
-    <motion.div
-      className="absolute top-0 left-0"
-      style={{ x, y, opacity, zIndex: Math.round(slot.depth * 10) }}
-    >
-      <BookBox
-        book={book}
-        height={target.height}
-        spineWidth={target.width}
-        style={{ z, rotateY, scale, filter, transformPerspective: 1000 }}
-      />
-    </motion.div>
-  );
-}
-
 /**
- * As capas soltas do topo. Só no navegador e sem movimento reduzido: o
- * destino de cada uma é a lombada dela na prateleira de verdade, medida.
- */
-function FloatingBooks({
-  books,
-  progress,
-  stage,
-  shelf,
-}: {
-  books: BookVisual[];
-  progress: MotionValue<number>;
-  stage: React.RefObject<HTMLDivElement | null>;
-  shelf: React.RefObject<HTMLDivElement | null>;
-}) {
-  const reduced = useReducedMotion();
-  const wide = useMediaQuery(WIDE);
-  const canHover = useMediaQuery(CAN_HOVER);
-  const [layout, setLayout] = useState<Layout | null>(null);
-  const mouseX = useSpring(0, springs.smooth);
-  const mouseY = useSpring(0, springs.smooth);
-  const slots = wide ? WIDE_SLOTS : NARROW_SLOTS;
-  const shown = books.slice(0, slots.length);
-
-  useEffect(() => {
-    const stageNode = stage.current;
-    const shelfNode = shelf.current;
-    if (!stageNode || !shelfNode) return;
-    function measure() {
-      if (!stageNode || !shelfNode) return;
-      const box = stageNode.getBoundingClientRect();
-      const spines = [...shelfNode.querySelectorAll<HTMLElement>("a.spine")];
-      const targets = spines
-        .map((spine) => spine.getBoundingClientRect())
-        .filter((rect) => rect.width > 0)
-        .map((rect) => ({
-          x: rect.left - box.left + rect.width / 2,
-          y: rect.top - box.top + rect.height / 2,
-          width: rect.width,
-          height: rect.height,
-        }));
-      setLayout({ width: box.width, height: box.height, targets });
-    }
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(stageNode);
-    observer.observe(shelfNode);
-    void document.fonts.ready.then(measure);
-    return () => observer.disconnect();
-  }, [stage, shelf, wide]);
-
-  useEffect(() => {
-    if (!canHover || reduced) return;
-    function follow(event: PointerEvent) {
-      mouseX.set((event.clientX / window.innerWidth - 0.5) * 2);
-      mouseY.set((event.clientY / window.innerHeight - 0.5) * 2);
-    }
-    window.addEventListener("pointermove", follow);
-    return () => window.removeEventListener("pointermove", follow);
-  }, [canHover, reduced, mouseX, mouseY]);
-
-  if (reduced || !layout) return null;
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 motion-reduce:hidden"
-    >
-      {shown.map((book, index) => {
-        const target = layout.targets[index];
-        const slot = slots[index];
-        if (!target || !slot) return null;
-        return (
-          <FlyingBook
-            key={book.id}
-            book={book}
-            index={index}
-            total={shown.length}
-            slot={slot}
-            target={target}
-            stage={layout}
-            wide={wide}
-            progress={progress}
-            mouseX={mouseX}
-            mouseY={mouseY}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * O topo da landing (spec §5.1): o título e, em volta, capas de verdade em
- * profundidade. Rolando, as capas viram lombadas numa prateleira, que vira o
- * perfil de uma leitora. O palco fica preso por 220vh de rolagem. Com
- * movimento reduzido, o CSS monta tudo parado: título, prateleira e perfil.
+ * O topo da landing (spec §5.1): o título e, em volta, livros de verdade em
+ * 3D (HeroBooks). Rolando, eles voam até a prateleira e viram as lombadas
+ * dela, que vira o perfil de uma leitora. O palco fica preso por 220vh de
+ * rolagem. Com movimento reduzido, o CSS monta tudo parado: título,
+ * prateleira e perfil.
  */
 export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
   const section = useRef<HTMLElement>(null);
@@ -380,9 +140,10 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
         </motion.div>
 
         {showcase ? (
-          <FloatingBooks
+          <HeroBooks
             books={showcase.books}
             progress={scrollYProgress}
+            section={section}
             stage={stage}
             shelf={shelf}
           />

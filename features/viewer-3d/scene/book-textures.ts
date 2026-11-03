@@ -8,7 +8,6 @@ import {
 } from "three";
 import { bookColor, PAPER_RGB } from "@/features/books/lib/color";
 import type { BookVisual } from "@/features/books/types";
-import imageLoader from "@/lib/image-loader";
 import {
   drawBackCover,
   drawGeneratedCover,
@@ -16,6 +15,7 @@ import {
   drawSpine,
 } from "../lib/book-art";
 import { loadCanvasFonts } from "../lib/canvas-text";
+import { coverTextureSource } from "../lib/cover-source";
 import type { BookDimensions } from "../lib/dimensions";
 
 export type BookTextures = {
@@ -120,20 +120,20 @@ function canvasTexture(canvas: HTMLCanvasElement) {
 }
 
 /**
- * A capa real no tamanho L, recortada no meio como o object-cover da capa
- * 2D. A Open Library, o archive.org e o bucket mandam CORS. Sem imagem, com
- * 404 ou sem CORS: null, e entra a capa tipográfica.
+ * A capa real, recortada no meio como o object-cover da capa 2D. Chega pela
+ * rota da mesma origem (coverTextureSource). Sem imagem, com erro ou com a
+ * imagem quebrada: null, e entra a capa tipográfica, sem derrubar a cena.
  */
-async function loadCoverImage(book: BookVisual): Promise<Texture | null> {
-  if (!book.coverUrl) return null;
+export async function loadCoverImage(
+  book: BookVisual,
+  size: "M" | "L" = "L",
+): Promise<Texture | null> {
+  const source = coverTextureSource(book, size);
+  if (!source) return null;
   try {
     const loader = new TextureLoader();
     loader.setCrossOrigin("anonymous");
-    // A imagem escolhida no cadastro, antes de subir, vai direto
-    const local = /^(blob|data):/.test(book.coverUrl);
-    const texture = await loader.loadAsync(
-      local ? book.coverUrl : imageLoader({ src: book.coverUrl, width: 480 }),
-    );
+    const texture = await loader.loadAsync(source);
     const { width, height } = texture.image as HTMLImageElement;
     const imageAspect = width / height;
     if (imageAspect > COVER_ASPECT) {

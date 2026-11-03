@@ -7,6 +7,9 @@ const MIN_PAGES_DEPTH = 0.06;
 const MAX_PAGES_DEPTH = 0.75;
 const BOARD = 0.025;
 const OVERHANG = 0.04;
+// Como num livro de verdade, as placas não encostam no miolo
+const GAP = 0.005;
+const HEIGHT = 3;
 
 export type BookDimensions = {
   /** Largura da capa. */
@@ -19,7 +22,9 @@ export type BookDimensions = {
   board: number;
   /** Quanto as placas sobram além do miolo, em cima, embaixo e na frente. */
   overhang: number;
-  /** Espessura total: o miolo e as duas placas. */
+  /** A folga entre cada placa e o miolo. */
+  gap: number;
+  /** Espessura total: o miolo, as folgas e as duas placas. */
   depth: number;
 };
 
@@ -30,11 +35,36 @@ export function bookDimensions(pageCount: number | null): BookDimensions {
     Math.max(MIN_PAGES_DEPTH, pages * DEPTH_PER_PAGE),
   );
   return {
-    width: 2,
-    height: 3,
+    width: HEIGHT / 1.5,
+    height: HEIGHT,
     pagesDepth,
     board: BOARD,
     overhang: OVERHANG,
-    depth: pagesDepth + 2 * BOARD,
+    gap: GAP,
+    depth: pagesDepth + 2 * BOARD + 2 * GAP,
+  };
+}
+
+/**
+ * Um livro com a lombada dada (a landing mede a lombada de verdade da
+ * prateleira): a altura e a espessura vêm dela, e placas, sobras e folgas
+ * guardam a proporção do livro de 3 unidades.
+ */
+export function bookDimensionsForSpine(
+  height: number,
+  thickness: number,
+): BookDimensions {
+  const scale = height / HEIGHT;
+  const board = BOARD * scale;
+  const gap = GAP * scale;
+  const pagesDepth = Math.max(thickness - 2 * board - 2 * gap, thickness / 2);
+  return {
+    width: height / 1.5,
+    height,
+    pagesDepth,
+    board,
+    overhang: OVERHANG * scale,
+    gap,
+    depth: pagesDepth + 2 * board + 2 * gap,
   };
 }

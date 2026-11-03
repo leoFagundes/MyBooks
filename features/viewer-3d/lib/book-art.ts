@@ -12,11 +12,13 @@ import type { BookVisual } from "@/features/books/types";
 import { drawLines, fontStack, wrapLines } from "./canvas-text";
 import type { BookDimensions } from "./dimensions";
 
-// As faces desenhadas têm os 2:3 da capa. Com 768px de largura, ficam nítidas
-// na capa grande de uma tela 2x
-const ART_WIDTH = 768;
-const ART_HEIGHT = 1152;
-const SPINE_HEIGHT = 1152;
+// As faces desenhadas têm os 2:3 da capa. Com 1024px de largura, ficam
+// nítidas na capa grande de uma tela 2x, mesmo com o zoom
+const ART_WIDTH = 1024;
+const ART_HEIGHT = 1536;
+const SPINE_HEIGHT = 1536;
+// A contracapa leva a sinopse curta, como a de uma orelha
+const SYNOPSIS_CHARS = 320;
 
 const INK = toHex(INK_RGB);
 const PAPER = toHex(PAPER_RGB);
@@ -48,19 +50,23 @@ function setFont(
 }
 
 /** Medidas em frações da largura da capa, como os cqi do GeneratedCover. */
-const cqi = (value: number) => (ART_WIDTH * value) / 100;
+const units = (width: number) => (value: number) => (width * value) / 100;
 
 type CoverText = {
   ctx: CanvasRenderingContext2D;
   title: string;
   /** A autoria já em caixa alta, separada por vírgulas. */
   authors: string;
+  /** Largura e altura da arte. */
+  w: number;
+  h: number;
 };
 
 /** Clássica: título no alto, autoria no pé, alinhados à esquerda. */
-function drawClassicCover({ ctx, title, authors }: CoverText) {
+function drawClassicCover({ ctx, title, authors, w, h }: CoverText) {
+  const cqi = units(w);
   const pad = cqi(10);
-  const inner = ART_WIDTH - 2 * pad;
+  const inner = w - 2 * pad;
   const titleSize = cqi(13);
   setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.025);
   drawLines(
@@ -75,17 +81,12 @@ function drawClassicCover({ ctx, title, authors }: CoverText) {
   const authorLine = authorSize * 1.375;
   setFont(ctx, fontStack("--font-geist-mono"), authorSize, 0.05);
   const author = wrapLines(ctx, authors, inner, 2);
-  drawLines(
-    ctx,
-    author,
-    pad,
-    ART_HEIGHT - pad - author.length * authorLine,
-    authorLine,
-  );
+  drawLines(ctx, author, pad, h - pad - author.length * authorLine, authorLine);
 }
 
 /** Moldura: um fio em volta, e título, traço e autoria centrados. */
-function drawFramedCover({ ctx, title, authors }: CoverText) {
+function drawFramedCover({ ctx, title, authors, w, h }: CoverText) {
+  const cqi = units(w);
   const inset = cqi(7);
   const border = Math.max(2, cqi(0.9));
   ctx.lineWidth = border;
@@ -93,11 +94,11 @@ function drawFramedCover({ ctx, title, authors }: CoverText) {
   ctx.strokeRect(
     inset + border / 2,
     inset + border / 2,
-    ART_WIDTH - 2 * inset - border,
-    ART_HEIGHT - 2 * inset - border,
+    w - 2 * inset - border,
+    h - 2 * inset - border,
   );
 
-  const inner = ART_WIDTH - 2 * inset - 2 * border - 2 * cqi(7);
+  const inner = w - 2 * inset - 2 * border - 2 * cqi(7);
   const gap = cqi(5);
   const rule = Math.max(2, cqi(0.6));
   const titleSize = cqi(12);
@@ -114,8 +115,8 @@ function drawFramedCover({ ctx, title, authors }: CoverText) {
     gap +
     rule +
     (authorLines.length > 0 ? gap + authorLines.length * authorLine : 0);
-  const center = ART_WIDTH / 2;
-  let top = (ART_HEIGHT - height) / 2;
+  const center = w / 2;
+  let top = (h - height) / 2;
   ctx.textAlign = "center";
   setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.025);
   drawLines(ctx, titleLines, center, top, titleLine);
@@ -128,15 +129,16 @@ function drawFramedCover({ ctx, title, authors }: CoverText) {
 }
 
 /** Faixa: o título numa faixa de papel no meio, a autoria embaixo. */
-function drawBandCover({ ctx, title, authors }: CoverText) {
+function drawBandCover({ ctx, title, authors, w, h }: CoverText) {
+  const cqi = units(w);
   const ink = ctx.fillStyle;
-  const bandTop = ART_HEIGHT * BAND.top;
-  const bandHeight = ART_HEIGHT * (BAND.bottom - BAND.top);
+  const bandTop = h * BAND.top;
+  const bandHeight = h * (BAND.bottom - BAND.top);
   ctx.fillStyle = PAPER;
-  ctx.fillRect(0, bandTop, ART_WIDTH, bandHeight);
+  ctx.fillRect(0, bandTop, w, bandHeight);
 
-  const inner = ART_WIDTH - 2 * cqi(9);
-  const center = ART_WIDTH / 2;
+  const inner = w - 2 * cqi(9);
+  const center = w / 2;
   ctx.textAlign = "center";
   const titleSize = cqi(11);
   const titleLine = titleSize * 1.05;
@@ -161,16 +163,17 @@ function drawBandCover({ ctx, title, authors }: CoverText) {
     ctx,
     author,
     center,
-    ART_HEIGHT - cqi(9) - author.length * authorLine,
+    h - cqi(9) - author.length * authorLine,
     authorLine,
   );
   ctx.textAlign = "left";
 }
 
 /** Mínima: a autoria no alto e o título grande no pé. */
-function drawMinimalCover({ ctx, title, authors }: CoverText) {
+function drawMinimalCover({ ctx, title, authors, w, h }: CoverText) {
+  const cqi = units(w);
   const pad = cqi(10);
-  const inner = ART_WIDTH - 2 * pad;
+  const inner = w - 2 * pad;
   const authorSize = cqi(5.5);
   setFont(ctx, fontStack("--font-geist-mono"), authorSize, 0.05);
   drawLines(
@@ -184,29 +187,27 @@ function drawMinimalCover({ ctx, title, authors }: CoverText) {
   const titleSize = cqi(15);
   setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.025);
   const lines = wrapLines(ctx, title, inner, 4, { balance: true });
-  drawLines(
-    ctx,
-    lines,
-    pad,
-    ART_HEIGHT - pad - lines.length * titleSize,
-    titleSize,
-  );
+  drawLines(ctx, lines, pad, h - pad - lines.length * titleSize, titleSize);
 }
 
 /**
  * A capa tipográfica, igual à do BookCover (GeneratedCover), no estilo do
  * livro: as mesmas frações da largura, a mesma margem e a tinta do coverInk.
+ * `width` menor serve à landing, que tem muitos livros e todos pequenos.
  */
-export function drawGeneratedCover(book: BookVisual) {
-  const { canvas, ctx } = createCanvas(ART_WIDTH, ART_HEIGHT);
+export function drawGeneratedCover(book: BookVisual, width = ART_WIDTH) {
+  const height = Math.round(width * 1.5);
+  const { canvas, ctx } = createCanvas(width, height);
   const { background, ink } = palette(book);
   ctx.fillStyle = background;
-  ctx.fillRect(0, 0, ART_WIDTH, ART_HEIGHT);
+  ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = ink;
   const text = {
     ctx,
     title: book.title,
     authors: book.authors.join(", ").toUpperCase(),
+    w: width,
+    h: height,
   };
   if (book.coverStyle === "framed") drawFramedCover(text);
   else if (book.coverStyle === "band") drawBandCover(text);
@@ -215,9 +216,21 @@ export function drawGeneratedCover(book: BookVisual) {
   return canvas;
 }
 
+/** A sinopse curta, cortada na palavra, com reticências se passar. */
+export function shortSynopsis(description: string, max = SYNOPSIS_CHARS) {
+  const text = description.replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(" ");
+  const kept = space > max * 0.6 ? cut.slice(0, space) : cut;
+  // Sem pontuação solta antes das reticências
+  return `${kept.replace(/[\s,;:.–—-]+$/, "")}…`;
+}
+
 /**
  * A contracapa: o catálogo não tem a imagem dela, então ela é desenhada na
- * cor do livro, com o título, a sinopse e a autoria, como num livro de verdade.
+ * cor do livro, com o título, a sinopse curta e a autoria, como num livro de
+ * verdade.
  */
 export function drawBackCover(book: BookVisual, description: string | null) {
   const { canvas, ctx } = createCanvas(ART_WIDTH, ART_HEIGHT);
@@ -255,7 +268,7 @@ export function drawBackCover(book: BookVisual, description: string | null) {
     setFont(ctx, fontStack("--font-geist-sans"), bodySize);
     const body = wrapLines(
       ctx,
-      description,
+      shortSynopsis(description),
       inner,
       Math.max(0, Math.floor(room / bodyLine)),
     );
@@ -273,27 +286,35 @@ const SPINE_BAND = { top: 0.14, bottom: 0.76 } as const;
  * deixar, no estilo da capa: a Moldura ganha dois fios, a Faixa o painel de
  * papel com o título e a Mínima fica só com o título, no meio.
  */
-export function drawSpine(book: BookVisual, dims: BookDimensions) {
+export function drawSpine(
+  book: BookVisual,
+  dims: BookDimensions,
+  spineHeight = SPINE_HEIGHT,
+) {
+  const H = spineHeight;
+  // A face da lombada cobre o miolo e as duas folgas
   const width = Math.max(
-    32,
-    Math.round((SPINE_HEIGHT * dims.pagesDepth) / dims.height),
+    Math.round(H / 36),
+    Math.round((H * (dims.pagesDepth + 2 * dims.gap)) / dims.height),
   );
-  const { canvas, ctx } = createCanvas(width, SPINE_HEIGHT);
+  // Os tetos das letras foram medidos na lombada de 1152px
+  const k = H / 1152;
+  const { canvas, ctx } = createCanvas(width, H);
   const { background, ink } = palette(book);
   ctx.fillStyle = background;
-  ctx.fillRect(0, 0, width, SPINE_HEIGHT);
+  ctx.fillRect(0, 0, width, H);
   ctx.fillStyle = ink;
 
   const style = book.coverStyle;
   if (style === "framed") {
-    const bar = Math.max(2, SPINE_HEIGHT * 0.003);
-    for (const top of [SPINE_HEIGHT * 0.03, SPINE_HEIGHT * 0.97 - bar]) {
+    const bar = Math.max(2, H * 0.003);
+    for (const top of [H * 0.03, H * 0.97 - bar]) {
       ctx.fillRect(width * 0.12, top, width * 0.76, bar);
     }
   }
   const band = {
-    start: SPINE_HEIGHT * SPINE_BAND.top,
-    end: SPINE_HEIGHT * SPINE_BAND.bottom,
+    start: H * SPINE_BAND.top,
+    end: H * SPINE_BAND.bottom,
   };
   if (style === "band") {
     ctx.fillStyle = PAPER;
@@ -305,14 +326,14 @@ export function drawSpine(book: BookVisual, dims: BookDimensions) {
   ctx.translate(width / 2, 0);
   ctx.rotate(Math.PI / 2);
   ctx.textBaseline = "middle";
-  const margin = SPINE_HEIGHT * (style === "framed" ? 0.075 : 0.06);
-  const titleSize = Math.min(width * 0.46, 56);
+  const margin = H * (style === "framed" ? 0.075 : 0.06);
+  const titleSize = Math.min(width * 0.46, 56 * k);
   const author = (book.authors[0] ?? "").toUpperCase();
-  const authorSize = Math.min(width * 0.22, 20);
-  const showAuthor = Boolean(author) && width >= 48 && style !== "minimal";
+  const authorSize = Math.min(width * 0.22, 20 * k);
+  const showAuthor = Boolean(author) && width >= 48 * k && style !== "minimal";
 
   if (style === "band") {
-    const inset = SPINE_HEIGHT * 0.03;
+    const inset = H * 0.03;
     setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.01);
     const [title] = wrapLines(
       ctx,
@@ -325,27 +346,22 @@ export function drawSpine(book: BookVisual, dims: BookDimensions) {
     if (title) ctx.fillText(title, band.start + inset, 0);
     if (showAuthor) {
       setFont(ctx, fontStack("--font-geist-mono"), authorSize, 0.05);
-      const [line] = wrapLines(
-        ctx,
-        author,
-        SPINE_HEIGHT - band.end - 2 * inset,
-        1,
-      );
+      const [line] = wrapLines(ctx, author, H - band.end - 2 * inset, 1);
       ctx.fillStyle = ink;
       ctx.textAlign = "center";
-      if (line) ctx.fillText(line, (band.end + SPINE_HEIGHT) / 2, 0);
+      if (line) ctx.fillText(line, (band.end + H) / 2, 0);
     }
     return canvas;
   }
 
-  let room = SPINE_HEIGHT - 2 * margin;
+  let room = H - 2 * margin;
   if (showAuthor) {
     setFont(ctx, fontStack("--font-geist-mono"), authorSize, 0.05);
     const [line] = wrapLines(ctx, author, room * 0.3, 1);
     if (line) {
       ctx.textAlign = "right";
-      ctx.fillText(line, SPINE_HEIGHT - margin, 0);
-      room -= ctx.measureText(line).width + SPINE_HEIGHT * 0.04;
+      ctx.fillText(line, H - margin, 0);
+      room -= ctx.measureText(line).width + H * 0.04;
     }
   }
 
@@ -353,7 +369,7 @@ export function drawSpine(book: BookVisual, dims: BookDimensions) {
   const [title] = wrapLines(ctx, book.title, room, 1);
   if (title && style === "minimal") {
     ctx.textAlign = "center";
-    ctx.fillText(title, SPINE_HEIGHT / 2, 0);
+    ctx.fillText(title, H / 2, 0);
   } else if (title) {
     ctx.textAlign = "left";
     ctx.fillText(title, margin, 0);

@@ -18,7 +18,7 @@ const authorClass =
  * descendo de cima para baixo como pede a ABNT, e a autoria no pé, se a
  * espessura deixar. A Moldura ganha dois fios; a Faixa, o painel de papel com
  * o título; a Mínima fica só com o título. Ocupa a caixa de quem a desenha
- * (BookSpine, BookBox e a prévia do cadastro), que pinta o fundo.
+ * (BookSpine e a prévia do cadastro), que pinta o fundo.
  */
 export function SpineArt({ book, width }: { book: BookVisual; width: number }) {
   const { inkClass } = spineColors(book);

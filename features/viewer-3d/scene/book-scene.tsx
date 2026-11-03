@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { type Group, PerspectiveCamera } from "three";
 import { CAMERA_FOV } from "../lib/framing";
 import type { PoseValues, SceneProps } from "../lib/types";
-import { BookModel } from "./book-model";
+import { ViewerBook } from "./viewer-book";
 import { Studio } from "./studio";
 
 // O livro flutua um pouco acima do chão, onde fica a sombra
@@ -41,7 +41,7 @@ export default function BookScene({
       <PoseGroup pose={pose}>
         {/* As texturas carregam aqui dentro: o sinal de pronto só sai com o livro inteiro */}
         <Suspense fallback={null}>
-          <BookModel
+          <ViewerBook
             book={book}
             description={description}
             quotes={quotes}

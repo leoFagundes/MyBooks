@@ -8,7 +8,7 @@ import type { BookVisual } from "@/features/books/types";
 import { bookDimensions } from "../lib/dimensions";
 import { CAMERA_FOV } from "../lib/framing";
 import { type PoseValues, SETTLE_POSE } from "../lib/types";
-import { BookModel } from "./book-model";
+import { ViewerBook } from "./viewer-book";
 import { loadBookTextures } from "./book-textures";
 import { Studio } from "./studio";
 
@@ -76,7 +76,7 @@ function PreloadedModel({ book }: { book: BookVisual }) {
   }, [book, dims, anisotropy]);
 
   return (
-    <BookModel
+    <ViewerBook
       book={shown}
       description={null}
       quotes={[]}
@@ -87,7 +87,7 @@ function PreloadedModel({ book }: { book: BookVisual }) {
 }
 
 /**
- * A prévia 3D do cadastro e da edição do livro: o mesmo BookModel do
+ * A prévia 3D do cadastro e da edição do livro: o mesmo ViewerBook do
  * visualizador, com a capa, a lombada e a contracapa desenhadas na cor e no
  * estilo escolhidos. É ponto de entrada de three, como a book-scene: chega
  * por next/dynamic só quando a pessoa pede o 3D.

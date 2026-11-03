@@ -49,6 +49,12 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
     - Troca entre Estante, Grade e Lista com o livro viajando de uma forma para a outra (a lombada gira pela quina até virar capa; entre capas, a capa voa), stagger leve, a rolagem ancorada no livro do topo e só os livros da tela viajando (até 48). O `/dev` tem o botão "Testar com 300 livros".
     - A vista lembrada: cookie `mybooks-vista` lido pelo servidor (a página já nasce na vista certa), gravada também no perfil (`profile_preferences`) e reescrita no cookie ao entrar na conta.
     - Capa personalizada no cadastro e na edição: quatro estilos (Clássica, Moldura, Faixa e Mínima), paleta de 12 cores, seletor livre (hex), o contraste calculado e a imagem da capa; prévia ao vivo em capa, lombada e 3D. "Editar livro" na página do livro, para quem o cadastrou à mão.
+- Melhorias, Fase 3 (3D) entregue em 03/11/2026 na branch `melhorias-3-3d` (a partir da `main`, que é a antiga `master`), aguardando o ok do usuário. Plano: [melhorias 3](docs/superpowers/plans/2026-11-03-melhorias-3-3d.md). Sem migration nova.
+  - Já existe:
+    - Um `BookModel` só, do visualizador, da prévia do cadastro e da landing.
+    - A capa que não atravessa mais as páginas ao fechar: pivô na dobra, folga entre placas e miolo, ângulo preso e fechamento sem rebote (folhas também).
+    - Livro sem capa em 3D com capa, lombada e contracapa desenhadas em 1024 × 1536 (o verso com a sinopse curta); capas de fora pela rota `/api/books/[id]/cover`.
+    - A landing com livros 3D de verdade numa cena só: flutuação própria, sem seguir o mouse, voo amortecido até a prateleira com giro por slerp, a sombra de contato na prateleira. No build de produção, com GPU: 60fps parado e rolando no notebook (16,8ms em média) e no celular com a CPU 4× (16,9ms).
 - Páginas que existem: `/`, `/dev`, `/dev/livro/[slug]`, `/dev/colecao/[slug]`, `/entrar`, `/cadastro`, `/onboarding`, `/inicio`, `/@usuario` (com `/colecoes` e `/citacoes`), `/livro/[id]`, `/colecao/[id]`, `/explorar` e `/configuracoes`, mais `/sitemap.xml` e `/robots.txt`. As demos do `/dev` usam `features/books/sample-books.ts` e `features/collections/sample-collections.ts`, com os mesmos slugs do seed (`seedId` de `scripts/seed-ids.ts` dá o id). Tire os `as Route` de `lib/routes.ts` conforme as páginas nascerem (as dinâmicas e o perfil continuam com ele).
 - O catálogo segue `BOOK_LIMITS` (`search-result.ts`) nos checks do banco, e o `source_id` da Open Library é o id da obra sem `/works/`.
 - O Google Books só responde com `GOOGLE_BOOKS_API_KEY` (opcional, no `.env.example`; a cota anônima é zero).
@@ -67,7 +73,7 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - `npm run test:e2e:producao`: build de produção e `next start` na porta 3100 para os `*.producao.spec.ts`. Prefetch, e com ele o par da capa entre páginas, só existe em produção.
 - `npm run test:auditoria`: auditoria de responsividade (projeto `auditoria`, `e2e/*.auditoria.ts`). Cada rota em 360, 390, 768, 1024 e 1440px, nos dois temas, com screenshot da página inteira; acusa rolagem horizontal e texto cortado, coberto ou com reticências. Não falha: o relatório fica em `test-results/auditoria-responsiva/relatorio.md` (mais `achados.json` e as imagens por tema e largura). `AUDITORIA_PAGINAS=livro,inicio` e `AUDITORIA_LARGURAS=360` conferem só uma parte. Leva uns 11 minutos inteira.
 - O projeto mora em `C:\Users\Adm\Dev\mybooks`, fora do OneDrive, e não deve voltar para uma pasta sincronizada: o OneDrive transforma arquivos em marcadores de nuvem, o `next dev` perde avisos de mudança e o `next build` falha com EPERM. O `prebuild` (`scripts/limpar-next.mjs`) ainda limpa o `.next` antes do build.
-- O repositório não tem remoto: o histórico existe só nesta máquina.
+- O repositório tem remoto no GitHub (`origin`, `leoFagundes/MyBooks`), e a integração é a `main`. Quem sobe para o remoto é o usuário.
 - Fim de fase: typecheck, lint, testes e build sem erros → resumo do que testar manualmente → commit.
 
 ## Idioma e texto
@@ -153,7 +159,7 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Raios de 10px em controles, 14px em cards e 3px em capas. Grade de 4/8px. Ícones `lucide-react` com traço 1.5.
 - Capas sempre com `<BookCover>`. A imagem vinda do servidor nasce visível, para o LCP não esperar a hidratação; só a que ainda está chegando entra com fade (`data-loading`). Não volte a esconder a capa até o `onLoad`.
 - Texto sobre a cor do livro (lombada, capa tipográfica) usa `coverInk`, que garante 4,5:1 escolhendo a tinta e, se preciso, ajustando o fundo. Nada de opacidade nesse texto: ela derruba o contraste.
-- A capa tipográfica tem quatro estilos (`books.cover_style`, `COVER_STYLES` em `features/books/lib/cover-style.ts`; null é a Clássica), desenhados em quatro lugares que andam juntos: `GeneratedCover` (CSS, medidas em cqi), `SpineArt` (a lombada, também na `BookBox` da landing), `drawGeneratedCover`/`drawSpine` (o canvas do 3D) e `OgCover` (as imagens de compartilhamento). Mexeu num, mexa nos outros; a faixa do estilo Faixa sai de `BAND`.
+- A capa tipográfica tem quatro estilos (`books.cover_style`, `COVER_STYLES` em `features/books/lib/cover-style.ts`; null é a Clássica), desenhados em quatro lugares que andam juntos: `GeneratedCover` (CSS, medidas em cqi), `SpineArt` (a lombada), `drawGeneratedCover`/`drawSpine` (o canvas do 3D, no visualizador e na landing) e `OgCover` (as imagens de compartilhamento). Mexeu num, mexa nos outros; a faixa do estilo Faixa sai de `BAND`.
 - A paleta curada da capa (`COVER_PALETTE`) fica em RGB no TS, como as tintas: o design-rules barra hex solto (até em comentário).
 - Tema: preferência em `localStorage["mybooks:tema"]`, lida por `useTheme()`. Para trocar, use `ThemeToggle` (ícone) ou `ThemeSelect` (Claro, Escuro e Sistema).
 - Todo componente tem os estados de carregando (skeleton com shimmer), vazio (ilustração em traço fino + uma ação), erro e sucesso, e funciona de 360px a 1920px.
@@ -200,9 +206,12 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - `<Stagger>` e `<Reveal>` nunca escondem nada no HTML do servidor (`useEntrance`): o que está na tela ao montar aparece sem esperar o JavaScript, e só o que está abaixo da dobra se esconde e entra ao aparecer. Entrada com `initial="hidden"` acima da dobra segura o LCP até a hidratação (no `/explorar`, eram 7,9s no celular).
 - Tempo relativo ("há 5 min") só com `<RelativeTime>`: o servidor manda vazio e o navegador preenche (a hora de quem vê não existe no servidor).
 - Lenis fica na raiz, guiado pelo `frame` do Motion. Ele sai do caminho quando a rolagem está travada (evento cancelado ou `body[data-scroll-locked]`, que o Radix põe com modal, gaveta, menu e paleta abertos) e deixa áreas com scroll próprio rolarem sozinhas (`allowNestedScroll`). `data-lenis-prevent` só para o que fugir disso.
-- three.js só no visualizador 3D, carregado com `next/dynamic` sem SSR.
+- three.js só nas cenas de `features/viewer-3d/scene` (o visualizador, a prévia do cadastro e a landing), sempre carregadas com `next/dynamic` sem SSR.
 - Visualizador 3D (`features/viewer-3d`):
   - **Onde mora o three:** three, R3F e drei só em `scene/`, que o `BookViewer` carrega com `next/dynamic` e pré-carrega na intenção (`preloadBookScene`). O resto (`components/`, `lib/`) não importa three.
+  - **O livro:** o `BookModel` é só a geometria (placas, lombada, miolo e a dobra), igual em todo lugar; recebe as superfícies prontas. O `ViewerBook` põe as texturas grandes, a folha de rosto e as folhas que viram (visualizador e prévia); a landing, as pequenas.
+  - **A dobra:** o pivô fica na face de dentro da capa, junto à lombada, e as placas ficam a uma folga (`gap`) do miolo: em qualquer ângulo de 0 a 180°, a capa fica acima dele. O ângulo e as folhas passam por `hingeAngle`/`leafTurn` (presos), e fechar é pela curva padrão, nunca por mola com rebote.
+  - **Capas:** a imagem vira textura pela rota `/api/books/[id]/cover` (mesma origem, sem CORS), pela `coverTextureSource`; falhou, entra a capa desenhada.
   - **Abrir:** é `<ViewIn3D book description pending>`, em volta da capa (veja `BookHero`).
   - **Pose e quadros:** a pose (`useBookPose`) anima motion values com as molas de `lib/motion.ts`. Nada de `PresentationControls`, que traz as molas do react-spring. A cena (`frameloop="demand"`) só desenha quando um valor muda.
   - **Enquadramento:** `frameBook` dá ao mesmo tempo o retângulo do voo do clone e a distância da câmera. Mexeu num, mexa no outro pela mesma conta, ou o crossfade salta.
@@ -211,7 +220,8 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 - Animação do Motion interrompida por outra não resolve `finished`: quem espera uma mola põe um teto de tempo (veja `settled` em `use-book-pose.ts`).
 - Landing (`features/landing`):
   - **Título:** o do topo entra só em CSS (keyframe `pagina-entra`, 35ms por palavra), porque é o LCP e não pode esperar o JavaScript.
-  - **Capas que viram lombadas:** cada capa solta é uma caixa 3D (`BookBox`) que voa até a lombada de verdade da `Shelf`, medida no DOM; no fim a caixa esmaece e a lombada de verdade assume. A posição fica num invólucro e a perspectiva (`transformPerspective`) na caixa: com a perspectiva antes do deslocamento, as capas da borda aparecem de lado.
+  - **Livros que viram lombadas:** a cena R3F `landing-scene` (`features/viewer-3d/scene`), carregada pelo `HeroBooks` quando o navegador sossega, desenha cada livro com o `BookModel`, nas medidas da lombada de verdade da `Shelf` (medida no DOM). Cada um flutua no seu ritmo (ondas com fase e velocidade próprias) e, com a rolagem amortecida (`MathUtils.damp`), voa girando por `Quaternion.slerp` até cair em cima da lombada da página; no fim o canvas esmaece e a prateleira de verdade assume. Os trechos da rolagem ficam em `features/landing/lib/story.ts`, lidos pelo DOM e pela cena.
+  - **Desempenho:** a cena pausa (`frameloop="never"`) fora da tela e depois da troca, usa `dpr` até 1,5, capas M e lombadas de 512px, e a sombra de contato só existe perto da prateleira. Sem o verniz (material físico), uma luz ambiente a mais (`VARNISH_LIGHT`) deixa a lombada 3D na cor da lombada da página.
   - **Movimento reduzido:** resolvido no CSS, desde o primeiro quadro. `motion-reduce:…!` (com `!`) vence o estilo inline do Motion: a seção perde a rolagem presa e tudo aparece montado.
 - Dois `CollectionCard` da mesma coleção na mesma tela disputam o `layoutId`, e o Motion esconde um: separe com um `LayoutGroup id` (veja a landing). O `ProfileHeader` aceita `titleAs="h2"` onde o h1 da página é outro.
 
@@ -234,4 +244,4 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
 
 ## Git
 
-- Uma branch por fase (`fase-N-nome`), com commit ao fim da fase e merge na `master` depois da aprovação.
+- Uma branch por fase (`fase-N-nome`, depois `melhorias-N-nome`), com commit ao fim da fase e merge na `main` depois da aprovação.

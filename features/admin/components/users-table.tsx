@@ -310,8 +310,8 @@ export function UsersTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="search" className="relative w-full sm:max-w-sm">
+      <div className="@container flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div role="search" className="relative w-full xl:max-w-sm">
           <Search
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -328,6 +328,8 @@ export function UsersTable({
         <SegmentedControl
           aria-label="Filtrar"
           size="sm"
+          // Sem espaço, 2 × 2 em vez de rolar escondendo opções
+          className="grid grid-cols-2 @min-[28rem]:inline-flex @min-[28rem]:self-start"
           value={state.filter}
           onValueChange={(filter) => update({ filter })}
           options={FILTERS}

@@ -38,6 +38,8 @@ O passo a passo para colocar no ar (SPEC §10). O código já está pronto: o qu
    - No Google Cloud, crie um cliente OAuth (Aplicativo da Web) com o URI de redirecionamento `https://<ref do projeto>.supabase.co/auth/v1/callback`.
    - Em Sign In / Providers → Google, cole o Client ID e o Secret e ligue.
    - O botão "Continuar com Google" passa a funcionar sozinho.
+   - Na tela de consentimento (Google Auth Platform → Branding), preencha a página inicial (`https://<seu domínio>`), a política de privacidade (`/privacidade`) e os termos de uso (`/termos`). O logo pode ser o `public/pwa/icone-512.png`.
+   - Antes de publicar, revise os rascunhos dos termos e da privacidade: no `npm run dev`, os trechos a revisar aparecem marcados com um tracejado (o `<ToReview>`, em `components/ui/prose.tsx`).
 3. **E-mail com o Resend:**
    - Em Emails → SMTP Settings: host `smtp.resend.com`, porta `465`, usuário `resend`, senha = a API key do Resend e remetente num domínio verificado lá.
    - Em Emails → Templates, cole os modelos em pt-BR:

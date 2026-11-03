@@ -88,6 +88,17 @@ export async function SignUpCard({
       }
     >
       <SignUpPanel next={next} />
+      <p className="mt-4 text-xs text-pretty text-muted-foreground">
+        Ao criar a conta, você concorda com os{" "}
+        <Link href={routes.termos} className={linkClasses}>
+          termos de uso
+        </Link>{" "}
+        e a{" "}
+        <Link href={routes.privacidade} className={linkClasses}>
+          política de privacidade
+        </Link>
+        .
+      </p>
     </AuthCard>
   );
 }

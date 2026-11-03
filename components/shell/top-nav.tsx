@@ -47,7 +47,7 @@ export function TopNav({ viewer, slots, preview = false }: TopNavProps) {
     <NavIndicatorContext value={indicatorId}>
       <header
         className={cn(
-          "top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md",
+          "top-0 z-40 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md",
           preview ? "relative" : "sticky",
         )}
         // Fica parada nas navegações; as prévias do /dev não levam o nome,

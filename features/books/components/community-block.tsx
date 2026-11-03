@@ -119,7 +119,7 @@ export function CommunityBlock({ community }: { community: BookCommunity }) {
                     {collection.emoji ?? "📚"}
                   </span>
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-medium">
+                    <span className="line-clamp-2 text-sm font-medium">
                       {collection.title}
                     </span>
                     <span className="font-mono text-xs text-muted-foreground">

@@ -59,6 +59,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url(routes.explorar), changeFrequency: "daily", priority: 0.8 },
     { url: url(routes.cadastro), changeFrequency: "yearly", priority: 0.5 },
     { url: url(routes.entrar), changeFrequency: "yearly", priority: 0.3 },
+    { url: url(routes.comunidade), changeFrequency: "daily", priority: 0.6 },
+    { url: url(routes.sugestoes), changeFrequency: "weekly", priority: 0.4 },
+    { url: url(routes.readme), changeFrequency: "monthly", priority: 0.2 },
+    { url: url(routes.termos), changeFrequency: "yearly", priority: 0.2 },
+    { url: url(routes.privacidade), changeFrequency: "yearly", priority: 0.2 },
     ...books.map((book) => ({
       url: url(routes.book(book.id)),
       lastModified: book.created_at,

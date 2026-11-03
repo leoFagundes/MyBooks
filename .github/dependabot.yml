@@ -1,0 +1,27 @@
+# Mantém as dependências em dia (MELHORIAS 9.2): um PR por semana com as
+# atualizações menores juntas, e as maiores separadas, para revisar com calma.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      menores:
+        update-types: [minor, patch]
+    ignore:
+      # Presos de propósito (CLAUDE.md, Dependências): o TypeScript fica na 6
+      # enquanto o typescript-eslint não aceitar a 7, e o ESLint na 9
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

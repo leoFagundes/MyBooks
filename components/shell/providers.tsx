@@ -7,6 +7,7 @@ import { springs } from "@/lib/motion";
 import { CoverTransitionProvider } from "@/features/books/components/cover-transition";
 import { NewCollectionProvider } from "@/features/collections/components/new-collection-provider";
 import { AddBookProvider } from "@/features/shelf/components/add-book/add-book-provider";
+import { Pwa } from "@/features/pwa/components/pwa";
 import { NextReadProvider } from "@/features/shelf/components/next-read/next-read-provider";
 import { CommandPaletteProvider } from "./command-palette";
 import { QueryProvider } from "./query-provider";
@@ -34,6 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         ) : null}
                         {children}
                         <Toaster />
+                        <Pwa />
                       </CommandPaletteProvider>
                     </NewCollectionProvider>
                   </NextReadProvider>

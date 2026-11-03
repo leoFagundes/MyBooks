@@ -1,0 +1,256 @@
+{
+  "app": [
+    {
+      "name": "@dnd-kit/core",
+      "license": "MIT",
+      "url": "https://github.com/clauderic/dnd-kit"
+    },
+    {
+      "name": "@dnd-kit/sortable",
+      "license": "MIT",
+      "url": "https://github.com/clauderic/dnd-kit"
+    },
+    {
+      "name": "@hookform/resolvers",
+      "license": "MIT",
+      "url": "https://react-hook-form.com"
+    },
+    {
+      "name": "@number-flow/react",
+      "license": "MIT",
+      "url": "https://number-flow.barvian.me"
+    },
+    {
+      "name": "@react-three/drei",
+      "license": "MIT",
+      "url": "https://github.com/pmndrs/drei"
+    },
+    {
+      "name": "@react-three/fiber",
+      "license": "MIT",
+      "url": "https://github.com/pmndrs/react-three-fiber"
+    },
+    {
+      "name": "@supabase/ssr",
+      "license": "MIT",
+      "url": "https://github.com/supabase/ssr"
+    },
+    {
+      "name": "@supabase/supabase-js",
+      "license": "MIT",
+      "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/supabase-js"
+    },
+    {
+      "name": "@tanstack/react-query",
+      "license": "MIT",
+      "url": "https://tanstack.com/query"
+    },
+    {
+      "name": "@tanstack/react-table",
+      "license": "MIT",
+      "url": "https://tanstack.com/table"
+    },
+    {
+      "name": "@vercel/analytics",
+      "license": "MIT",
+      "url": "https://github.com/vercel/analytics"
+    },
+    {
+      "name": "@vercel/speed-insights",
+      "license": "Apache-2.0",
+      "url": "https://github.com/vercel/speed-insights"
+    },
+    {
+      "name": "@zxing/browser",
+      "license": "MIT",
+      "url": "https://github.com/zxing-js/browser"
+    },
+    {
+      "name": "@zxing/library",
+      "license": "Apache-2.0",
+      "url": "https://zxing-js.github.io/library/"
+    },
+    {
+      "name": "class-variance-authority",
+      "license": "Apache-2.0",
+      "url": "https://github.com/joe-bell/cva"
+    },
+    {
+      "name": "cmdk",
+      "license": "MIT",
+      "url": "https://github.com/pacocoursey/cmdk"
+    },
+    {
+      "name": "cn",
+      "license": "MIT",
+      "url": "https://github.com/shadcn-ui/cn"
+    },
+    {
+      "name": "fractional-indexing",
+      "license": "CC0-1.0",
+      "url": "https://github.com/rocicorp/fractional-indexing"
+    },
+    {
+      "name": "lenis",
+      "license": "MIT",
+      "url": "https://github.com/darkroomengineering/lenis"
+    },
+    {
+      "name": "lucide-react",
+      "license": "ISC",
+      "url": "https://lucide.dev"
+    },
+    {
+      "name": "motion",
+      "license": "MIT",
+      "url": "https://github.com/motiondivision/motion"
+    },
+    {
+      "name": "next",
+      "license": "MIT",
+      "url": "https://nextjs.org"
+    },
+    {
+      "name": "radix-ui",
+      "license": "MIT",
+      "url": "https://radix-ui.com/primitives"
+    },
+    {
+      "name": "react",
+      "license": "MIT",
+      "url": "https://react.dev/"
+    },
+    {
+      "name": "react-dom",
+      "license": "MIT",
+      "url": "https://react.dev/"
+    },
+    {
+      "name": "react-easy-crop",
+      "license": "MIT",
+      "url": "https://ValentinH.github.io/react-easy-crop/"
+    },
+    {
+      "name": "react-hook-form",
+      "license": "MIT",
+      "url": "https://react-hook-form.com"
+    },
+    {
+      "name": "server-only",
+      "license": "MIT",
+      "url": "https://reactjs.org/"
+    },
+    {
+      "name": "shadcn",
+      "license": "MIT",
+      "url": "https://ui.shadcn.com"
+    },
+    {
+      "name": "sonner",
+      "license": "MIT",
+      "url": "https://sonner.emilkowal.ski/"
+    },
+    {
+      "name": "three",
+      "license": "MIT",
+      "url": "https://threejs.org/"
+    },
+    {
+      "name": "tw-animate-css",
+      "license": "MIT",
+      "url": "https://github.com/Wombosvideo/tw-animate-css"
+    },
+    {
+      "name": "zod",
+      "license": "MIT",
+      "url": "https://zod.dev"
+    }
+  ],
+  "build": [
+    {
+      "name": "@axe-core/playwright",
+      "license": "MPL-2.0",
+      "url": "https://github.com/dequelabs/axe-core-npm"
+    },
+    {
+      "name": "@playwright/test",
+      "license": "Apache-2.0",
+      "url": "https://playwright.dev"
+    },
+    {
+      "name": "@serwist/build",
+      "license": "MIT",
+      "url": "https://serwist.pages.dev"
+    },
+    {
+      "name": "@tailwindcss/turbopack",
+      "license": "MIT",
+      "url": "https://tailwindcss.com"
+    },
+    {
+      "name": "babel-plugin-react-compiler",
+      "license": "MIT",
+      "url": "https://github.com/facebook/react"
+    },
+    {
+      "name": "esbuild",
+      "license": "MIT",
+      "url": "https://github.com/evanw/esbuild"
+    },
+    {
+      "name": "eslint",
+      "license": "MIT",
+      "url": "https://eslint.org"
+    },
+    {
+      "name": "eslint-config-next",
+      "license": "MIT",
+      "url": "https://nextjs.org/docs/app/api-reference/config/eslint"
+    },
+    {
+      "name": "node-vibrant",
+      "license": "MIT",
+      "url": "https://vibrant.dev"
+    },
+    {
+      "name": "prettier",
+      "license": "MIT",
+      "url": "https://prettier.io"
+    },
+    {
+      "name": "prettier-plugin-tailwindcss",
+      "license": "MIT",
+      "url": "https://github.com/tailwindlabs/prettier-plugin-tailwindcss"
+    },
+    {
+      "name": "serwist",
+      "license": "MIT",
+      "url": "https://serwist.pages.dev"
+    },
+    {
+      "name": "supabase",
+      "license": "MIT",
+      "url": "https://github.com/supabase/cli"
+    },
+    {
+      "name": "tailwindcss",
+      "license": "MIT",
+      "url": "https://tailwindcss.com"
+    },
+    {
+      "name": "tsx",
+      "license": "MIT",
+      "url": "https://tsx.hirok.io"
+    },
+    {
+      "name": "typescript",
+      "license": "Apache-2.0",
+      "url": "https://www.typescriptlang.org/"
+    },
+    {
+      "name": "vitest",
+      "license": "MIT",
+      "url": "https://vitest.dev"
+    }
+  ]
+}

@@ -150,3 +150,62 @@ export function ReadersIllustration(props: IllustrationProps) {
     </Illustration>
   );
 }
+
+/** Um livro aberto na base e o sinal da internet que não chega (tracejado). */
+export function OfflineIllustration(props: IllustrationProps) {
+  return (
+    <Illustration {...props}>
+      <Stroke order={0} d="M10 56H86" />
+      <Stroke order={1} d="M48 34C40 29 30 29 22 32V54C30 51 40 51 48 56" />
+      <Stroke order={2} d="M48 34C56 29 66 29 74 32V54C66 51 56 51 48 56" />
+      <Stroke order={3} d="M48 34V56" />
+      <Stroke order={4} d="M44 21a6 6 0 0 1 8 0" />
+      <Stroke order={5} dashed d="M40 16.5a11 11 0 0 1 16 0" />
+      <Stroke order={6} dashed d="M36 12a16.5 16.5 0 0 1 24 0" />
+    </Illustration>
+  );
+}
+
+/** A barra do Safari, com o botão de compartilhar em destaque. */
+export function ShareStepIllustration(props: IllustrationProps) {
+  return (
+    <Illustration {...props}>
+      <Stroke order={0} dashed d="M20 14H76" />
+      <Stroke order={1} dashed d="M20 22H60" />
+      <Stroke order={2} d={rect(8, 40, 80, 16, 4)} />
+      <Stroke order={3} d="M20 44.5L16.5 48L20 51.5" />
+      <Stroke order={4} d="M45 45.5H43.5V53.5H52.5V45.5H51" />
+      <Stroke order={5} d="M48 50V33M45 36L48 33L51 36" />
+      <Stroke order={6} d={rect(72, 44.5, 7, 7, 1)} />
+    </Illustration>
+  );
+}
+
+/** O menu de compartilhar, com "Adicionar à Tela de Início" em destaque. */
+export function AddToHomeStepIllustration(props: IllustrationProps) {
+  return (
+    <Illustration {...props}>
+      <Stroke order={0} d={rect(16, 8, 64, 48, 4)} />
+      <Stroke order={1} dashed d="M24 18H64" />
+      <Stroke order={2} d={rect(24, 28, 8, 8, 1.5)} />
+      <Stroke order={3} d="M28 30.5V33.5M26.5 32H29.5" />
+      <Stroke order={4} d="M37 32H68" />
+      <Stroke order={5} dashed d="M24 46H60" />
+    </Illustration>
+  );
+}
+
+/** A tela de início com o ícone do MyBooks entre os outros apps. */
+export function HomeScreenStepIllustration(props: IllustrationProps) {
+  return (
+    <Illustration {...props}>
+      <Stroke order={0} dashed d={rect(20, 18, 14, 14, 3)} />
+      <Stroke order={1} dashed d={rect(41, 18, 14, 14, 3)} />
+      <Stroke order={2} dashed d={rect(62, 18, 14, 14, 3)} />
+      <Stroke order={3} dashed d={rect(20, 42, 14, 14, 3)} />
+      <Stroke order={4} d={rect(40, 40, 16, 16, 3.5)} />
+      <Stroke order={5} d="M45 45.5V51.5M48.5 44V51.5M52.5 46L51.4 51.6" />
+      <Stroke order={6} dashed d={rect(62, 42, 14, 14, 3)} />
+    </Illustration>
+  );
+}

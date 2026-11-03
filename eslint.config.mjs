@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // O service worker gerado no postbuild (o código está em features/pwa)
+    "public/sw.js",
     // Artefatos de teste e do fluxo de planos
     "test-results/**",
     "playwright-report/**",

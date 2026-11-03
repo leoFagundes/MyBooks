@@ -16,7 +16,9 @@ import { Shelf } from "@/features/books/components/shelf";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { staggerDelay } from "@/lib/motion";
 import { routes } from "@/lib/routes";
-import { LINE, PROFILE, SWAP, TITLE_OUT } from "../lib/story";
+import { useMediaQuery } from "@/lib/use-media-query";
+import { LINE, PROFILE, STORY_MEDIA, SWAP, TITLE_OUT } from "../lib/story";
+import { useStoryProgress } from "../lib/use-story-progress";
 import type { LandingShowcase } from "../queries";
 import { HeroBooks } from "./hero-books";
 
@@ -31,40 +33,43 @@ const delay = (step: number) => ({
 
 /**
  * O topo da landing (spec §5.1): o título e, em volta, livros de verdade em
- * 3D (HeroBooks). Rolando, eles voam até a prateleira e viram as lombadas
- * dela, que vira o perfil de uma leitora. O palco fica preso por 220vh de
- * rolagem. Com movimento reduzido, o CSS monta tudo parado: título,
- * prateleira e perfil.
+ * 3D (HeroBooks). No computador, rolando, eles voam até a prateleira e viram
+ * as lombadas dela, que vira o perfil de uma leitora; o palco fica preso por
+ * 160vh de rolagem. No celular, no tablet e com movimento reduzido, o CSS
+ * monta tudo parado (a variante historia-parada): título, prateleira e
+ * perfil, e os livros (sem movimento reduzido) só flutuam em volta do título.
  */
 export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
   const section = useRef<HTMLElement>(null);
-  const stage = useRef<HTMLDivElement>(null);
   const shelf = useRef<HTMLDivElement>(null);
+  const text = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: section,
     offset: ["start start", "end end"],
   });
+  const progress = useStoryProgress(scrollYProgress);
+  const reduced = useReducedMotion();
+  const story = useMediaQuery(STORY_MEDIA) && !reduced;
 
-  const titleOpacity = useTransform(scrollYProgress, TITLE_OUT, [1, 0]);
-  const titleY = useTransform(scrollYProgress, TITLE_OUT, [0, -48]);
+  const titleOpacity = useTransform(progress, TITLE_OUT, [1, 0]);
+  const titleY = useTransform(progress, TITLE_OUT, [0, -48]);
   const titleEvents = useTransform(titleOpacity, (value) =>
     value > 0.15 ? "auto" : "none",
   );
-  const lineScale = useTransform(scrollYProgress, LINE, [0, 1]);
-  const shelfOpacity = useTransform(scrollYProgress, SWAP, [0, 1]);
-  const profileOpacity = useTransform(scrollYProgress, PROFILE, [0, 1]);
-  const profileY = useTransform(scrollYProgress, PROFILE, [24, 0]);
+  const lineScale = useTransform(progress, LINE, [0, 1]);
+  const shelfOpacity = useTransform(progress, SWAP, [0, 1]);
+  const profileOpacity = useTransform(progress, PROFILE, [0, 1]);
+  const profileY = useTransform(progress, PROFILE, [24, 0]);
   const endEvents = useTransform(profileOpacity, (value) =>
     value > 0.5 ? "auto" : "none",
   );
   const words = splitWords(TITLE);
-  const reduced = useReducedMotion();
 
   // O Tab não para no invisível: o foco numa camada escondida rola a página
   // até o trecho em que ela aparece (o começo ou o fim da história)
   function reveal(opacity: MotionValue<number>, where: "start" | "end") {
     const node = section.current;
-    if (reduced || !node || opacity.get() > 0.9) return;
+    if (!story || !node || opacity.get() > 0.9) return;
     const top = window.scrollY + node.getBoundingClientRect().top;
     window.scrollTo({
       top:
@@ -77,22 +82,23 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
     <section
       ref={section}
       aria-label="Apresentação"
-      className="relative h-[320vh] motion-reduce:h-auto"
+      className="relative h-[260vh] historia-parada:h-auto"
     >
-      <div
-        ref={stage}
-        className="sticky top-0 h-svh overflow-hidden motion-reduce:relative motion-reduce:h-auto motion-reduce:overflow-visible"
-      >
+      <div className="sticky top-0 h-svh overflow-hidden historia-parada:relative historia-parada:h-auto historia-parada:overflow-visible">
         <motion.div
+          ref={text}
           onFocusCapture={() => reveal(titleOpacity, "start")}
           style={{
             opacity: titleOpacity,
             y: titleY,
             pointerEvents: titleEvents,
           }}
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-7 px-6 text-center motion-reduce:pointer-events-auto! motion-reduce:relative motion-reduce:min-h-[88svh] motion-reduce:transform-none! motion-reduce:opacity-100!"
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-7 px-6 text-center historia-parada:pointer-events-auto! historia-parada:relative historia-parada:min-h-[88svh] historia-parada:transform-none! historia-parada:opacity-100!"
         >
-          <h1 className="max-w-4xl font-serif text-5xl leading-[1.02] tracking-tight text-balance sm:text-7xl lg:text-8xl">
+          <h1
+            data-hero-text
+            className="max-w-4xl font-serif text-5xl leading-[1.02] tracking-tight text-balance sm:text-7xl lg:text-8xl"
+          >
             {words.map((word, index) => (
               <span key={`${word}-${index}`}>
                 <span
@@ -106,6 +112,7 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
             ))}
           </h1>
           <p
+            data-hero-text
             className={`max-w-md text-lg text-pretty text-muted-foreground ${entering}`}
             style={delay(words.length + 2)}
           >
@@ -114,6 +121,7 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
             a sua atenção.
           </p>
           <div
+            data-hero-text
             className={`flex flex-wrap items-center justify-center gap-x-5 gap-y-3 ${entering}`}
             style={delay(words.length + 4)}
           >
@@ -130,7 +138,7 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
           {showcase ? (
             <p
               aria-hidden
-              className={`absolute bottom-8 flex items-center gap-2 font-mono text-xs text-muted-foreground motion-reduce:hidden ${entering}`}
+              className={`absolute bottom-8 flex items-center gap-2 font-mono text-xs text-muted-foreground historia-parada:hidden ${entering}`}
               style={delay(words.length + 8)}
             >
               <ArrowDown className="size-3.5" strokeWidth={1.5} />
@@ -142,10 +150,10 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
         {showcase ? (
           <HeroBooks
             books={showcase.books}
-            progress={scrollYProgress}
-            section={section}
-            stage={stage}
+            progress={progress}
+            story={story}
             shelf={shelf}
+            text={text}
           />
         ) : null}
 
@@ -154,12 +162,12 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
             onFocusCapture={() => reveal(profileOpacity, "end")}
             style={{ pointerEvents: endEvents }}
             // pt-14: o fim da história centra abaixo da barra
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 px-4 pt-14 motion-reduce:pointer-events-auto! motion-reduce:relative motion-reduce:pb-24 sm:gap-10 sm:px-6"
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 px-4 pt-14 sm:gap-10 sm:px-6 historia-parada:pointer-events-auto! historia-parada:relative historia-parada:pb-24"
           >
             <motion.div
               style={{ opacity: profileOpacity, y: profileY }}
               // No celular, sem os gêneros: o fim da história cabe na tela
-              className="w-full max-w-3xl motion-reduce:transform-none! motion-reduce:opacity-100! max-sm:[&_[data-genres]]:hidden"
+              className="w-full max-w-3xl historia-parada:transform-none! historia-parada:opacity-100! max-sm:[&_[data-genres]]:hidden"
             >
               <ProfileHeader
                 profile={showcase.profile}
@@ -171,7 +179,7 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
               <motion.div
                 ref={shelf}
                 style={{ opacity: shelfOpacity }}
-                className="motion-reduce:opacity-100!"
+                className="historia-parada:opacity-100!"
               >
                 <Shelf
                   books={showcase.books}
@@ -183,12 +191,12 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
               <motion.div
                 aria-hidden
                 style={{ scaleX: lineScale }}
-                className="absolute inset-x-0 bottom-0 h-px bg-foreground/24 motion-reduce:transform-none!"
+                className="absolute inset-x-0 bottom-0 h-px bg-foreground/24 historia-parada:transform-none!"
               />
             </div>
             <motion.div
               style={{ opacity: profileOpacity }}
-              className="motion-reduce:opacity-100!"
+              className="historia-parada:opacity-100!"
             >
               <Link
                 href={routes.profile(showcase.profile.username)}

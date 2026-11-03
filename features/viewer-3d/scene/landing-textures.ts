@@ -6,6 +6,7 @@ import {
   type Texture,
 } from "three";
 import { bookColor, PAPER_RGB } from "@/features/books/lib/color";
+import { spineHeight, spineWidth } from "@/features/books/lib/spine";
 import type { BookVisual } from "@/features/books/types";
 import { drawGeneratedCover, drawPageEdges, drawSpine } from "../lib/book-art";
 import { loadCanvasFonts } from "../lib/canvas-text";
@@ -72,7 +73,13 @@ export async function loadLandingSurfaces(
       const cover =
         (await loadCoverImage(book, "M")) ??
         canvasTexture(drawGeneratedCover(book, COVER_ART_WIDTH));
-      const spine = canvasTexture(drawSpine(book, size, SPINE_HEIGHT));
+      // O texto nas medidas da lombada da página, que assume no fim
+      const spine = canvasTexture(
+        drawSpine(book, size, SPINE_HEIGHT, {
+          width: spineWidth(book.pageCount),
+          height: spineHeight(book.id),
+        }),
+      );
       const pagesTop = edgeFor(top, size, false);
       const pagesSide = edgeFor(side, size, true);
       const coverColor = new Color(bookColor(book));

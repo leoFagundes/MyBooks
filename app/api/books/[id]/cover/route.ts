@@ -8,7 +8,8 @@ type Size = (typeof SIZES)[number];
 const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 10_000;
 
-const OPEN_LIBRARY_COVER = /^(https:\/\/covers\.openlibrary\.org\/b\/.+)-[SML]\.jpg$/;
+const OPEN_LIBRARY_COVER =
+  /^(https:\/\/covers\.openlibrary\.org\/b\/.+)-[SML]\.jpg$/;
 const BUCKET_COVER = /\/storage\/v1\/object\/public\/covers\/[0-9a-f/-]+$/;
 
 /** O arquivo do tamanho pedido: no bucket, S, M ou L.webp; na Open Library, -S, -M ou -L. */

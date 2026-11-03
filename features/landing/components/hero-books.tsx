@@ -10,12 +10,12 @@ import {
   useTransform,
 } from "motion/react";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BookVisual } from "@/features/books/types";
 import { SceneBoundary } from "@/features/viewer-3d/components/scene-boundary";
 import { tweens } from "@/lib/motion";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { FLIGHT, NARROW_SLOTS, SWAP, WIDE_SLOTS } from "../lib/story";
+import { FLIGHT, HIDE_SCENE, NARROW_SLOTS, WIDE_SLOTS } from "../lib/story";
 
 // three, R3F e drei chegam só depois do título, que é o LCP
 const LandingScene = dynamic(
@@ -27,42 +27,56 @@ const WIDE = "(min-width: 640px)";
 // Espera o navegador sossegar depois da carga, para a cena não disputar com o
 // título e as primeiras imagens
 const IDLE_TIMEOUT_MS = 1500;
+// A folga entre o texto do título e os livros que flutuam em volta dele, em px
+const TEXT_GAP = 12;
 
+type Size = { width: number; height: number };
 type Target = { x: number; y: number; width: number; height: number };
-type Layout = { width: number; height: number; targets: Target[] };
+type Block = { left: number; right: number; top: number; bottom: number };
 
 /**
- * Os livros 3D do topo da landing. Mede as lombadas de verdade da prateleira
- * (o destino de cada livro), carrega a cena quando o navegador sossega e a
- * pausa fora da tela e depois da troca pela prateleira da página. Com
- * movimento reduzido, não há cena: o CSS monta a história parada.
+ * Os livros 3D do topo da landing. No computador, com a história (story),
+ * cobrem o palco e voam até as lombadas de verdade da prateleira, medidas na
+ * página; fora dele, só flutuam no trecho do título, abaixo da barra e fora
+ * dos blocos de texto (`data-hero-text`). A cena carrega quando o navegador
+ * sossega e para de desenhar fora da tela e depois da troca pela prateleira
+ * da página. Com movimento reduzido, não há cena.
  */
 export function HeroBooks({
   books,
   progress,
-  section,
-  stage,
+  story,
   shelf,
+  text,
 }: {
   books: BookVisual[];
+  /** A história amortecida, a mesma que move o palco. */
   progress: MotionValue<number>;
-  section: React.RefObject<HTMLElement | null>;
-  stage: React.RefObject<HTMLDivElement | null>;
+  story: boolean;
   shelf: React.RefObject<HTMLDivElement | null>;
+  /** O trecho do título, com os blocos de texto marcados. */
+  text: React.RefObject<HTMLDivElement | null>;
 }) {
   const reduced = useReducedMotion();
   const wide = useMediaQuery(WIDE);
-  const [layout, setLayout] = useState<Layout | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<Size | null>(null);
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [idle, setIdle] = useState(false);
   const [inView, setInView] = useState(true);
-  const [beforeSwap, setBeforeSwap] = useState(progress.get() < SWAP[1]);
+  const [beforeHide, setBeforeHide] = useState(
+    () => progress.get() < (HIDE_SCENE[1] ?? 1),
+  );
   const appear = useMotionValue(0);
-  const swap = useTransform(progress, SWAP, [1, 0]);
-  const opacity = useTransform(() => appear.get() * swap.get());
+  // A prateleira da página já cobre os livros 3D (inteiros) quando a cena
+  // some: nada de os dois meio transparentes ao mesmo tempo
+  const hide = useTransform(progress, HIDE_SCENE, [0, 1]);
+  const storyOpacity = useTransform(() => appear.get() * (1 - hide.get()));
   const slots = wide ? WIDE_SLOTS : NARROW_SLOTS;
 
   useMotionValueEvent(progress, "change", (value) =>
-    setBeforeSwap(value < (SWAP[1] ?? 1)),
+    setBeforeHide(value < (HIDE_SCENE[1] ?? 1)),
   );
 
   useEffect(() => {
@@ -75,62 +89,90 @@ export function HeroBooks({
   }, []);
 
   useEffect(() => {
-    const node = section.current;
+    const node = box.current;
     if (!node) return;
     const observer = new IntersectionObserver(([entry]) =>
       setInView(entry?.isIntersecting ?? true),
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [section]);
+  }, []);
 
+  // O palco da cena é esta caixa: o palco inteiro na história, só o trecho
+  // do título fora dela. As lombadas ficam medidas nas coordenadas dela
   useEffect(() => {
-    const stageNode = stage.current;
+    const node = box.current;
     const shelfNode = shelf.current;
-    if (!stageNode || !shelfNode) return;
+    const textNode = text.current;
+    if (!node) return;
     function measure() {
-      if (!stageNode || !shelfNode) return;
-      const box = stageNode.getBoundingClientRect();
-      const spines = [...shelfNode.querySelectorAll<HTMLElement>("a.spine")];
-      const targets = spines
-        .map((spine) => spine.getBoundingClientRect())
-        .filter((rect) => rect.width > 0)
-        .map((rect) => ({
-          x: rect.left - box.left + rect.width / 2,
-          y: rect.top - box.top + rect.height / 2,
-          width: rect.width,
-          height: rect.height,
-        }));
-      setLayout({ width: box.width, height: box.height, targets });
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      setSize({ width: rect.width, height: rect.height });
+      const spines = [
+        ...(shelfNode?.querySelectorAll<HTMLElement>("a.spine") ?? []),
+      ];
+      setTargets(
+        spines
+          .map((spine) => spine.getBoundingClientRect())
+          .filter((spine) => spine.width > 0)
+          .map((spine) => ({
+            x: spine.left - rect.left + spine.width / 2,
+            y: spine.top - rect.top + spine.height / 2,
+            width: spine.width,
+            height: spine.height,
+          })),
+      );
+      setBlocks(
+        [
+          ...(textNode?.querySelectorAll<HTMLElement>("[data-hero-text]") ??
+            []),
+        ].map((block) => {
+          const edges = block.getBoundingClientRect();
+          return {
+            left: edges.left - rect.left - TEXT_GAP,
+            right: edges.right - rect.left + TEXT_GAP,
+            top: edges.top - rect.top - TEXT_GAP,
+            bottom: edges.bottom - rect.top + TEXT_GAP,
+          };
+        }),
+      );
     }
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(stageNode);
-    observer.observe(shelfNode);
+    observer.observe(node);
+    if (shelfNode) observer.observe(shelfNode);
+    if (textNode) observer.observe(textNode);
     void document.fonts.ready.then(measure);
     return () => observer.disconnect();
-  }, [stage, shelf, wide]);
+  }, [shelf, text, story, wide]);
 
-  if (reduced || !layout || !idle) return null;
+  const ready =
+    !reduced && idle && size !== null && (!story || targets.length > 0);
   return (
     <motion.div
+      ref={box}
       aria-hidden
-      style={{ opacity }}
-      className="pointer-events-none absolute inset-0 motion-reduce:hidden"
+      style={{ opacity: story ? storyOpacity : appear }}
+      // Fora da história, só o trecho do título, abaixo da barra (h-14)
+      className="pointer-events-none absolute inset-0 historia-parada:top-14 historia-parada:bottom-auto historia-parada:h-[calc(88svh-3.5rem)]"
     >
-      <SceneBoundary onError={() => undefined}>
-        <LandingScene
-          books={books.slice(0, slots.length)}
-          slots={slots}
-          targets={layout.targets}
-          stage={layout}
-          wide={wide}
-          flight={FLIGHT}
-          progress={progress}
-          active={inView && beforeSwap}
-          onReady={() => animate(appear, 1, tweens.slow)}
-        />
-      </SceneBoundary>
+      {ready ? (
+        <SceneBoundary onError={() => undefined}>
+          <LandingScene
+            books={books.slice(0, slots.length)}
+            slots={slots}
+            targets={story ? targets : null}
+            avoid={story ? null : blocks}
+            stage={size}
+            wide={wide}
+            flight={FLIGHT}
+            progress={progress}
+            active={inView && (!story || beforeHide)}
+            onReady={() => animate(appear, 1, tweens.slow)}
+          />
+        </SceneBoundary>
+      ) : null}
     </motion.div>
   );
 }

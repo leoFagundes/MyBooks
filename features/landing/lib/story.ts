@@ -1,12 +1,23 @@
 // A história do topo da landing, em trechos da rolagem da seção (0 a 1): o
 // título sai, os livros voam até a prateleira, a linha se desenha, a
-// prateleira de verdade assume e o perfil aparece. O DOM (HeroStage) e a cena
-// 3D (os livros) leem os mesmos trechos.
-export const TITLE_OUT = [0.03, 0.18];
-export const FLIGHT = { start: 0.08, spread: 0.22, length: 0.32 };
-export const LINE = [0.48, 0.62];
-export const SWAP = [0.63, 0.69];
-export const PROFILE = [0.69, 0.82];
+// prateleira de verdade assume por cima dos livros 3D, e o perfil aparece. O
+// DOM (HeroStage) e a cena 3D (os livros) leem os mesmos trechos.
+export const TITLE_OUT = [0.02, 0.15];
+export const FLIGHT = { start: 0.04, spread: 0.16, length: 0.34 };
+export const LINE = [0.42, 0.54];
+/** A prateleira da página aparece por cima dos livros 3D, ainda inteiros. */
+export const SWAP = [0.54, 0.6];
+/** Já coberta pela prateleira, a cena some (sem o fundo vazar no meio). */
+export const HIDE_SCENE = [0.6, 0.62];
+export const PROFILE = [0.6, 0.74];
+
+/**
+ * A história da rolagem só existe no computador: tela larga e mouse de
+ * verdade. No celular e no tablet, o topo fica parado e os livros só flutuam.
+ * O CSS espelha a mesma condição na variante `historia-parada`.
+ */
+export const STORY_MEDIA =
+  "(min-width: 48rem) and (hover: hover) and (pointer: fine)";
 
 /** Onde cada livro flutua no começo: frações do palco e a profundidade. */
 export type Slot = { x: number; y: number; depth: number };

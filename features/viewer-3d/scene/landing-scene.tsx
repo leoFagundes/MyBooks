@@ -1,11 +1,20 @@
 "use client";
 
-import { ContactShadows } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { cubicBezier, type MotionValue } from "motion/react";
 import { Suspense, use, useEffect, useRef, useState } from "react";
-import { Euler, type Group, MathUtils, Quaternion, Vector3 } from "three";
+import {
+  CanvasTexture,
+  Euler,
+  type Group,
+  MathUtils,
+  type MeshBasicMaterial,
+  Quaternion,
+  Vector3,
+} from "three";
+import { INK_RGB, toHex } from "@/features/books/lib/color";
 import { hashString } from "@/features/books/lib/hash";
+import { spineHeight, spineWidth } from "@/features/books/lib/spine";
 import type { BookVisual } from "@/features/books/types";
 import { easing } from "@/lib/motion";
 import { type BookDimensions, bookDimensionsForSpine } from "../lib/dimensions";
@@ -30,14 +39,28 @@ export type LandingSlot = { x: number; y: number; depth: number };
 /** O trecho da rolagem em que cada livro voa até a prateleira. */
 export type LandingFlight = { start: number; spread: number; length: number };
 
+/** Um bloco de texto do título, em px no palco, que os livros não cobrem. */
+export type LandingBlock = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+
 export type LandingSceneProps = {
   books: BookVisual[];
   slots: LandingSlot[];
-  targets: LandingTarget[];
+  /**
+   * As lombadas da prateleira, o destino de cada livro. Sem elas (fora do
+   * computador, onde não há a história da rolagem), os livros só flutuam.
+   */
+  targets: LandingTarget[] | null;
+  /** Sem a história, o texto do título: os livros flutuam fora dele. */
+  avoid: LandingBlock[] | null;
   stage: { width: number; height: number };
   wide: boolean;
   flight: LandingFlight;
-  /** A rolagem da seção, de 0 a 1 (o Lenis a move). */
+  /** A história, de 0 a 1, já amortecida: a mesma que move a página. */
   progress: MotionValue<number>;
   /** Fora da tela, ou depois da troca pela prateleira de verdade: não desenha. */
   active: boolean;
@@ -49,17 +72,43 @@ const PX = 100;
 // Campo estreito: as lombadas no fim quase não mostram os lados
 const FOV = 22;
 const EASE = cubicBezier(...easing);
-// Quanto a rolagem amortecida demora a alcançar a de verdade (maior, mais rápido)
-const SCROLL_DAMPING = 6;
+// O tamanho de partida, sobre o da lombada: no celular, menor; na tela larga,
+// cheio a partir de FULL_WIDTH (px) e menor abaixo dela (no tablet em pé, os
+// livros do tamanho do computador se amontoavam)
+const NARROW_SCALE = 0.6;
+const WIDE_SCALE = 0.95;
+const FULL_WIDTH = 1280;
 // A flutuação, em px no plano e em radianos
 const FLOAT_PX = 12;
 const FLOAT_TURN = 0.09;
+// Sem a história, a cena acaba no meio da página e tem o texto no meio:
+// cada livro, com a flutuação e mais esta folga (px), fica inteiro dentro
+// dela e fora do texto, menor se o espaço for curto; se nem com esta fração
+// do tamanho ele couber, fica de fora
+const FLOAT_MARGIN = 8;
+const MIN_FIT = 0.6;
 // Sem o verniz da capa (o material físico, caro com muitos livros), a lombada
 // sairia uns 5% mais escura que a da página, que assume no fim
 const VARNISH_LIGHT = 0.35;
+// A sombra de contato de cada livro, no chão da prateleira: escurece no fim do
+// voo (deste trecho do tempo dele em diante, quando o livro já está perto) e
+// passa da base dele (em unidades)
+const SHADOW_OPACITY = 0.35;
+const SHADOW_FROM = 0.7;
+const SHADOW_SPREAD = 0.12;
+// Desmontada, a cena ainda segura as texturas por um tempo: o StrictMode (no
+// dev) desmonta e monta de novo na hora, e a volta pelo histórico também
+const RELEASE_MS = 2000;
 
 const cameraDistance = (heightPx: number) =>
   heightPx / PX / 2 / Math.tan((FOV * Math.PI) / 360);
+
+/** As medidas da lombada de verdade (as mesmas da BookSpine), em unidades. */
+const dimensionsOf = (book: BookVisual) =>
+  bookDimensionsForSpine(
+    spineHeight(book.id) / PX,
+    spineWidth(book.pageCount) / PX,
+  );
 
 /** Aleatório repetível por livro: a mesma flutuação a cada visita. */
 function seeded(seed: number) {
@@ -70,9 +119,56 @@ function seeded(seed: number) {
   };
 }
 
+const overlaps = (a: LandingBlock, b: LandingBlock) =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * Onde o livro flutua sem a história: na altura da vaga, se não cobrir o
+ * texto; senão, acima ou abaixo dele (o lado da vaga), encolhido até caber.
+ */
+function floatPlacement(
+  slot: LandingSlot,
+  dims: BookDimensions,
+  stage: { width: number; height: number },
+  startScale: number,
+  avoid: LandingBlock[],
+) {
+  const pad = FLOAT_PX + FLOAT_MARGIN;
+  const height = dims.height * PX * startScale;
+  const x = slot.x * stage.width;
+  const halfWidth = (dims.width * PX * startScale) / 2 + pad;
+  const inside = (y: number, top: number, bottom: number, fit: number) => {
+    const half = (height * fit) / 2 + pad;
+    return MathUtils.clamp(y, top + half, Math.max(top + half, bottom - half));
+  };
+  let top = 0;
+  let bottom = stage.height;
+  const y = inside(slot.y * stage.height, top, bottom, 1);
+  const half = height / 2 + pad;
+  const box = {
+    left: x - halfWidth,
+    right: x + halfWidth,
+    top: y - half,
+    bottom: y + half,
+  };
+  if (avoid.some((block) => overlaps(box, block))) {
+    const textTop = Math.min(...avoid.map((block) => block.top));
+    const textBottom = Math.max(...avoid.map((block) => block.bottom));
+    if (slot.y * stage.height < (textTop + textBottom) / 2) bottom = textTop;
+    else top = textBottom;
+  }
+  const fit = Math.min(1, (bottom - top - 2 * pad) / height);
+  if (fit < MIN_FIT) return null;
+  return {
+    y: inside(slot.y * stage.height, top, bottom, fit),
+    scale: startScale * fit,
+  };
+}
+
 type Plan = {
   start: Vector3;
-  end: Vector3;
+  /** Onde pousa, em cima da lombada da página; sem a história, não pousa. */
+  end: Vector3 | null;
   startTurn: Quaternion;
   endTurn: Quaternion;
   begin: number;
@@ -85,12 +181,13 @@ function planBook(
   index: number,
   total: number,
   slot: LandingSlot,
-  target: LandingTarget,
+  target: LandingTarget | null,
+  avoid: LandingBlock[] | null,
   dims: BookDimensions,
   stage: { width: number; height: number },
   wide: boolean,
   flight: LandingFlight,
-): Plan {
+): Plan | null {
   const distance = cameraDistance(stage.height);
   // Um ponto do palco (px) no mundo, à profundidade z
   const toWorld = (x: number, y: number, z: number) => {
@@ -102,16 +199,36 @@ function planBook(
     );
   };
   // Perto é maior: a escala de partida vira a profundidade, pela perspectiva
-  const startScale = slot.depth * (wide ? 0.95 : 0.6);
+  let startScale =
+    slot.depth *
+    (wide
+      ? WIDE_SCALE * MathUtils.clamp(stage.width / FULL_WIDTH, 0.6, 1)
+      : NARROW_SCALE);
+  let y = slot.y * stage.height;
+  if (!target) {
+    const placement = floatPlacement(
+      slot,
+      dims,
+      stage,
+      startScale,
+      avoid ?? [],
+    );
+    if (!placement) return null;
+    y = placement.y;
+    startScale = placement.scale;
+  }
   const start = toWorld(
     slot.x * stage.width,
-    slot.y * stage.height,
+    y,
     distance * (1 - 1 / startScale),
   );
   // No fim, a lombada fica no plano z = 0, em cima da lombada da página: o
   // centro do livro, girado 90°, fica meia capa para trás
-  const end = toWorld(target.x, target.y, 0);
-  end.z = -dims.width / 2;
+  let end: Vector3 | null = null;
+  if (target) {
+    end = toWorld(target.x, target.y, 0);
+    end.z = -dims.width / 2;
+  }
 
   const random = seeded(hashString(book.id));
   // Partida de 3/4, nunca de perfil: um pouco da lombada ou da borda das
@@ -141,6 +258,28 @@ const wave = (time: number, { speed, phase }: Plan["waves"][number]) =>
   Math.sin(time * speed + phase) * 0.7 +
   Math.sin(time * speed * 2.17 + phase * 1.3) * 0.3;
 
+let shadowMap: CanvasTexture | null = null;
+
+/** A sombra de um livro vista do alto: um retângulo desfocado, um para todos. */
+function contactShadowMap() {
+  if (shadowMap) return shadowMap;
+  const size = 64;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  if (context) {
+    // O retângulo fica fora do quadro: só a sombra dele, desfocada, cai no meio
+    context.fillStyle = toHex(INK_RGB);
+    context.shadowColor = toHex(INK_RGB);
+    context.shadowBlur = size / 5;
+    context.shadowOffsetX = size;
+    context.fillRect(size / 4 - size, size / 4, size / 2, size / 2);
+  }
+  shadowMap = new CanvasTexture(canvas);
+  return shadowMap;
+}
+
 function FlyingBook({
   plan,
   dims,
@@ -152,23 +291,29 @@ function FlyingBook({
   dims: BookDimensions;
   surfaces: LandingBookSurfaces["surfaces"];
   flightLength: number;
-  progress: React.RefObject<number>;
+  progress: MotionValue<number>;
 }) {
   const group = useRef<Group>(null);
+  const shade = useRef<MeshBasicMaterial>(null);
+  // O relógio da flutuação para com a cena e segue de onde parou (o do R3F
+  // volta a zero quando o frameloop muda, e os livros saltariam)
+  const time = useRef(0);
   const [scratch] = useState(() => ({
     euler: new Euler(0, 0, 0, "YXZ"),
     sway: new Quaternion(),
     from: new Quaternion(),
   }));
 
-  useFrame(({ clock }) => {
+  useFrame((_, delta) => {
     const node = group.current;
     if (!node) return;
-    const k = EASE(
-      MathUtils.clamp((progress.current - plan.begin) / flightLength, 0, 1),
-    );
+    time.current += Math.min(delta, 0.1);
+    const end = plan.end ?? plan.start;
+    const t = plan.end
+      ? MathUtils.clamp((progress.get() - plan.begin) / flightLength, 0, 1)
+      : 0;
+    const k = EASE(t);
     const loose = 1 - k;
-    const time = clock.elapsedTime;
     const [wx, wy, wPitch, wYaw, wRoll] = plan.waves as [
       Plan["waves"][number],
       Plan["waves"][number],
@@ -176,29 +321,65 @@ function FlyingBook({
       Plan["waves"][number],
       Plan["waves"][number],
     ];
-    const floatX = (wave(time, wx) * FLOAT_PX * loose) / PX;
-    const floatY = (wave(time, wy) * FLOAT_PX * loose) / PX;
+    const floatX = (wave(time.current, wx) * FLOAT_PX * loose) / PX;
+    const floatY = (wave(time.current, wy) * FLOAT_PX * loose) / PX;
     node.position.set(
-      MathUtils.lerp(plan.start.x + floatX, plan.end.x, k),
-      MathUtils.lerp(plan.start.y + floatY, plan.end.y, k),
-      MathUtils.lerp(plan.start.z, plan.end.z, k),
+      MathUtils.lerp(plan.start.x + floatX, end.x, k),
+      MathUtils.lerp(plan.start.y + floatY, end.y, k),
+      MathUtils.lerp(plan.start.z, end.z, k),
     );
     // O balanço solto vai sumindo no voo, e o giro anda pelo caminho mais
     // curto (slerp): nenhum livro vira pelo lado errado
     scratch.euler.set(
-      wave(time, wPitch) * FLOAT_TURN * 0.6 * loose,
-      wave(time, wYaw) * FLOAT_TURN * loose,
-      wave(time, wRoll) * FLOAT_TURN * 0.5 * loose,
+      wave(time.current, wPitch) * FLOAT_TURN * 0.6 * loose,
+      wave(time.current, wYaw) * FLOAT_TURN * loose,
+      wave(time.current, wRoll) * FLOAT_TURN * 0.5 * loose,
     );
     scratch.sway.setFromEuler(scratch.euler);
     scratch.from.copy(plan.startTurn).multiply(scratch.sway);
     node.quaternion.slerpQuaternions(scratch.from, plan.endTurn, k);
+
+    const material = shade.current;
+    if (material) {
+      material.opacity =
+        SHADOW_OPACITY * MathUtils.smoothstep(t, SHADOW_FROM, 1);
+      material.visible = material.opacity > 0.001;
+    }
   });
 
   return (
-    <group ref={group}>
-      <BookModel dims={dims} surfaces={surfaces} gloss={false} />
-    </group>
+    <>
+      <group ref={group}>
+        <BookModel dims={dims} surfaces={surfaces} gloss={false} />
+      </group>
+      {plan.end ? (
+        // No chão, sob a base do livro pousado: o próprio livro esconde o
+        // meio, e o que sobra escurece os vãos e as pontas da prateleira
+        <mesh
+          position={[
+            plan.end.x,
+            plan.end.y - dims.height / 2 + 0.002,
+            plan.end.z,
+          ]}
+          rotation-x={-Math.PI / 2}
+          scale={[
+            dims.depth + 2 * SHADOW_SPREAD,
+            dims.width + 2 * SHADOW_SPREAD,
+            1,
+          ]}
+        >
+          <planeGeometry />
+          <meshBasicMaterial
+            ref={shade}
+            map={contactShadowMap()}
+            transparent
+            depthWrite={false}
+            opacity={0}
+            visible={false}
+          />
+        </mesh>
+      ) : null}
+    </>
   );
 }
 
@@ -216,139 +397,117 @@ function CameraRig() {
   return null;
 }
 
-/** A rolagem amortecida: rolar de uma vez não dá tranco nos livros. */
-function useDampedProgress(progress: MotionValue<number>) {
-  const damped = useRef(progress.get());
-  useFrame((_, delta) => {
-    damped.current = MathUtils.damp(
-      damped.current,
-      progress.get(),
-      SCROLL_DAMPING,
-      Math.min(delta, 0.1),
-    );
-  });
-  return damped;
+type CachedSurfaces = {
+  load: Promise<LandingBookSurfaces[]>;
+  users: number;
+  release: number | undefined;
+};
+
+// As texturas por conjunto de livros. O use() recebe sempre a mesma promessa,
+// e a cena montada segura as dela: se uma cena que volta carregasse tudo de
+// novo, o Suspense apagaria os livros até o fim da carga (era o pisca)
+const cache = new Map<string, CachedSurfaces>();
+
+function surfacesFor(key: string, books: BookVisual[], dims: BookDimensions[]) {
+  let cached = cache.get(key);
+  if (!cached) {
+    const load = loadLandingSurfaces(books, dims);
+    cached = { load, users: 0, release: undefined };
+    cache.set(key, cached);
+    load.catch(() => cache.delete(key));
+  }
+  return cached.load;
 }
 
-// As texturas de uma visita: uma promessa por conjunto (o use() pede a mesma)
-const loads = new Map<string, Promise<LandingBookSurfaces[]>>();
+/** Segura as texturas enquanto a cena existe; sem ninguém, saem depois de um tempo. */
+function useHeldSurfaces(key: string) {
+  useEffect(() => {
+    const cached = cache.get(key);
+    if (!cached) return;
+    cached.users += 1;
+    window.clearTimeout(cached.release);
+    return () => {
+      cached.users -= 1;
+      if (cached.users > 0) return;
+      cached.release = window.setTimeout(() => {
+        cache.delete(key);
+        void cached.load.then((list) => {
+          for (const item of list) item.dispose();
+        });
+      }, RELEASE_MS);
+    };
+  }, [key]);
+}
 
 function Books({
   books,
   slots,
   targets,
+  avoid,
   stage,
   wide,
   flight,
   progress,
   onReady,
 }: Omit<LandingSceneProps, "active">) {
+  // Na história, só voa quem tem lombada; sem ela, todos flutuam
   const entries = books.flatMap((book, index) => {
-    const target = targets[index];
     const slot = slots[index];
-    return target && slot ? [{ book, target, slot }] : [];
+    const target = targets ? targets[index] : null;
+    return slot && target !== undefined ? [{ book, slot, target }] : [];
   });
-  const dims = entries.map(({ target }) =>
-    bookDimensionsForSpine(target.height / PX, target.width / PX),
-  );
-  const key = entries
-    .map(({ book, target }) => `${book.id}:${target.width}x${target.height}`)
-    .join("|");
-  let load = loads.get(key);
-  if (!load) {
-    load = loadLandingSurfaces(
+  const dims = entries.map(({ book }) => dimensionsOf(book));
+  // As medidas vêm só dos livros: medir a página de novo não recarrega nada
+  const key = entries.map(({ book }) => book.id).join("|");
+  const surfaces = use(
+    surfacesFor(
+      key,
       entries.map(({ book }) => book),
       dims,
-    );
-    loads.set(key, load);
-    load.catch(() => loads.delete(key));
-  }
-  const surfaces = use(load);
-  const damped = useDampedProgress(progress);
-  const [shadows, setShadows] = useState(false);
+    ),
+  );
+  useHeldSurfaces(key);
   const announced = useRef(false);
 
-  useEffect(
-    () => () => {
-      loads.delete(key);
-      for (const surface of surfaces) surface.dispose();
-    },
-    [key, surfaces],
-  );
-
-  // A sombra de contato só existe perto da prateleira: antes disso, os
-  // livros estão longe da linha e ela seria um desenho a mais por quadro
   useFrame(() => {
-    const near = damped.current > flight.start + flight.spread * 0.6;
-    if (near !== shadows) setShadows(near);
-    if (!announced.current) {
-      announced.current = true;
-      requestAnimationFrame(() => onReady());
-    }
+    if (announced.current) return;
+    announced.current = true;
+    requestAnimationFrame(() => onReady());
   });
 
-  const plans = entries.map(({ book, slot, target }, index) =>
-    planBook(
+  return entries.map(({ book, slot, target }, index) => {
+    const size = dims[index] as BookDimensions;
+    const plan = planBook(
       book,
       index,
       entries.length,
       slot,
       target,
-      dims[index] as BookDimensions,
+      avoid,
+      size,
       stage,
       wide,
       flight,
-    ),
-  );
-
-  // A linha da prateleira: a base das lombadas, onde a sombra se apoia
-  const shelf = entries.reduce(
-    (box, { target }) => ({
-      left: Math.min(box.left, target.x - target.width / 2),
-      right: Math.max(box.right, target.x + target.width / 2),
-      bottom: Math.max(box.bottom, target.y + target.height / 2),
-      height: Math.max(box.height, target.height),
-    }),
-    { left: Infinity, right: -Infinity, bottom: 0, height: 0 },
-  );
-  const deepest = Math.max(...dims.map((size) => size.width));
-
-  return (
-    <>
-      {entries.map(({ book }, index) => (
-        <FlyingBook
-          key={book.id}
-          plan={plans[index] as Plan}
-          dims={dims[index] as BookDimensions}
-          surfaces={(surfaces[index] as LandingBookSurfaces).surfaces}
-          flightLength={flight.length}
-          progress={damped}
-        />
-      ))}
-      {shadows && entries.length > 0 ? (
-        <ContactShadows
-          position={[
-            ((shelf.left + shelf.right) / 2 - stage.width / 2) / PX,
-            -(shelf.bottom - stage.height / 2) / PX,
-            -deepest / 2,
-          ]}
-          scale={[(shelf.right - shelf.left) / PX + deepest, deepest * 1.5]}
-          far={shelf.height / PX}
-          blur={2.4}
-          opacity={0.3}
-          resolution={256}
-          frames={Infinity}
-        />
-      ) : null}
-    </>
-  );
+    );
+    // Sem lugar fora do texto, o livro fica de fora (as texturas continuam)
+    return plan ? (
+      <FlyingBook
+        key={book.id}
+        plan={plan}
+        dims={size}
+        surfaces={(surfaces[index] as LandingBookSurfaces).surfaces}
+        flightLength={flight.length}
+        progress={progress}
+      />
+    ) : null;
+  });
 }
 
 /**
  * Os livros da landing (MELHORIAS 3.3), numa cena R3F só: cada um é o
  * BookModel do visualizador, com as medidas da lombada de verdade da
- * prateleira. Flutuam cada um no seu ritmo e, com a rolagem (amortecida),
- * voam girando pelo caminho mais curto até cair em cima das lombadas da
+ * prateleira. Flutuam cada um no seu ritmo e, no computador, voam com a
+ * história girando pelo caminho mais curto até cair em cima das lombadas da
  * página, que assumem no fim. É ponto de entrada de three, como a book-scene:
  * chega por next/dynamic, depois do título.
  */

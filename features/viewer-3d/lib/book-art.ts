@@ -280,16 +280,22 @@ export function drawBackCover(book: BookVisual, description: string | null) {
 // O painel de papel da lombada no estilo Faixa, como no SpineArt
 const SPINE_BAND = { top: 0.14, bottom: 0.76 } as const;
 
+/** A lombada da página (BookSpine), em px: a 3D da landing cai em cima dela. */
+export type ShelfSpine = { width: number; height: number };
+
 /**
  * A lombada, como o BookSpine (SpineArt): título em serif descendo de cima
  * para baixo (a ABNT pede assim) e autoria em mono no pé, se a espessura
  * deixar, no estilo da capa: a Moldura ganha dois fios, a Faixa o painel de
- * papel com o título e a Mínima fica só com o título, no meio.
+ * papel com o título e a Mínima fica só com o título, no meio. Com `shelf`
+ * (a landing), as medidas são as da SpineArt na lombada da página, para a
+ * troca de uma pela outra não mexer no texto.
  */
 export function drawSpine(
   book: BookVisual,
   dims: BookDimensions,
   spineHeight = SPINE_HEIGHT,
+  shelf?: ShelfSpine,
 ) {
   const H = spineHeight;
   // A face da lombada cobre o miolo e as duas folgas
@@ -299,6 +305,8 @@ export function drawSpine(
   );
   // Os tetos das letras foram medidos na lombada de 1152px
   const k = H / 1152;
+  // Na landing, um px da lombada da página vale u px do canvas
+  const u = shelf ? H / shelf.height : 0;
   const { canvas, ctx } = createCanvas(width, H);
   const { background, ink } = palette(book);
   ctx.fillStyle = background;
@@ -307,9 +315,12 @@ export function drawSpine(
 
   const style = book.coverStyle;
   if (style === "framed") {
-    const bar = Math.max(2, H * 0.003);
-    for (const top of [H * 0.03, H * 0.97 - bar]) {
-      ctx.fillRect(width * 0.12, top, width * 0.76, bar);
+    // Na página, fios de 1px a 6px das pontas e a 3px dos lados
+    const bar = shelf ? u : Math.max(2, H * 0.003);
+    const end = shelf ? 6 * u : H * 0.03;
+    const side = shelf ? 3 * u : width * 0.12;
+    for (const top of [end, H - end - bar]) {
+      ctx.fillRect(side, top, width - 2 * side, bar);
     }
   }
   const band = {
@@ -326,6 +337,10 @@ export function drawSpine(
   ctx.translate(width / 2, 0);
   ctx.rotate(Math.PI / 2);
   ctx.textBaseline = "middle";
+  if (shelf) {
+    drawShelfSpineText(ctx, book, { H, u, band, ink, wide: shelf.width >= 24 });
+    return canvas;
+  }
   const margin = H * (style === "framed" ? 0.075 : 0.06);
   const titleSize = Math.min(width * 0.46, 56 * k);
   const author = (book.authors[0] ?? "").toUpperCase();
@@ -375,6 +390,73 @@ export function drawSpine(
     ctx.fillText(title, margin, 0);
   }
   return canvas;
+}
+
+/**
+ * O texto da lombada nas medidas da SpineArt (em px da página, vezes u):
+ * título de 13px e autoria de 8px, folga de 12px nas pontas (16px na
+ * Moldura) e 6px entre os dois; o título vai primeiro e deixa ao menos 48px,
+ * e a autoria fica com o resto. Na Faixa, o título começa 8px dentro do
+ * painel e a autoria 8px abaixo dele. O canvas já está girado.
+ */
+function drawShelfSpineText(
+  ctx: CanvasRenderingContext2D,
+  book: BookVisual,
+  {
+    H,
+    u,
+    band,
+    ink,
+    wide,
+  }: {
+    H: number;
+    u: number;
+    band: { start: number; end: number };
+    ink: string;
+    /** Espessa o bastante para a autoria (24px na página). */
+    wide: boolean;
+  },
+) {
+  const serif = fontStack("--font-instrument-serif");
+  const mono = fontStack("--font-geist-mono");
+  const style = book.coverStyle;
+  const author = wide ? (book.authors[0] ?? "").toUpperCase() : "";
+  ctx.textAlign = "left";
+
+  if (style === "band") {
+    const pad = 8 * u;
+    setFont(ctx, serif, 13 * u);
+    const [title] = wrapLines(
+      ctx,
+      book.title,
+      band.end - band.start - 2 * pad,
+      1,
+    );
+    ctx.fillStyle = INK;
+    if (title) ctx.fillText(title, band.start + pad, 0);
+    setFont(ctx, mono, 8 * u, 0.05);
+    const [line] = wrapLines(ctx, author, H - band.end - 2 * pad, 1);
+    ctx.fillStyle = ink;
+    if (line) ctx.fillText(line, band.end + pad, 0);
+    return;
+  }
+
+  const pad = (style === "framed" ? 16 : 12) * u;
+  const room = H - 2 * pad;
+  setFont(ctx, serif, 13 * u);
+  if (style === "minimal") {
+    const [title] = wrapLines(ctx, book.title, room, 1);
+    ctx.textAlign = "center";
+    if (title) ctx.fillText(title, H / 2, 0);
+    return;
+  }
+  const [title] = wrapLines(ctx, book.title, room - 48 * u, 1);
+  if (title) ctx.fillText(title, pad, 0);
+  const used = title ? ctx.measureText(title).width + 6 * u : 0;
+  setFont(ctx, mono, 8 * u, 0.05);
+  const [line] = wrapLines(ctx, author, room - used, 1);
+  ctx.textAlign = "right";
+  if (line) ctx.fillText(line, H - pad, 0);
 }
 
 /**

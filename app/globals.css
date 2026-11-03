@@ -11,6 +11,16 @@
     @slot;
   }
 }
+/* A história da rolagem da landing só existe no computador (tela larga e
+   mouse de verdade) e sem movimento reduzido. Fora disso, o topo fica montado
+   e parado (o celular ainda tem os livros 3D flutuando em volta do título).
+   Espelha STORY_MEDIA (features/landing/lib/story.ts). */
+@custom-variant historia-parada {
+  @media (prefers-reduced-motion: reduce),
+    not all and (min-width: 48rem) and (hover: hover) and (pointer: fine) {
+    @slot;
+  }
+}
 
 /* Só existem as cores do MyBooks: a paleta padrão do Tailwind fica desligada. */
 @theme {

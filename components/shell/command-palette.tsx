@@ -74,6 +74,8 @@ export function CommandPaletteProvider({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      // O autopreenchimento do navegador dispara keydown sem key
+      if (!event.key) return;
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setOpen((current) => !current);

@@ -45,6 +45,8 @@ type AddBookContextValue = {
   openForCollection: (collection: CollectionTarget) => void;
   /** Abre direto na câmera, para ler o código de barras (só no toque). */
   openScanner: () => void;
+  /** Abre direto no cadastro à mão, com o título já escrito (o Explorar). */
+  openManual: (title: string) => void;
   /** Há conta: o +, a tecla N e o item do ⌘K funcionam. */
   enabled: boolean;
 };
@@ -58,6 +60,7 @@ type Controls = {
   setInitialBook: (book: ChosenBook | null) => void;
   setCollection: (collection: CollectionTarget | null) => void;
   setScanFirst: (scanFirst: boolean) => void;
+  setManualTitle: (title: string | null) => void;
 };
 const ControlsContext = createContext<Controls | null>(null);
 
@@ -71,6 +74,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
   const [initialBook, setInitialBook] = useState<ChosenBook | null>(null);
   const [collection, setCollection] = useState<CollectionTarget | null>(null);
   const [scanFirst, setScanFirst] = useState(false);
+  const [manualTitle, setManualTitle] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const returnFocus = useRef<HTMLElement | null>(null);
 
@@ -153,24 +157,35 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           setInitialBook(null);
           setCollection(null);
           setScanFirst(false);
+          setManualTitle(null);
           setOpen(true);
         },
         openWith: (book) => {
           setInitialBook(book);
           setCollection(null);
           setScanFirst(false);
+          setManualTitle(null);
           setOpen(true);
         },
         openForCollection: (target) => {
           setInitialBook(null);
           setCollection(target);
           setScanFirst(false);
+          setManualTitle(null);
           setOpen(true);
         },
         openScanner: () => {
           setInitialBook(null);
           setCollection(null);
           setScanFirst(true);
+          setManualTitle(null);
+          setOpen(true);
+        },
+        openManual: (title) => {
+          setInitialBook(null);
+          setCollection(null);
+          setScanFirst(false);
+          setManualTitle(title);
           setOpen(true);
         },
         enabled,
@@ -183,6 +198,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           setInitialBook,
           setCollection,
           setScanFirst,
+          setManualTitle,
         }}
       >
         {children}
@@ -211,6 +227,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           <AddBookFlow
             initialBook={initialBook}
             startWithScan={scanFirst}
+            startManual={manualTitle}
             onSave={save}
             collectionTitle={collection?.title}
             onPick={collection ? (book) => pick(book, collection) : undefined}
@@ -243,8 +260,14 @@ export function AddBookShortcut() {
   const controls = use(ControlsContext);
   if (!controls)
     throw new Error("AddBookShortcut precisa do <AddBookProvider>");
-  const { setOpen, setEnabled, setInitialBook, setCollection, setScanFirst } =
-    controls;
+  const {
+    setOpen,
+    setEnabled,
+    setInitialBook,
+    setCollection,
+    setScanFirst,
+    setManualTitle,
+  } = controls;
 
   useEffect(() => {
     setEnabled(true);
@@ -260,6 +283,7 @@ export function AddBookShortcut() {
       setInitialBook(null);
       setCollection(null);
       setScanFirst(false);
+      setManualTitle(null);
       setOpen(true);
     }
     window.addEventListener("keydown", onKeyDown);
@@ -267,7 +291,14 @@ export function AddBookShortcut() {
       window.removeEventListener("keydown", onKeyDown);
       setEnabled(false);
     };
-  }, [setOpen, setEnabled, setInitialBook, setCollection, setScanFirst]);
+  }, [
+    setOpen,
+    setEnabled,
+    setInitialBook,
+    setCollection,
+    setScanFirst,
+    setManualTitle,
+  ]);
 
   return null;
 }

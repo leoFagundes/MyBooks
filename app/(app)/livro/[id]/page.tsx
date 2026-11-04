@@ -166,7 +166,7 @@ async function Discussions({ book }: { book: BookDetails }) {
   ]);
   const open = (
     <NewTopicButton
-      signedIn={Boolean(viewer)}
+      viewer={viewer?.username ?? null}
       categories={categories}
       category="discussoes-de-livros"
       book={book}

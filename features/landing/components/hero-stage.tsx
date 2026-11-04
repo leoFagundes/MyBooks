@@ -19,6 +19,7 @@ import { routes } from "@/lib/routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   CAPTION,
+  CAPTION_IN,
   CAPTION_OUT,
   LINE,
   PROFILE,
@@ -99,7 +100,11 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
   const endEvents = useTransform(profileOpacity, (value) =>
     value > 0.5 ? "auto" : "none",
   );
-  const captionOpacity = useTransform(progress, CAPTION_OUT, [1, 0]);
+  const captionOpacity = useTransform(
+    progress,
+    [...CAPTION_IN, ...CAPTION_OUT],
+    [0, 1, 1, 0],
+  );
   const captionY = useTransform(progress, CAPTION_OUT, [0, -16]);
   const words = splitWords(TITLE);
   const captionWords = splitWords(CAPTION_TEXT);

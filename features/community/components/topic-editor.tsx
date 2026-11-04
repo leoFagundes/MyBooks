@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input, fieldClasses } from "@/components/ui/input";
@@ -42,10 +42,72 @@ export const emptyDraft = (
   books,
 });
 
+const hasContent = (draft: TopicDraft) =>
+  Boolean(draft.title.trim() || draft.body.trim() || draft.tags.trim());
+
+/**
+ * O rascunho guardado no navegador, se ainda servir. O livro da página de
+ * onde a pessoa abriu entra junto, se faltar (até 5).
+ */
+function storedDraft(key: string, initial: TopicDraft): TopicDraft | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as Partial<TopicDraft>;
+    if (typeof saved.title !== "string" || typeof saved.body !== "string") {
+      return null;
+    }
+    const draft: TopicDraft = {
+      category:
+        typeof saved.category === "string" ? saved.category : initial.category,
+      title: saved.title,
+      body: saved.body,
+      tags: typeof saved.tags === "string" ? saved.tags : "",
+      containsSpoilers: saved.containsSpoilers === true,
+      books: Array.isArray(saved.books) ? saved.books : [],
+    };
+    for (const book of initial.books) {
+      if (!draft.books.some((item) => item.id === book.id)) {
+        draft.books = [...draft.books, book].slice(0, 5);
+      }
+    }
+    return hasContent(draft) ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(key: string, draft: TopicDraft) {
+  try {
+    if (hasContent(draft)) {
+      window.localStorage.setItem(key, JSON.stringify(draft));
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Sem armazenamento (aba privada): o rascunho vale só enquanto a gaveta
+    // estiver aberta
+  }
+}
+
+/** Se dá para guardar no navegador (aba privada e bloqueio não deixam). */
+function storageWorks() {
+  try {
+    const probe = "mybooks:teste";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Abrir ou editar um tópico (MELHORIAS 8), numa gaveta: de baixo no celular,
  * do lado no resto. Categoria, título, texto com a prévia, livros vinculados
- * (aparecem na página deles), tags e o aviso de spoilers.
+ * (aparecem na página deles), tags e o aviso de spoilers. O tópico novo
+ * guarda o rascunho no navegador (`draftKey`, por conta) a cada mudança:
+ * fechar a gaveta, recarregar ou sair da página não perde o texto.
  */
 export function TopicEditor({
   open,
@@ -53,6 +115,7 @@ export function TopicEditor({
   categories,
   initial,
   topicId,
+  draftKey,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +123,8 @@ export function TopicEditor({
   initial: TopicDraft;
   /** Editando: o tópico. Sem ele, é um tópico novo. */
   topicId?: string;
+  /** Onde guardar o rascunho do tópico novo. */
+  draftKey?: string;
 }) {
   const wide = useMediaQuery("(min-width: 640px)");
   return (
@@ -77,6 +142,7 @@ export function TopicEditor({
             categories={categories}
             initial={initial}
             topicId={topicId}
+            draftKey={topicId ? undefined : draftKey}
             onDone={() => onOpenChange(false)}
           />
         ) : null}
@@ -89,16 +155,35 @@ function TopicForm({
   categories,
   initial,
   topicId,
+  draftKey,
   onDone,
 }: {
   categories: ForumCategory[];
   initial: TopicDraft;
   topicId?: string;
+  draftKey?: string;
   onDone: () => void;
 }) {
   const id = useId();
   const router = useRouter();
-  const [draft, setDraft] = useState(initial);
+  // A gaveta só monta o formulário aberta, no navegador: ler aqui não
+  // desencontra a hidratação
+  const [restored, setRestored] = useState(() =>
+    draftKey ? storedDraft(draftKey, initial) : null,
+  );
+  const [draft, setDraft] = useState(restored ?? initial);
+  const [canStore] = useState(() => (draftKey ? storageWorks() : false));
+  const saved = canStore && hasContent(draft);
+
+  useEffect(() => {
+    if (draftKey) saveDraft(draftKey, draft);
+  }, [draftKey, draft]);
+
+  function discard() {
+    if (draftKey) saveDraft(draftKey, initial);
+    setRestored(null);
+    setDraft(initial);
+  }
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -139,6 +224,8 @@ function TopicForm({
         return;
       }
       toast.success(topicId ? "Tópico atualizado" : "Tópico publicado");
+      // Publicado, o rascunho sai (antes de a gaveta fechar e o efeito parar)
+      if (draftKey) saveDraft(draftKey, emptyDraft());
       onDone();
       if (topicId) router.refresh();
       else if (result.data)
@@ -153,6 +240,14 @@ function TopicForm({
       className="flex min-h-0 flex-1 flex-col gap-4"
     >
       <div className="-mx-6 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-6 py-1">
+        {restored ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border bg-muted px-3 py-2 text-sm">
+            <span>Rascunho recuperado: continue de onde parou.</span>
+            <Button type="button" variant="ghost" size="sm" onClick={discard}>
+              Descartar rascunho
+            </Button>
+          </div>
+        ) : null}
         {topicId ? null : (
           <div className="flex flex-col gap-2">
             <Label htmlFor={`${id}-categoria`}>Categoria</Label>
@@ -262,7 +357,15 @@ function TopicForm({
           ) : null}
         </div>
       </div>
-      <SheetFooter className="flex-row justify-end">
+      <SheetFooter className="flex-row items-center justify-end">
+        {draftKey ? (
+          <p
+            aria-live="polite"
+            className="mr-auto font-mono text-xs text-muted-foreground"
+          >
+            {saved ? "Rascunho salvo" : null}
+          </p>
+        ) : null}
         <Button type="button" variant="ghost" onClick={onDone}>
           Cancelar
         </Button>

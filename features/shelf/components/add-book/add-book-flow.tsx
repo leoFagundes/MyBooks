@@ -33,6 +33,7 @@ const stepMotion = {
 export function AddBookFlow({
   initialBook,
   startWithScan = false,
+  startManual = null,
   onSave,
   onPick,
   collectionTitle,
@@ -41,6 +42,8 @@ export function AddBookFlow({
   initialBook: ChosenBook | null;
   /** Começa na câmera (o ⌘K). */
   startWithScan?: boolean;
+  /** Começa no cadastro à mão, com este título (o Explorar). */
+  startManual?: string | null;
   onSave: (
     book: ChosenBook,
     details: ShelfDetails,
@@ -49,13 +52,15 @@ export function AddBookFlow({
   onPick?: (book: ChosenBook) => void;
   collectionTitle?: string;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(startManual ?? "");
   const [step, setStep] = useState<Step>(
     initialBook
       ? { name: "details", book: initialBook }
       : startWithScan
         ? { name: "scan" }
-        : { name: "search" },
+        : startManual !== null
+          ? { name: "manual" }
+          : { name: "search" },
   );
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
 

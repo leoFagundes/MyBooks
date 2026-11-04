@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { PenLine, Search } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollectionCard } from "@/features/collections/components/collection-card";
 import type { CollectionVisual } from "@/features/collections/types";
 
+import { useAddBook } from "@/features/shelf/components/add-book/add-book-provider";
 import { useBookSearch } from "@/features/shelf/components/add-book/use-book-search";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { routes } from "@/lib/routes";
@@ -123,8 +125,40 @@ export function ExploreSearch({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Livros: o catálogo primeiro (na hora) e a Open Library logo depois, sem
- * repetidos (fica a versão do catálogo), cada um com o selo da origem.
+ * "Não achou?": abre o cadastro à mão com o que a pessoa buscou no título.
+ * Sem conta, leva a entrar e volta para a mesma busca.
+ */
+function ManualRegister({ query }: { query: string }) {
+  const { enabled: signedIn, openManual } = useAddBook();
+  if (!signedIn) {
+    return (
+      <Button variant="outline" asChild>
+        <Link
+          href={{
+            pathname: routes.entrar,
+            query: { next: `/explorar?q=${encodeURIComponent(query)}` },
+          }}
+        >
+          Entrar para cadastrar
+        </Link>
+      </Button>
+    );
+  }
+  return (
+    <Button variant="outline" onClick={() => openManual(query)}>
+      <PenLine aria-hidden />
+      Cadastrar à mão
+    </Button>
+  );
+}
+
+const sectionLabel =
+  "font-mono text-[11px] tracking-wide text-muted-foreground uppercase";
+
+/**
+ * Livros: o catálogo primeiro (na hora) e as fontes de fora logo depois, sem
+ * repetidos (fica a versão do catálogo). Os de fora vêm numa seção própria,
+ * com "Cadastrar no MyBooks"; e, se nada servir, o cadastro à mão.
  */
 function BookResults({ raw, onClear }: { raw: string; onClear: () => void }) {
   const search = useBookSearch(raw);
@@ -137,38 +171,70 @@ function BookResults({ raw, onClear }: { raw: string; onClear: () => void }) {
       <EmptyState
         illustration={SearchIllustration}
         title={`Nada com “${search.query}” em Livros`}
-        description="Tente outra palavra ou veja as outras abas."
+        description="Nem no MyBooks nem na Open Library. Se o livro existe, cadastre: ele entra no catálogo para todo mundo."
         action={
-          <Button variant="outline" onClick={onClear}>
-            Limpar busca
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <ManualRegister query={search.query} />
+            <Button variant="ghost" onClick={onClear}>
+              Limpar busca
+            </Button>
+          </div>
         }
       />
     );
   }
+  const inside = search.results.filter((result) => result.catalogId);
+  const outside = search.results.flatMap((result) =>
+    !result.catalogId && result.source !== "manual"
+      ? [{ result, source: result.source }]
+      : [],
+  );
   return (
-    <div className="flex flex-col gap-6">
-      {search.results.length > 0 ? (
-        <Stagger key={search.query} className={COVER_GRID}>
-          {search.results.map((result) => (
-            <StaggerItem
-              key={result.catalogId ?? `${result.source}:${result.sourceId}`}
-            >
-              <ResultCard
-                result={result}
-                outside={
-                  !result.catalogId && result.source !== "manual"
-                    ? {
-                        source: result.source,
-                        sourceId: result.sourceId,
-                        query: search.query,
-                      }
-                    : null
-                }
-              />
-            </StaggerItem>
-          ))}
-        </Stagger>
+    <div className="flex flex-col gap-10">
+      {inside.length > 0 ? (
+        <section aria-labelledby="no-mybooks" className="flex flex-col gap-4">
+          <h2 id="no-mybooks" className={sectionLabel}>
+            No MyBooks
+          </h2>
+          <Stagger key={search.query} className={COVER_GRID}>
+            {inside.map((result) => (
+              <StaggerItem key={result.catalogId}>
+                <ResultCard result={result} outside={null} />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </section>
+      ) : null}
+      {outside.length > 0 ? (
+        <section
+          aria-labelledby="fora-do-mybooks"
+          className="flex flex-col gap-4"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 id="fora-do-mybooks" className={sectionLabel}>
+              Ainda não estão no MyBooks
+            </h2>
+            <p className="text-sm text-pretty text-muted-foreground">
+              Achamos na Open Library. Cadastre para pôr na estante, numa
+              coleção ou no fórum.
+            </p>
+          </div>
+          <Stagger key={`fora-${search.query}`} className={COVER_GRID}>
+            {outside.map(({ result, source }) => (
+              <StaggerItem key={`${source}:${result.sourceId}`}>
+                <ResultCard
+                  result={result}
+                  register
+                  outside={{
+                    source,
+                    sourceId: result.sourceId,
+                    query: search.query,
+                  }}
+                />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </section>
       ) : null}
       {search.externalPending ? (
         <p className="font-mono text-xs text-muted-foreground">
@@ -179,7 +245,15 @@ function BookResults({ raw, onClear }: { raw: string; onClear: () => void }) {
           A Open Library não respondeu agora. Por enquanto, só o que já está no
           MyBooks.
         </p>
-      ) : null}
+      ) : (
+        <div className="flex flex-col items-start gap-2 border-t border-border pt-6">
+          <p className="text-sm text-pretty text-muted-foreground">
+            Não achou o seu? Cadastre o livro: ele entra no catálogo para todo
+            mundo.
+          </p>
+          <ManualRegister query={search.query} />
+        </div>
+      )}
     </div>
   );
 }

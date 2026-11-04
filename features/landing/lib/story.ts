@@ -11,8 +11,10 @@ export const SWAP = [0.54, 0.6];
 /** Já coberta pela prateleira, a cena some (sem o fundo vazar no meio). */
 export const HIDE_SCENE = [0.6, 0.62];
 export const PROFILE = [0.58, 0.72];
+/** A legenda só aparece com o título saindo: no topo, nem apagada se vê. */
+export const CAPTION_IN = [0.1, 0.16];
 /** A legenda do voo: cada palavra acende no seu pedaço deste trecho. */
-export const CAPTION = { start: 0.12, end: 0.46, word: 0.05 };
+export const CAPTION = { start: 0.14, end: 0.46, word: 0.05 };
 /** A legenda se apaga logo antes de o perfil entrar no lugar dela. */
 export const CAPTION_OUT = [0.5, 0.58];
 

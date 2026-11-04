@@ -78,7 +78,7 @@ async function Forum({
   };
   const newTopic = (
     <NewTopicButton
-      signedIn={Boolean(viewer)}
+      viewer={viewer?.username ?? null}
       categories={categories}
       category={category ?? "geral"}
     />

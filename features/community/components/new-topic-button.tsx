@@ -12,9 +12,10 @@ import { emptyDraft, TopicEditor } from "./topic-editor";
 /**
  * "Novo tópico": abre o editor na gaveta. Sem conta, leva a entrar (e volta
  * para cá). Na página do livro, já vem com ele e na categoria de discussões.
+ * O rascunho fica guardado por conta, e volta ao abrir de novo.
  */
 export function NewTopicButton({
-  signedIn,
+  viewer,
   categories,
   category = "geral",
   book,
@@ -22,7 +23,8 @@ export function NewTopicButton({
   variant = "primary",
   next = "/comunidade",
 }: {
-  signedIn: boolean;
+  /** O @ de quem está vendo (a chave do rascunho); null sem conta. */
+  viewer: string | null;
   categories: ForumCategory[];
   category?: string;
   book?: BookVisual;
@@ -32,7 +34,7 @@ export function NewTopicButton({
   next?: string;
 }) {
   const [open, setOpen] = useState(false);
-  if (!signedIn) {
+  if (!viewer) {
     return (
       <Button variant={variant} asChild>
         <Link href={{ pathname: routes.entrar, query: { next } }}>
@@ -53,6 +55,7 @@ export function NewTopicButton({
         onOpenChange={setOpen}
         categories={categories}
         initial={emptyDraft(category, book ? [book] : [])}
+        draftKey={`mybooks:rascunho-topico:${viewer}`}
       />
     </>
   );

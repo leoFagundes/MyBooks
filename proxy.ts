@@ -88,6 +88,14 @@ export async function proxy(request: NextRequest) {
     );
   }
 
+  // Quando o endereço de retorno não está na lista do Supabase, o código do
+  // login (Google, link mágico) cai na raiz: ele segue para a troca
+  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const callback = new URL("/auth/callback", request.url);
+    callback.search = search;
+    return carryAuth(response, NextResponse.redirect(callback));
+  }
+
   const target = authRedirect(`${pathname}${search}`, userId !== null);
   if (!target) return response;
   return carryAuth(

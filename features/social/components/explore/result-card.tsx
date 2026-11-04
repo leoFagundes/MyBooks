@@ -47,16 +47,23 @@ export function ResultCard({
   const visual = resultVisual(result);
   const { catalogId } = result;
 
-  function open() {
+  /**
+   * Traz o livro para o catálogo. Pela capa, abre a página dele; pelo
+   * "Cadastrar", fica aqui: o livro sobe para "No MyBooks", e o aviso abre.
+   */
+  function bring(navigate: boolean) {
     if (!outside) return;
     startOpening(async () => {
       const bringing = unwrapAction(openExternalBook(outside));
       toast.promise(bringing, {
         loading: "Cadastrando no MyBooks…",
         description: result.title,
-        success: () => ({
+        success: (id) => ({
           message: "Cadastrado no MyBooks",
           description: result.title,
+          action: navigate
+            ? undefined
+            : { label: "Abrir", onClick: () => router.push(routes.book(id)) },
         }),
         error: (error: unknown) => ({
           message: actionErrorMessage(error),
@@ -68,7 +75,7 @@ export function ResultCard({
       // As buscas guardadas no navegador ainda o têm como "de fora": refeitas,
       // ele aparece no MyBooks (e não dá para cadastrar de novo)
       void queryClient.invalidateQueries({ queryKey: ["busca-livros"] });
-      router.push(routes.book(id));
+      if (navigate) router.push(routes.book(id));
     });
   }
 
@@ -85,7 +92,7 @@ export function ResultCard({
       ) : (
         <button
           type="button"
-          onClick={open}
+          onClick={() => bring(true)}
           disabled={opening || !outside}
           className={cn(
             "block cursor-pointer rounded-cover text-left transition-opacity disabled:cursor-progress",
@@ -114,7 +121,7 @@ export function ResultCard({
             variant="outline"
             size="sm"
             disabled={opening}
-            onClick={open}
+            onClick={() => bring(false)}
             aria-label={
               opening ? undefined : `Cadastrar ${result.title} no MyBooks`
             }

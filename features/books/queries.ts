@@ -182,7 +182,7 @@ export async function searchBooks(
   const answers = await Promise.all(sources);
   if (answers.every((answer) => answer === null)) return null;
   const results = dedupeResults(answers.flatMap((answer) => answer ?? []));
-  return (await withoutRemoved(results)).slice(0, 20);
+  return (await withoutRemoved(await asCataloged(results))).slice(0, 20);
 }
 
 // As chaves de um resultado de fora: a obra na fonte e o ISBN-13
@@ -224,6 +224,91 @@ async function withoutRemoved(results: SearchResult[]) {
     (result) =>
       result.catalogId || !outsideKeys(result).some((key) => removed.has(key)),
   );
+}
+
+/**
+ * Os livros do catálogo com essas chaves (a obra na fonte ou o ISBN-13), na
+ * versão de lá. Guardado por conjunto de chaves; cadastrar atualiza a tag
+ * catalog.
+ */
+async function catalogedByKeys(keys: string[]): Promise<SearchResult[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("catalog");
+  if (keys.length === 0) return [];
+  const supabase = createPublicClient();
+  const sourceIds = keys.flatMap((key) =>
+    key.startsWith("isbn:") ? [] : [key.slice(key.indexOf(":") + 1)],
+  );
+  const isbns = keys.flatMap((key) =>
+    key.startsWith("isbn:") ? [key.slice("isbn:".length)] : [],
+  );
+  const [byWork, byIsbn] = await Promise.all([
+    sourceIds.length > 0
+      ? supabase
+          .from("books")
+          .select("*")
+          .in("source_id", sourceIds)
+          .eq("moderation_status", "approved")
+      : Promise.resolve({ data: [], error: null }),
+    isbns.length > 0
+      ? supabase
+          .from("books")
+          .select("*")
+          .in("isbn_13", isbns)
+          .eq("moderation_status", "approved")
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (byWork.error) throw byWork.error;
+  if (byIsbn.error) throw byIsbn.error;
+  const wanted = new Set(keys);
+  const rows = new Map(
+    [...(byWork.data ?? []), ...(byIsbn.data ?? [])]
+      // A obra só vale na mesma fonte (o id de uma não é o da outra)
+      .filter(
+        (row) =>
+          (row.isbn_13 && wanted.has(`isbn:${row.isbn_13}`)) ||
+          wanted.has(`${row.source}:${row.source_id}`),
+      )
+      .map((row) => [row.id, row]),
+  );
+  return withCommunity([...rows.values()]);
+}
+
+/**
+ * Troca o resultado de fora pela versão do catálogo quando o livro já está
+ * lá. A busca no catálogo nem sempre o devolve: a Open Library acha "The
+ * Lightning Thief" por "percy jackson" (a série), o catálogo não. Sem a
+ * troca, o livro cadastrado continuaria como "de fora", pronto para cadastrar
+ * de novo. Sem resposta do banco, fica como estava.
+ */
+async function asCataloged(results: SearchResult[]): Promise<SearchResult[]> {
+  const keys = [
+    ...new Set(
+      results.flatMap((result) =>
+        result.catalogId ? [] : outsideKeys(result),
+      ),
+    ),
+  ].sort();
+  const cataloged = await catalogedByKeys(keys).catch(() => []);
+  if (cataloged.length === 0) return results;
+  const byKey = new Map<string, SearchResult>();
+  for (const book of cataloged) {
+    for (const key of outsideKeys(book)) byKey.set(key, book);
+  }
+  const seen = new Set<string>();
+  return results.flatMap((result) => {
+    const swap = result.catalogId
+      ? result
+      : (outsideKeys(result)
+          .map((key) => byKey.get(key))
+          .find(Boolean) ?? result);
+    if (swap.catalogId) {
+      if (seen.has(swap.catalogId)) return [];
+      seen.add(swap.catalogId);
+    }
+    return [swap];
+  });
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -578,7 +663,9 @@ export async function getDiscoveryPool(
   const external = [...trending, ...bySubject.flat()].filter(
     (result) => result.coverUrl,
   );
-  return withoutRemoved(dedupeResults([...catalog, ...external]));
+  return withoutRemoved(
+    await asCataloged(dedupeResults([...catalog, ...external])),
+  );
 }
 
 /** O livro de fora que a grade mostrou, achado de novo no mesmo conjunto (do cache). */

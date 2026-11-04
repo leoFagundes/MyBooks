@@ -29,7 +29,7 @@ const NEXT_VIEW: Record<ShelfView, ShelfView> = {
   grade: "lista",
   lista: "estante",
 };
-const VIEW_INTERVAL_MS = 2800;
+const VIEW_INTERVAL_MS = 99999999999;
 
 function Feature({
   eyebrow,
@@ -67,7 +67,7 @@ function OrganizeDemo({ books }: { books: LandingShowcase["books"] }) {
   const box = useRef<HTMLDivElement>(null);
   const inView = useInView(box, { amount: 0.5 });
   const reduced = useReducedMotion();
-  const views = useShelfViewSwitch("estante");
+  const views = useShelfViewSwitch("lista");
   // Mexeu no controle, a demonstração para de trocar sozinha
   const [touched, setTouched] = useState(false);
   const { view, setView } = views;

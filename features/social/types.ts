@@ -78,6 +78,8 @@ export type NotificationItem = {
 
 export type NotificationsPayload = {
   unread: number;
+  /** Quantos avisos há ao todo (o sino mostra os primeiros). */
+  total: number;
   requests: FollowRequest[];
   items: NotificationItem[];
 };

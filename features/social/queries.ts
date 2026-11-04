@@ -7,6 +7,7 @@ import { getPublicEnv } from "@/lib/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { FEED_PAGE_SIZE, groupActivities } from "./lib/feed";
+import { BELL_PREVIEW } from "./lib/notifications";
 import {
   ACTIVITY_TYPES,
   type ActivityRow,
@@ -217,45 +218,37 @@ const READER_COLUMNS = "id, username, display_name, avatar_url";
  * O popover de avisos: os pedidos para seguir pendentes (todos, de follows),
  * os 30 avisos mais novos e quantos ainda não foram lidos.
  */
-export async function readNotifications(
+/**
+ * Uma página dos avisos de quem vê, do mais novo ao mais velho, a partir de
+ * `before` (a data do último da página anterior). Os pedidos para seguir não
+ * entram: são follows, com Aceitar e Recusar.
+ */
+export async function readNotificationItems(
   supabase: Supabase,
   userId: string,
-): Promise<NotificationsPayload> {
-  const [requests, items, unread] = await Promise.all([
-    supabase
-      .from("follows")
-      .select(
-        `created_at, person:profiles!follows_follower_id_fkey(${READER_COLUMNS})`,
-      )
-      .eq("following_id", userId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("notifications")
-      .select(
-        `id, type, refs, read_at, created_at, actor:profiles!notifications_actor_id_fkey(${READER_COLUMNS})`,
-      )
-      .eq("user_id", userId)
-      .neq("type", "follow_request")
-      .order("created_at", { ascending: false })
-      .limit(30),
-    supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .is("read_at", null),
-  ]);
-  if (requests.error) throw requests.error;
+  { before, limit }: { before?: string | null; limit: number },
+): Promise<{ items: NotificationItem[]; next: string | null }> {
+  let request = supabase
+    .from("notifications")
+    .select(
+      `id, type, refs, read_at, created_at, actor:profiles!notifications_actor_id_fkey(${READER_COLUMNS})`,
+    )
+    .eq("user_id", userId)
+    .neq("type", "follow_request")
+    .order("created_at", { ascending: false })
+    .limit(limit + 1);
+  if (before) request = request.lt("created_at", before);
+  const items = await request;
   if (items.error) throw items.error;
-  if (unread.error) throw unread.error;
+  const more = items.data.length > limit;
+  const page = items.data.slice(0, limit);
 
   const collectionOf = (refs: unknown) =>
     refs && typeof refs === "object" && "collection_id" in refs
       ? String(refs.collection_id)
       : null;
   const collectionIds = [
-    ...new Set(items.data.flatMap((item) => collectionOf(item.refs) ?? [])),
+    ...new Set(page.flatMap((item) => collectionOf(item.refs) ?? [])),
   ];
   // A RLS esconde a coleção que quem vê não pode mais ver
   const { data: collections } =
@@ -269,32 +262,70 @@ export async function readNotifications(
     (collections ?? []).map((collection) => [collection.id, collection]),
   );
 
+  const mapped = page.flatMap((item) => {
+    if (!isNotificationType(item.type)) return [];
+    const collectionId = collectionOf(item.refs);
+    return [
+      {
+        id: item.id,
+        type: item.type,
+        actor: item.actor ? toReader(item.actor) : null,
+        collection: collectionId ? (titles.get(collectionId) ?? null) : null,
+        review: item.type === "catalog_review" ? reviewOf(item.refs) : null,
+        forum:
+          item.type === "forum_reply" || item.type === "forum_mention"
+            ? forumOf(item.refs)
+            : null,
+        suggestion:
+          item.type === "suggestion_status" ? suggestionOf(item.refs) : null,
+        at: item.created_at,
+        unread: item.read_at === null,
+      },
+    ];
+  });
+  return {
+    items: mapped,
+    next: more ? (page.at(-1)?.created_at ?? null) : null,
+  };
+}
+
+export async function readNotifications(
+  supabase: Supabase,
+  userId: string,
+): Promise<NotificationsPayload> {
+  const [requests, first, unread, total] = await Promise.all([
+    supabase
+      .from("follows")
+      .select(
+        `created_at, person:profiles!follows_follower_id_fkey(${READER_COLUMNS})`,
+      )
+      .eq("following_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    readNotificationItems(supabase, userId, { limit: BELL_PREVIEW }),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("read_at", null),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .neq("type", "follow_request"),
+  ]);
+  if (requests.error) throw requests.error;
+  if (unread.error) throw unread.error;
+  if (total.error) throw total.error;
+
   return {
     unread: unread.count ?? 0,
+    total: total.count ?? first.items.length,
     requests: requests.data.flatMap(({ created_at, person }) =>
       person ? [{ reader: toReader(person), at: created_at }] : [],
     ),
-    items: items.data.flatMap((item) => {
-      if (!isNotificationType(item.type)) return [];
-      const collectionId = collectionOf(item.refs);
-      return [
-        {
-          id: item.id,
-          type: item.type,
-          actor: item.actor ? toReader(item.actor) : null,
-          collection: collectionId ? (titles.get(collectionId) ?? null) : null,
-          review: item.type === "catalog_review" ? reviewOf(item.refs) : null,
-          forum:
-            item.type === "forum_reply" || item.type === "forum_mention"
-              ? forumOf(item.refs)
-              : null,
-          suggestion:
-            item.type === "suggestion_status" ? suggestionOf(item.refs) : null,
-          at: item.created_at,
-          unread: item.read_at === null,
-        },
-      ];
-    }),
+    items: first.items,
   };
 }
 

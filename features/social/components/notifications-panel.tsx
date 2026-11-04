@@ -1,13 +1,20 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { BookCheck, Lightbulb } from "lucide-react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { BookCheck, Lightbulb, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QuietBellIllustration } from "@/components/ui/illustrations";
 import { RelativeTime } from "@/components/ui/relative-time";
@@ -18,6 +25,12 @@ import { springs, tweens } from "@/lib/motion";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { acceptFollowRequest, declineFollowRequest } from "../actions";
+import { BELL_PREVIEW } from "../lib/notifications";
+import {
+  ALL_NOTIFICATIONS_KEY,
+  type NotificationsPage,
+  useDeleteNotifications,
+} from "../lib/use-delete-notification";
 import {
   NOTIFICATIONS_KEY,
   type useNotifications,
@@ -131,18 +144,34 @@ export function NotificationsPanel({
   query,
   fresh,
   onNavigate,
+  onShowAll,
 }: {
   query: NotificationsQuery;
   /** Os avisos que estavam sem ler quando o popover abriu. */
   fresh: ReadonlySet<string>;
   onNavigate: () => void;
+  /** Abre o "Ver todas" (o popover fecha). */
+  onShowAll: () => void;
 }) {
+  const total = query.data?.total ?? 0;
   return (
     <div className="flex flex-col">
       <p className="border-b border-border px-4 py-3 text-sm font-medium">
         Notificações
       </p>
       <PanelBody query={query} fresh={fresh} onNavigate={onNavigate} />
+      {total > BELL_PREVIEW ? (
+        <div className="border-t border-border p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={onShowAll}
+          >
+            Ver todas ({total})
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -156,6 +185,7 @@ function PanelBody({
   fresh: ReadonlySet<string>;
   onNavigate: () => void;
 }) {
+  const { remove } = useDeleteNotifications();
   if (query.isError) {
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
@@ -223,14 +253,17 @@ function PanelBody({
           aria-label="Avisos"
           className={cn(data.requests.length > 0 && "border-t border-border")}
         >
-          {data.items.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              fresh={fresh.has(item.id)}
-              onNavigate={onNavigate}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {data.items.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                fresh={fresh.has(item.id)}
+                onNavigate={onNavigate}
+                onDelete={() => remove(item.id)}
+              />
+            ))}
+          </AnimatePresence>
         </ul>
       ) : null}
     </div>
@@ -312,10 +345,12 @@ function ItemRow({
   item,
   fresh,
   onNavigate,
+  onDelete,
 }: {
   item: NotificationItem;
   fresh: boolean;
   onNavigate: () => void;
+  onDelete: () => void;
 }) {
   const href = hrefOf(item);
   const review = item.type === "catalog_review" ? item.review : null;
@@ -394,24 +429,204 @@ function ItemRow({
       ) : null}
     </>
   );
-  const row = "flex items-start gap-3 px-4 py-3";
+  const row = "flex min-w-0 flex-1 items-start gap-3 py-3 pr-1 pl-4";
 
   return (
-    <li>
+    <motion.li
+      layout
+      exit={{ opacity: 0, x: 24, transition: tweens.fast }}
+      transition={springs.snappy}
+      className="group flex items-start transition-colors hover:bg-muted"
+    >
       {href ? (
         <Link
           href={href}
           onClick={onNavigate}
-          className={cn(
-            row,
-            "transition-colors hover:bg-muted focus-visible:-outline-offset-2",
-          )}
+          className={cn(row, "focus-visible:-outline-offset-2")}
         >
           {content}
         </Link>
       ) : (
         <div className={row}>{content}</div>
       )}
-    </li>
+      {/* Com mouse, aparece ao passar por cima (ou no foco); no toque, sempre */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Excluir aviso"
+        onClick={onDelete}
+        className="my-2 mr-2 shrink-0 text-muted-foreground focus-visible:-outline-offset-2 can-hover:opacity-0 can-hover:group-focus-within:opacity-100 can-hover:group-hover:opacity-100"
+      >
+        <X className="size-4" />
+      </Button>
+    </motion.li>
+  );
+}
+
+async function fetchPage(before: string | null): Promise<NotificationsPage> {
+  const query = before ? `&antes=${encodeURIComponent(before)}` : "";
+  const response = await fetch(`/api/notifications?todas=1${query}`);
+  if (!response.ok) throw new Error(String(response.status));
+  return (await response.json()) as NotificationsPage;
+}
+
+/**
+ * "Ver todas": todos os avisos, do mais novo ao mais velho, em páginas que
+ * chegam conforme a lista rola; cada um com o X, e "Excluir todos" no topo
+ * (com uma confirmação). Os avisos ficam até a pessoa excluir.
+ */
+export function AllNotificationsDialog({
+  open,
+  onOpenChange,
+  returnFocus,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** O sino: sem DialogTrigger, o foco volta para ele à mão. */
+  returnFocus: React.RefObject<HTMLElement | null>;
+}) {
+  const { remove, removeAll } = useDeleteNotifications();
+  const [confirming, setConfirming] = useState(false);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const pages = useInfiniteQuery({
+    queryKey: ALL_NOTIFICATIONS_KEY,
+    queryFn: ({ pageParam }) => fetchPage(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next,
+    enabled: open,
+  });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
+  const items = pages.data?.pages.flatMap((page) => page.items) ?? [];
+
+  // A próxima página chega um pouco antes do fim da lista
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!open || !node || !hasNextPage || isFetchingNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void fetchNextPage();
+      },
+      { rootMargin: "200px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [open, hasNextPage, isFetchingNextPage, fetchNextPage, items.length]);
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) setConfirming(false);
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[85dvh] flex-col gap-0 p-0 sm:max-w-lg"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocus.current?.focus();
+        }}
+      >
+        <DialogHeader className="flex-row flex-wrap items-center justify-between gap-2 border-b border-border py-4 pr-12 pl-5 text-left">
+          <div className="flex flex-col gap-0.5">
+            <DialogTitle>Todas as notificações</DialogTitle>
+            <DialogDescription>Ficam aqui até você excluir.</DialogDescription>
+          </div>
+          {items.length > 0 ? (
+            confirming ? (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    removeAll();
+                    setConfirming(false);
+                  }}
+                >
+                  Excluir todas
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirming(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirming(true)}
+              >
+                <Trash2 aria-hidden />
+                Excluir todas
+              </Button>
+            )
+          ) : null}
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {pages.isPending ? (
+            <div
+              aria-busy
+              aria-label="Carregando os avisos"
+              className="px-4 py-2"
+            >
+              {[0, 1, 2, 3].map((row) => (
+                <div key={row} className="flex items-center gap-3 py-2.5">
+                  <Skeleton className="size-9 rounded-full" />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <Skeleton className="h-3.5 w-3/4" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : pages.isError ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                Não deu para carregar os avisos agora.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void pages.refetch()}
+              >
+                Tentar de novo
+              </Button>
+            </div>
+          ) : items.length === 0 ? (
+            <EmptyState
+              illustration={QuietBellIllustration}
+              title="Tudo em dia"
+              description="Nenhuma notificação por aqui."
+              className="rounded-none border-0"
+            />
+          ) : (
+            <ul aria-label="Todas as notificações">
+              <AnimatePresence initial={false}>
+                {items.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    fresh={false}
+                    onNavigate={() => onOpenChange(false)}
+                    onDelete={() => remove(item.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            </ul>
+          )}
+          <div ref={sentinel} className="flex justify-center py-3">
+            {isFetchingNextPage ? (
+              <p className="font-mono text-xs text-muted-foreground">
+                Carregando mais…
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

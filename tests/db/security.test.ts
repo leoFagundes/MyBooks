@@ -118,3 +118,29 @@ test("saber se tem senha, só sobre a própria conta", async () => {
     ),
   );
 });
+
+test("cada um exclui só os próprios avisos", async () => {
+  await runSql(
+    sqlTransaction(
+      ...setup,
+      asAdmin(),
+      `insert into public.notifications (user_id, actor_id, type) values ('${ANA}', '${BIA}', 'follow'), ('${BIA}', '${ANA}', 'follow');`,
+      asUser(BIA),
+      `delete from public.notifications where user_id = '${ANA}';`,
+      asAdmin(),
+      check(
+        `(select count(*) from public.notifications where user_id = '${ANA}') = 1`,
+        "a Bia não apaga o aviso da Ana",
+      ),
+      asUser(ANA),
+      `delete from public.notifications where user_id = '${ANA}';`,
+      asAdmin(),
+      check(
+        `(select count(*) from public.notifications where user_id = '${ANA}') = 0`,
+        "a Ana apaga o seu",
+      ),
+      asAnon(),
+      rejects("delete from public.notifications;", "visitante não apaga nada"),
+    ),
+  );
+});

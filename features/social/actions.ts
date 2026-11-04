@@ -139,6 +139,36 @@ export async function removeFollower(
 }
 
 /** Abrir o popover marca os avisos como lidos (só a data de leitura muda). */
+/** Exclui um aviso do sino (a RLS só deixa apagar os próprios). */
+export async function deleteNotification(
+  notificationId: string,
+): Promise<ActionResult> {
+  const id = z.uuid().safeParse(notificationId);
+  if (!id.success) return { ok: false, error: "Aviso inválido." };
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("id", id.data)
+    .eq("user_id", viewer.id);
+  if (error) return { ok: false, error: "Não deu para excluir o aviso." };
+  return { ok: true, data: undefined };
+}
+
+/** Exclui todos os avisos do sino (os pedidos para seguir ficam: são follows). */
+export async function deleteAllNotifications(): Promise<ActionResult> {
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("user_id", viewer.id)
+    .neq("type", "follow_request");
+  if (error) return { ok: false, error: "Não deu para excluir os avisos." };
+  return { ok: true, data: undefined };
+}
+
 export async function markNotificationsRead(): Promise<ActionResult> {
   const viewer = await requireViewer();
   const supabase = await createClient();

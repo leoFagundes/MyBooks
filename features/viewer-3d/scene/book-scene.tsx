@@ -2,7 +2,14 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { type Group, PerspectiveCamera } from "three";
+import {
+  type Group,
+  type Object3D,
+  PerspectiveCamera,
+  SkinnedMesh,
+  Vector2,
+} from "three";
+import type { PageLink } from "../lib/copy-art";
 import { CAMERA_FOV } from "../lib/framing";
 import type { PoseValues, SceneProps } from "../lib/types";
 import { ViewerBook } from "./viewer-book";
@@ -20,6 +27,8 @@ export default function BookScene({
   book,
   description,
   quotes,
+  copy,
+  hitRef,
   dims,
   framing,
   pose,
@@ -37,6 +46,7 @@ export default function BookScene({
     >
       <CameraRig dims={dims} framing={framing} pose={pose} />
       <ContextLossGuard />
+      <HitTester hitRef={hitRef} />
       <Studio floorY={-dims.height / 2 - FLOAT} />
       <PoseGroup pose={pose}>
         {/* As texturas carregam aqui dentro: o sinal de pronto só sai com o livro inteiro */}
@@ -45,6 +55,7 @@ export default function BookScene({
             book={book}
             description={description}
             quotes={quotes}
+            copy={copy}
             dims={dims}
             pose={pose}
           />
@@ -154,5 +165,69 @@ function ContextLossGuard() {
   }, [gl]);
 
   if (lost) throw new Error("O contexto do WebGL caiu");
+  return null;
+}
+
+/** Visível de verdade: o objeto e todos os pais. */
+function shown(object: Object3D) {
+  for (let node: Object3D | null = object; node; node = node.parent) {
+    if (!node.visible) return false;
+  }
+  return true;
+}
+
+/**
+ * O teste de toque: um raio da câmera pelo ponto tocado. O que estiver na
+ * frente vale (a capa e o miolo tapam a fita e as folhas de baixo): a fita,
+ * ou uma área de tópico na página das discussões (pela altura do toque na
+ * textura). O visualizador decide o que fazer.
+ */
+function HitTester({ hitRef }: { hitRef: SceneProps["hitRef"] }) {
+  const get = useThree((state) => state.get);
+
+  useEffect(() => {
+    hitRef.current = (clientX, clientY) => {
+      const { camera, scene, gl, raycaster } = get();
+      const rect = gl.domElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      const pointer = new Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, camera);
+      // As folhas se curvam pelos ossos: o contorno guardado é o da folha
+      // deitada à direita, e o raio nem testaria a que virou para a esquerda
+      scene.traverse((object) => {
+        if (object instanceof SkinnedMesh) object.computeBoundingSphere();
+      });
+      const hit = raycaster
+        .intersectObject(scene, true)
+        .find((item) => item.object.type !== "Line" && shown(item.object));
+      if (!hit) return null;
+      const data = hit.object.userData as {
+        kind?: string;
+        links?: Record<"front" | "back", PageLink[]>;
+      };
+      if (data.kind === "ribbon") return { kind: "ribbon" };
+      if (data.kind !== "leaf" || !hit.uv || !hit.face) return null;
+      // Na caixa da folha, o material 4 é a frente e o 5, o verso
+      const side =
+        hit.face.materialIndex === 4
+          ? "front"
+          : hit.face.materialIndex === 5
+            ? "back"
+            : null;
+      if (!side) return null;
+      const y = 1 - hit.uv.y;
+      const link = data.links?.[side]?.find(
+        (item) => y >= item.top && y <= item.bottom,
+      );
+      return link ? { kind: "topic", id: link.topicId } : null;
+    };
+    return () => {
+      hitRef.current = null;
+    };
+  }, [get, hitRef]);
+
   return null;
 }

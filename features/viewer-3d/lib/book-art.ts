@@ -14,16 +14,16 @@ import type { BookDimensions } from "./dimensions";
 
 // As faces desenhadas têm os 2:3 da capa. Com 1024px de largura, ficam
 // nítidas na capa grande de uma tela 2x, mesmo com o zoom
-const ART_WIDTH = 1024;
+export const ART_WIDTH = 1024;
 const ART_HEIGHT = 1536;
 const SPINE_HEIGHT = 1536;
 // A contracapa leva a sinopse curta, como a de uma orelha
 const SYNOPSIS_CHARS = 320;
 
-const INK = toHex(INK_RGB);
-const PAPER = toHex(PAPER_RGB);
+export const INK = toHex(INK_RGB);
+export const PAPER = toHex(PAPER_RGB);
 
-function createCanvas(width: number, height: number) {
+export function createCanvas(width: number, height: number) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -33,12 +33,12 @@ function createCanvas(width: number, height: number) {
 }
 
 /** Fundo e tinta sobre a cor do livro, com o contraste AA do coverInk. */
-function palette(book: BookVisual) {
+export function palette(book: BookVisual) {
   const { background, ink } = coverInk(bookColor(book));
   return { background, ink: ink === "ink" ? INK : PAPER };
 }
 
-function setFont(
+export function setFont(
   ctx: CanvasRenderingContext2D,
   font: string,
   size: number,

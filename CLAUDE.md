@@ -267,6 +267,11 @@ Fora do escopo (não crie): conquistas ou badges, página de estatísticas, grá
   - **Enquadramento:** `frameBook` dá ao mesmo tempo o retângulo do voo do clone e a distância da câmera. Mexeu num, mexa no outro pela mesma conta, ou o crossfade salta.
   - **Luz:** sem tone mapping (`flat`), calibrada para a capa de frente sair a ±5% do clone 2D. Mexeu na luz, refaça a comparação de pixels entre o clone e o 3D.
   - **Cores e texto nos canvas:** as cores vêm de `INK_RGB`/`PAPER_RGB` (com `toHex`) e de `bookColor`/`coverInk`. O texto usa `fontStack` (as variáveis do next/font), depois de `loadCanvasFonts()`.
+- O exemplar no 3D (`features/viewer-3d`): `/api/books/[id]/exemplar` (`getBookCopy`) traz a estante, as citações e de quem veio o livro de quem vê, quem mais guardou cada trecho (`quoteKey`), as discussões e, só em domínio público na Open Library (`openLibraryPublicReading`), o link de leitura e a primeira frase. O MyBooks nunca mostra o texto de livro protegido: as páginas trazem só o que os leitores guardaram.
+  - **As folhas** (`pageLayout`, até `MAX_LEAVES`): a folha de rosto (com a citação de outra pessoa no pé), "Você parou aqui", as citações de quem vê a lápis, as da comunidade, um trecho (a primeira frase ou a mais guardada) e as discussões. Faltando lugar, saem primeiro as da comunidade. O desenho fica em `lib/copy-art.ts`.
+  - **Fora das folhas:** o ex-libris vai na guarda (`coverInside` do `BookModel`), o cartão da leitura na contracapa (`backOutside`) e a fita sai de baixo do miolo.
+  - **Animações:** o lápis sublinha quando a página aparece; o carimbo aperta ao abrir; o cartão sobe quando o verso vira; a fita balança com mola sobre a gravidade. A cena desenha sob demanda: quem anima chama `invalidate()` enquanto se move.
+  - **Toques:** o `HitTester` lança um raio (recalculando o contorno das folhas curvadas, que o three guarda da posição deitada) e acha a fita ou uma área de tópico (`PageLink`, em frações da altura da textura); o `onTap` do `useStageGestures` devolve se cuidou do toque.
 - Animação do Motion interrompida por outra não resolve `finished`: quem espera uma mola põe um teto de tempo (veja `settled` em `use-book-pose.ts`).
 - Landing (`features/landing`):
   - **Título:** o do topo entra só em CSS (keyframe `pagina-entra`, 35ms por palavra), porque é o LCP e não pode esperar o JavaScript.

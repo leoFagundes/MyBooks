@@ -187,3 +187,40 @@ export async function openLibrarySubject(
     ),
   );
 }
+
+/** A leitura pública de uma obra: o livro no Internet Archive e a primeira frase. */
+export type PublicReading = { url: string; firstSentence: string | null };
+
+/**
+ * Se a obra está em domínio público na Open Library (`ebook_access` igual a
+ * "public", com o exemplar no Internet Archive): o link para ler lá e a
+ * primeira frase, que só aparece nesses livros. Livro com direito autoral
+ * devolve null: o MyBooks não mostra o texto dele. Undefined quando a Open
+ * Library não respondeu.
+ */
+export async function openLibraryPublicReading(
+  workId: string,
+  fetcher: typeof fetch = fetch,
+  timeoutMs = SOURCE_TIMEOUT_MS,
+): Promise<PublicReading | null | undefined> {
+  if (!/^OL\d+W$/.test(workId)) return null;
+  const url = new URL(SEARCH_URL);
+  url.searchParams.set("q", `key:/works/${workId}`);
+  url.searchParams.set("fields", "ebook_access,ia,first_sentence");
+  url.searchParams.set("limit", "1");
+  const body = await fetchJson(url, fetcher, timeoutMs);
+  if (body === null) return undefined;
+  const doc = isRecord(body) ? list(body.docs)[0] : undefined;
+  if (!isRecord(doc) || doc.ebook_access !== "public") return null;
+  const archive = list(doc.ia).find(
+    (id): id is string => typeof id === "string" && /^[\w.-]+$/.test(id),
+  );
+  if (!archive) return null;
+  const sentence = list(doc.first_sentence).find(
+    (text): text is string => typeof text === "string",
+  );
+  return {
+    url: `https://archive.org/details/${archive}`,
+    firstSentence: sentence ? sentence.trim().slice(0, 400) : null,
+  };
+}

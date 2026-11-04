@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Orbit, RotateCcw, Smartphone, XIcon } from "lucide-react";
+import {
+  BookOpen,
+  BookOpenText,
+  Orbit,
+  RotateCcw,
+  Smartphone,
+  XIcon,
+} from "lucide-react";
 import {
   AnimatePresence,
   animate,
@@ -10,6 +17,8 @@ import {
   useReducedMotion,
 } from "motion/react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   useEffect,
@@ -26,15 +35,18 @@ import { bookColor } from "@/features/books/lib/color";
 import type { CommunityQuote } from "@/features/books/queries";
 import type { BookVisual } from "@/features/books/types";
 import { durations, springs, tweens } from "@/lib/motion";
+import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import {
   orientationSupport,
   requestOrientation,
   useDeviceTilt,
 } from "../lib/device-tilt";
+import { type BookCopy, EMPTY_COPY } from "../lib/copy";
 import { bookDimensions } from "../lib/dimensions";
 import { frameBook, openFraming, type Rect, type Size } from "../lib/framing";
-import { pageLayout } from "../lib/pages";
+import { bookmarkFace, pageLayout } from "../lib/pages";
+import type { HitTest } from "../lib/types";
 import { type BookPose, useBookPose } from "../lib/use-book-pose";
 import { useStageGestures } from "../lib/use-stage-gestures";
 import { SceneBoundary } from "./scene-boundary";
@@ -64,6 +76,20 @@ async function fetchQuotes(bookId: string): Promise<CommunityQuote[]> {
   if (!response.ok) return NO_QUOTES;
   return ((await response.json()) as { quotes: CommunityQuote[] }).quotes;
 }
+
+// O exemplar de quem vê (sem conta, ou sem rede, só o livro)
+async function fetchCopy(bookId: string): Promise<BookCopy> {
+  const response = await fetch(
+    `/api/books/${encodeURIComponent(bookId)}/exemplar`,
+  );
+  if (!response.ok) return EMPTY_COPY;
+  return (await response.json()) as BookCopy;
+}
+
+// A capa abre com a mola gentle; a folha do marcador vira depois que ela assenta
+const BOOKMARK_TURN_MS = 950;
+// O visualizador fecha (e o histórico volta) antes de ir para o tópico
+const TOPIC_DELAY_MS = 350;
 
 // O teclado no diálogo inteiro: os botões da pílula não usam setas
 const KEYS: Record<string, (pose: BookPose) => void> = {
@@ -133,7 +159,14 @@ export function BookViewer({
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-  const quote = quotes[0] ?? null;
+  const { data: copy = EMPTY_COPY } = useQuery({
+    queryKey: ["exemplar", book.id],
+    queryFn: () => fetchCopy(book.id),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  const router = useRouter();
+  const hitRef = useRef<HitTest | null>(null);
 
   const cloneX = useMotionValue(0);
   const cloneY = useMotionValue(0);
@@ -152,18 +185,66 @@ export function BookViewer({
   const [notice, setNotice] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const interactive = revealed && !closing;
-  // Folhear: com o livro aberto e folhas para virar, um toque à direita do
-  // meio vira a próxima, e à esquerda desvira
-  const layout = pageLayout(quotes);
-  const turnPage =
-    pose.opened && layout.leafCount > 0
-      ? (x: number) =>
-          pose.turnPage(x >= viewport.width / 2 ? 1 : -1, layout.leafCount)
-      : undefined;
-  const bookQuotes = [quote, ...layout.faces.slice(1)].filter(
-    (item): item is CommunityQuote => item !== null,
+  const layout = pageLayout(quotes, copy, book.pageCount);
+  const turning = pose.opened && layout.leafCount > 0;
+  const mark = bookmarkFace(layout);
+
+  // A fita: abre o livro (se fechado) e vira até a página do marcador
+  function openAtBookmark() {
+    const mine = copy.mine;
+    if (mark < 0 || !mine?.currentPage) return;
+    if (!pose.opened) pose.setOpen(true, openFraming(dims, framing));
+    setNotice(
+      book.pageCount
+        ? `Você parou na página ${mine.currentPage} de ${book.pageCount}.`
+        : `Você parou na página ${mine.currentPage}.`,
+    );
+    // A página do marcador é o verso da primeira folha: uma virada a mostra
+    window.setTimeout(
+      () => pose.turnPage(1, layout.leafCount),
+      pose.opened ? 0 : BOOKMARK_TURN_MS,
+    );
+  }
+
+  // Cada toque: a fita, um tópico na página das discussões ou, com o livro
+  // aberto, virar a folha (à direita do meio vira, à esquerda desvira)
+  function onTap(x: number, y: number) {
+    const hit = hitRef.current?.(x, y) ?? null;
+    if (hit?.kind === "ribbon") {
+      openAtBookmark();
+      return true;
+    }
+    if (hit?.kind === "topic") {
+      onRequestClose();
+      window.setTimeout(
+        () => router.push(routes.topic(hit.id)),
+        TOPIC_DELAY_MS,
+      );
+      return true;
+    }
+    if (turning) {
+      pose.turnPage(x >= viewport.width / 2 ? 1 : -1, layout.leafCount);
+      return true;
+    }
+    return false;
+  }
+
+  const gestures = useStageGestures(
+    stageRef,
+    pose,
+    interactive,
+    onTap,
+    turning,
   );
-  const gestures = useStageGestures(stageRef, pose, interactive, turnPage);
+
+  // A mãozinha sobre o que se toca: a fita e os tópicos
+  function onHover(event: React.PointerEvent<HTMLDivElement>) {
+    gestures.onPointerMove(event);
+    const stage = stageRef.current;
+    if (!stage || !interactive || event.buttons !== 0) return;
+    const hit = hitRef.current?.(event.clientX, event.clientY) ?? null;
+    stage.style.cursor = hit ? "pointer" : "";
+  }
 
   // Inclinar o aparelho: ligado de saída onde não há permissão a pedir
   // (Android), a não ser com movimento reduzido; no iOS, o toque pede
@@ -306,7 +387,7 @@ export function BookViewer({
   function onKeyDown(event: React.KeyboardEvent) {
     if (!interactive || event.altKey || event.ctrlKey || event.metaKey) return;
     // Aberto e com folhas, as setas dos lados folheiam
-    if (turnPage && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+    if (turning && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
       event.preventDefault();
       pose.turnPage(event.key === "ArrowRight" ? 1 : -1, layout.leafCount);
       return;
@@ -354,6 +435,21 @@ export function BookViewer({
             onClick: toggleTilt,
           },
         ]),
+    // Domínio público: o livro inteiro no Internet Archive, numa aba nova
+    ...(copy.reading
+      ? [
+          {
+            id: "ler",
+            label: "Ler",
+            icon: BookOpenText,
+            onClick: () => {
+              if (copy.reading) {
+                window.open(copy.reading.url, "_blank", "noopener,noreferrer");
+              }
+            },
+          },
+        ]
+      : []),
     {
       id: "fechar",
       label: "Fechar",
@@ -409,6 +505,7 @@ export function BookViewer({
             aria-label={`${book.title} em 3D`}
             aria-describedby={instructionsId}
             {...gestures}
+            onPointerMove={onHover}
             className={cn(
               "absolute inset-0 touch-none select-none focus-visible:-outline-offset-4",
               interactive && "cursor-grab active:cursor-grabbing",
@@ -426,6 +523,8 @@ export function BookViewer({
                     dims={dims}
                     framing={framing}
                     quotes={quotes}
+                    copy={copy}
+                    hitRef={hitRef}
                     pose={pose.values}
                     onReady={() => setReady(true)}
                   />
@@ -511,19 +610,53 @@ export function BookViewer({
                 {authors ? `, de ${authors}` : ""}.
               </p>
               {description ? <p>{description}</p> : null}
-              {bookQuotes.map((item) => (
-                <p key={`${item.reader.username}:${item.text}`}>
-                  Citação de @{item.reader.username}
-                  {item.page ? `, página ${item.page}` : ""}: {item.text}
+              {layout.titleQuote ? (
+                <p>
+                  Citação de @{layout.titleQuote.reader.username}
+                  {layout.titleQuote.page
+                    ? `, página ${layout.titleQuote.page}`
+                    : ""}
+                  : {layout.titleQuote.text}
                 </p>
-              ))}
+              ) : null}
+              {layout.faces.map((face, index) =>
+                face.kind === "bookmark" ? (
+                  <p key={index}>
+                    Marcador: você parou na página {face.page}
+                    {face.total ? ` de ${face.total}` : ""}.
+                  </p>
+                ) : face.kind === "quote" ? (
+                  <p key={index}>
+                    {face.credit
+                      ? `Citação de @${face.credit}`
+                      : "Sua citação, sublinhada"}
+                    {face.page ? `, página ${face.page}` : ""}: {face.text}
+                    {face.alsoMarked.length > 0
+                      ? ` Também marcaram: ${face.alsoMarked.map((name) => `@${name}`).join(", ")}.`
+                      : ""}
+                  </p>
+                ) : face.kind === "excerpt" ? (
+                  <p key={index}>
+                    {face.label.toLowerCase()}: {face.text}
+                  </p>
+                ) : face.kind === "discussions" ? (
+                  <ul key={index} aria-label="Conversas sobre este livro">
+                    {face.topics.map((topic) => (
+                      <li key={topic.id}>
+                        <Link href={routes.topic(topic.id)}>{topic.title}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null,
+              )}
             </div>
           ) : null}
 
           <DialogPrimitive.Description id={instructionsId} className="sr-only">
             Arraste ou use as setas para girar o livro. Role, faça pinça ou use
             + e − para aproximar, e dê dois cliques para voltar ao começo. Com o
-            livro aberto, toque nas páginas ou use as setas para folhear.
+            livro aberto, toque nas páginas ou use as setas para folhear. A fita
+            marca onde você parou: tocar nela abre o livro ali.
           </DialogPrimitive.Description>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

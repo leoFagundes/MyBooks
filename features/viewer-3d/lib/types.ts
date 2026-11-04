@@ -1,6 +1,7 @@
 import type { MotionValue } from "motion/react";
 import type { CommunityQuote } from "@/features/books/queries";
 import type { BookVisual } from "@/features/books/types";
+import type { BookCopy } from "./copy";
 import type { BookDimensions } from "./dimensions";
 import type { Framing } from "./framing";
 
@@ -32,12 +33,22 @@ export type PoseValues = {
  */
 export const SETTLE_POSE = { yaw: 0.5, pitch: 0.28 } as const;
 
+/** O que um toque acertou no livro: a fita ou um tópico das discussões. */
+export type SceneHit = { kind: "ribbon" } | { kind: "topic"; id: string };
+
+/** Pergunta à cena o que há sob um ponto da tela (em px da janela). */
+export type HitTest = (clientX: number, clientY: number) => SceneHit | null;
+
 /** O que a cena 3D recebe do visualizador. */
 export type SceneProps = {
   book: BookVisual;
   description: string | null;
   /** Citações da comunidade: a primeira vai para a folha de rosto. */
   quotes: CommunityQuote[];
+  /** O exemplar de quem vê: as citações dela, a fita, o ex-libris, o fórum. */
+  copy: BookCopy;
+  /** A cena guarda aqui o teste de toque (a fita e os tópicos). */
+  hitRef: React.RefObject<HitTest | null>;
   dims: BookDimensions;
   framing: Framing;
   pose: PoseValues;

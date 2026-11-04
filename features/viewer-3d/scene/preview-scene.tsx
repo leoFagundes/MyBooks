@@ -5,6 +5,7 @@ import { motionValue } from "motion/react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import type { BookVisual } from "@/features/books/types";
+import { EMPTY_COPY } from "../lib/copy";
 import { bookDimensions } from "../lib/dimensions";
 import { CAMERA_FOV } from "../lib/framing";
 import { type PoseValues, SETTLE_POSE } from "../lib/types";
@@ -80,6 +81,7 @@ function PreloadedModel({ book }: { book: BookVisual }) {
       book={shown}
       description={null}
       quotes={[]}
+      copy={EMPTY_COPY}
       dims={bookDimensions(shown.pageCount)}
       pose={pose}
     />

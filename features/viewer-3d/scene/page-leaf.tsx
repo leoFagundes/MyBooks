@@ -104,6 +104,7 @@ export function PageLeaf({
   rest,
   lift,
   position,
+  meta,
 }: {
   width: number;
   height: number;
@@ -119,6 +120,8 @@ export function PageLeaf({
    */
   lift: number;
   position: [number, number, number];
+  /** O que o toque acha nesta folha (as áreas que abrem um tópico). */
+  meta?: Record<string, unknown>;
 }) {
   const leaf = useMemo(
     () => buildLeaf(width, height, front, back, paper),
@@ -147,5 +150,8 @@ export function PageLeaf({
     }
   });
 
-  return <primitive object={leaf.mesh} position={position} />;
+  // O R3F aplica as props no objeto: o userData leva o que o toque procura
+  return (
+    <primitive object={leaf.mesh} position={position} userData={meta ?? {}} />
+  );
 }

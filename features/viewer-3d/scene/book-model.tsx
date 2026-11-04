@@ -105,6 +105,9 @@ function Slab({
  * `open` (de 0 a 1) abre a capa; `pagesInset` baixa a frente do miolo para as
  * folhas que viram caberem nele (`children`, no mesmo sistema); `blockFront`
  * é o que se vê no miolo com a capa aberta (a folha de rosto).
+ * `coverInside` vai sobre a guarda da capa (gira com ela) e `backOutside`
+ * sobre a contracapa; os dois são desenhados de frente, no plano xy, e o livro
+ * os vira para fora.
  */
 export function BookModel({
   dims,
@@ -114,6 +117,8 @@ export function BookModel({
   pagesInset = 0,
   gloss = true,
   children,
+  coverInside,
+  backOutside,
 }: {
   dims: BookDimensions;
   surfaces: BookSurfaces;
@@ -123,6 +128,8 @@ export function BookModel({
   /** O verniz da capa (material físico); a landing, com muitos livros, dispensa. */
   gloss?: boolean;
   children?: React.ReactNode;
+  coverInside?: React.ReactNode;
+  backOutside?: React.ReactNode;
 }) {
   const hinge = useRef<Group>(null);
 
@@ -175,6 +182,14 @@ export function BookModel({
         }}
       />
       {children}
+      {backOutside ? (
+        <group
+          position={[0, 0, -inner - board - 0.0015]}
+          rotation={[0, Math.PI, 0]}
+        >
+          {backOutside}
+        </group>
+      ) : null}
       <group ref={hinge} position={[-width / 2, 0, inner]}>
         <Slab
           size={[width, height, board]}
@@ -186,6 +201,11 @@ export function BookModel({
             nz: endpaper,
           }}
         />
+        {coverInside ? (
+          <group position={[width / 2, 0, -0.0015]} rotation={[0, Math.PI, 0]}>
+            {coverInside}
+          </group>
+        ) : null}
       </group>
     </group>
   );

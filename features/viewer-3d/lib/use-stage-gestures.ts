@@ -20,15 +20,18 @@ type Sample = { x: number; y: number; time: number };
  * Os gestos do palco: arrastar gira (um dedo ou o mouse), a pinça e a roda
  * aproximam, e o duplo clique ou o toque duplo voltam ao começo. Pointer
  * Events com captura, para o arraste seguir fora do palco; o palco tem
- * touch-action: none, e o navegador não rola nem dá zoom na página. Com
- * `onTap` (o livro aberto, com folhas para virar), cada toque ou clique vai
- * para ele, sem esperar um segundo toque, e o duplo não volta ao começo.
+ * touch-action: none, e o navegador não rola nem dá zoom na página. Cada
+ * toque ou clique vai antes para `onTap` (a fita, um tópico, virar a folha):
+ * se ele cuidou, para ali; senão, o toque duplo volta ao começo. Com
+ * `turning` (o livro aberto, com folhas para virar), o duplo clique também
+ * não volta ao começo: cada clique já vira uma folha.
  */
 export function useStageGestures(
   stage: React.RefObject<HTMLElement | null>,
   pose: BookPose,
   enabled: boolean,
-  onTap?: (x: number) => void,
+  onTap?: (x: number, y: number) => boolean,
+  turning = false,
 ) {
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<number | null>(null);
@@ -142,10 +145,7 @@ export function useStageGestures(
     if (!enabled || !start) return;
 
     if (!start.moved && event.timeStamp - start.time < TAP_MS) {
-      if (onTap) {
-        onTap(event.clientX);
-        return;
-      }
+      if (onTap?.(event.clientX, event.clientY)) return;
       // No mouse, quem cuida do duplo clique é o dblclick
       if (event.pointerType !== "mouse") {
         onTouchTap({
@@ -173,7 +173,7 @@ export function useStageGestures(
   }
 
   function onDoubleClick() {
-    if (enabled && !onTap) pose.reset();
+    if (enabled && !turning) pose.reset();
   }
 
   return {

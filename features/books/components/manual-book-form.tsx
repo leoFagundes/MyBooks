@@ -1,12 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Info } from "lucide-react";
 import { useId, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { SwapText } from "@/components/motion/swap-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { createManualBook, updateManualBook } from "../actions";
 import type { BookDetails } from "../queries";
 import {
@@ -15,6 +21,7 @@ import {
   manualBookSchema,
 } from "../schemas";
 import type { BookVisual } from "../types";
+import { BookGenresField } from "./book-genres-field";
 import {
   type CoverDraft,
   CoverControls,
@@ -40,6 +47,7 @@ function initialFields(mode: ManualBookMode): ManualBookFields {
       publishedYear: "",
       pageCount: "",
       isbn: "",
+      genres: [],
     };
   }
   const { book } = mode;
@@ -50,6 +58,7 @@ function initialFields(mode: ManualBookMode): ManualBookFields {
     publishedYear: book.publishedYear?.toString() ?? "",
     pageCount: book.pageCount?.toString() ?? "",
     isbn: book.isbn13 ?? book.isbn10 ?? "",
+    genres: book.genres,
   };
 }
 
@@ -94,6 +103,7 @@ export function ManualBookForm({
     control,
     handleSubmit,
     getValues,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<ManualBookFields, unknown, ManualBook>({
@@ -104,6 +114,7 @@ export function ManualBookForm({
   const authors = useWatch({ control, name: "authors" });
   const pageCount = useWatch({ control, name: "pageCount" });
   const year = useWatch({ control, name: "publishedYear" });
+  const genres = useWatch({ control, name: "genres" }) ?? [];
 
   const preview = previewBook(
     {
@@ -145,14 +156,18 @@ export function ManualBookForm({
   });
 
   function field(
-    name: FieldName,
-    label: string,
+    name: Exclude<FieldName, "genres">,
+    label: React.ReactNode,
     props: React.ComponentProps<"input"> = {},
+    hint?: React.ReactNode,
   ) {
     const error = errors[name]?.message;
     return (
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`${id}-${name}`}>{label}</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor={`${id}-${name}`}>{label}</Label>
+          {hint}
+        </div>
         <Input
           id={`${id}-${name}`}
           aria-invalid={error ? true : undefined}
@@ -206,7 +221,22 @@ export function ManualBookForm({
             {field("publishedYear", "Ano", { inputMode: "numeric" })}
             {field("pageCount", "Páginas", { inputMode: "numeric" })}
           </div>
-          {field("isbn", "ISBN", { inputMode: "numeric", autoComplete: "off" })}
+          {field(
+            "isbn",
+            <>
+              ISBN{" "}
+              <span className="font-normal text-muted-foreground">
+                (opcional)
+              </span>
+            </>,
+            { inputMode: "numeric", autoComplete: "off" },
+            <IsbnHelp />,
+          )}
+          <BookGenresField
+            value={genres}
+            onChange={(next) => setValue("genres", next, { shouldDirty: true })}
+            known={mode.kind === "edit" ? mode.book.genreNames : undefined}
+          />
         </div>
       </div>
 
@@ -237,5 +267,37 @@ export function ManualBookForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** O "i" ao lado do ISBN: o que é e onde achar. */
+function IsbnHelp() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="O que é o ISBN?"
+          className="size-6 text-muted-foreground"
+        >
+          <Info className="size-4" strokeWidth={1.5} aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 text-sm text-pretty">
+        <p className="font-medium">O que é o ISBN?</p>
+        <p className="mt-1 text-muted-foreground">
+          É o número que identifica cada edição de um livro, com 10 ou 13
+          dígitos. Fica no verso da página de rosto ou acima do código de barras
+          da contracapa, começando por 978 ou 979.
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Com ele, quem buscar pelo número acha este livro, e ninguém cadastra a
+          mesma edição de novo. Se não tiver, tudo bem: dá para deixar em
+          branco.
+        </p>
+      </PopoverContent>
+    </Popover>
   );
 }

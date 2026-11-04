@@ -135,14 +135,18 @@ export function GenreChips({
 }
 
 /** A busca de outro gênero: os que já existem e, se não houver igual, "Criar". */
-function GenreSearch({
+export function GenreSearch({
   selected,
   disabled,
   onPick,
+  label = "Outro gênero",
+  placeholder = "Outro gênero",
 }: {
   selected: string[];
   disabled: boolean;
   onPick: (genre: Genre) => void;
+  label?: string;
+  placeholder?: string;
 }) {
   const id = useId();
   const queryClient = useQueryClient();
@@ -192,9 +196,9 @@ function GenreSearch({
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={`${id}-busca`} className="sr-only">
-        Outro gênero
+        {label}
       </label>
-      <Command shouldFilter={false} loop label="Outro gênero">
+      <Command shouldFilter={false} loop label={label}>
         <Command.Input
           id={`${id}-busca`}
           value={text}
@@ -203,7 +207,7 @@ function GenreSearch({
             setError(null);
           }}
           disabled={disabled || creating}
-          placeholder={disabled ? "Chegou ao limite" : "Outro gênero"}
+          placeholder={disabled ? "Chegou ao limite" : placeholder}
           maxLength={40}
           aria-describedby={error ? `${id}-erro` : undefined}
           className={cn(fieldClasses, "h-10")}

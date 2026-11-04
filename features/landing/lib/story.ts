@@ -1,7 +1,8 @@
 // A história do topo da landing, em trechos da rolagem da seção (0 a 1): o
-// título sai, os livros voam até a prateleira, a linha se desenha, a
-// prateleira de verdade assume por cima dos livros 3D, e o perfil aparece. O
-// DOM (HeroStage) e a cena 3D (os livros) leem os mesmos trechos.
+// título sai, os livros voam até a prateleira enquanto a legenda se acende
+// palavra por palavra, a linha se desenha, a prateleira de verdade assume por
+// cima dos livros 3D, e o perfil toma o lugar da legenda. O DOM (HeroStage) e
+// a cena 3D (os livros) leem os mesmos trechos.
 export const TITLE_OUT = [0.02, 0.15];
 export const FLIGHT = { start: 0.04, spread: 0.16, length: 0.34 };
 export const LINE = [0.42, 0.54];
@@ -9,7 +10,11 @@ export const LINE = [0.42, 0.54];
 export const SWAP = [0.54, 0.6];
 /** Já coberta pela prateleira, a cena some (sem o fundo vazar no meio). */
 export const HIDE_SCENE = [0.6, 0.62];
-export const PROFILE = [0.6, 0.74];
+export const PROFILE = [0.58, 0.72];
+/** A legenda do voo: cada palavra acende no seu pedaço deste trecho. */
+export const CAPTION = { start: 0.12, end: 0.46, word: 0.05 };
+/** A legenda se apaga logo antes de o perfil entrar no lugar dela. */
+export const CAPTION_OUT = [0.5, 0.58];
 
 /**
  * A história da rolagem só existe no computador: tela larga e mouse de

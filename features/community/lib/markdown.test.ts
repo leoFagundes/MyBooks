@@ -10,6 +10,37 @@ import {
 const BOOK = "3d4f4713-d94b-593f-b462-10acf3328e40";
 
 describe("markdown leve", () => {
+  test("os efeitos se misturam", () => {
+    const text = (v: string) => ({ t: "text", v });
+    expect(parseInline("***os dois***")).toEqual([
+      { t: "strong", c: [{ t: "em", c: [text("os dois")] }] },
+    ]);
+    expect(parseInline("**forte *leve* forte**")).toEqual([
+      {
+        t: "strong",
+        c: [text("forte "), { t: "em", c: [text("leve")] }, text(" forte")],
+      },
+    ]);
+    expect(parseInline("*leve **forte** leve*")).toEqual([
+      {
+        t: "em",
+        c: [text("leve "), { t: "strong", c: [text("forte")] }, text(" leve")],
+      },
+    ]);
+    expect(parseMarkdown("## **Capitu**, *sempre*")).toEqual([
+      {
+        t: "h",
+        level: 2,
+        c: [
+          { t: "strong", c: [text("Capitu")] },
+          text(", "),
+          { t: "em", c: [text("sempre")] },
+        ],
+      },
+    ]);
+    expect(parseInline("2 * 3 * 4")).toEqual([text("2 * 3 * 4")]);
+  });
+
   test("títulos numa linha só deles, mesmo sem linha em branco", () => {
     expect(parseMarkdown("# Capitu\n## O olhar\ntexto\n#sem espaço")).toEqual([
       { t: "h", level: 1, c: [{ t: "text", v: "Capitu" }] },

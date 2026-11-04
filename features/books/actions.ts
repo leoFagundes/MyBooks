@@ -75,6 +75,7 @@ function bookColumns(book: ManualBook, design: CoverDesign) {
     page_count: book.pageCount,
     isbn_13: book.isbn13,
     isbn_10: book.isbn10,
+    genres: book.genres,
     cover_color: design.color,
     // A Clássica é o padrão: fica null no banco
     cover_style: design.style === "classic" ? null : design.style,
@@ -111,7 +112,13 @@ export async function createManualBook(
     .insert({
       id,
       ...bookColumns(book, parsed.design),
-      ...(cover ? { cover_url: cover.coverUrl, cover_color: cover.color } : {}),
+      // Com imagem, a cor (da lombada) é a escolhida ou, na automática, a dela
+      ...(cover
+        ? {
+            cover_url: cover.coverUrl,
+            cover_color: parsed.design.color ?? cover.color,
+          }
+        : {}),
       source: "manual",
       created_by: viewer.id,
     })
@@ -192,8 +199,9 @@ export async function updateManualBook(
   }
   const keepsImage = !cover && !removeImage && current.cover_url !== null;
   const columns = bookColumns(parsed.book, parsed.design);
-  // Com imagem, a cor do livro é a dela (lombada e fundo da capa)
-  if (keepsImage) columns.cover_color = current.cover_color;
+  // Com imagem e a cor automática, continua a que já estava (a tirada dela)
+  if (keepsImage && !parsed.design.color)
+    columns.cover_color = current.cover_color;
 
   const { data: updated, error } = await supabase
     .from("books")
@@ -214,7 +222,10 @@ export async function updateManualBook(
       .from("books")
       .update(
         cover
-          ? { cover_url: cover.coverUrl, cover_color: cover.color }
+          ? {
+              cover_url: cover.coverUrl,
+              cover_color: parsed.design.color ?? cover.color,
+            }
           : { cover_url: null },
       )
       .eq("id", bookId);

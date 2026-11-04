@@ -6,6 +6,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { GenreSlug } from "@/features/profile/genres";
+import { customGenreNames } from "@/features/profile/queries";
 import { GENRE_SUBJECTS, MIXED_GENRES } from "./lib/discovery";
 import { searchGoogleBooks } from "./lib/google-books";
 import { isbnFromQuery } from "./lib/isbn";
@@ -234,6 +235,8 @@ export type BookDetails = BookVisual & {
   isbn10: string | null;
   language: string | null;
   genres: string[];
+  /** O nome dos gêneros criados por leitores (aprovados) que o livro tem. */
+  genreNames: Record<string, string>;
   /** Quem cadastrou à mão (só esse livro se edita); null nos das fontes. */
   manualCreatorId: string | null;
   /** A revisão do livro manual (MELHORIAS 7): pendente só aparece para quem criou na busca. */
@@ -267,6 +270,7 @@ export async function getBook(id: string): Promise<BookDetails | null> {
     isbn10: data.isbn_10,
     language: data.language,
     genres: data.genres,
+    genreNames: await customGenreNames(data.genres),
     manualCreatorId: data.source === "manual" ? data.created_by : null,
     moderation: {
       status:

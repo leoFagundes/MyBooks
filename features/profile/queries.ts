@@ -106,9 +106,11 @@ export async function getVisibleGenres(): Promise<Genre[]> {
   }));
 }
 
-// Os nomes dos gêneros de leitores (aprovados) que um perfil favoritou: os
-// oficiais têm nome no código
-async function customGenreNames(
+/**
+ * Os nomes dos gêneros de leitores (só os aprovados) entre esses slugs: os
+ * oficiais têm nome no código. Serve aos favoritos do perfil e ao livro.
+ */
+export async function customGenreNames(
   slugs: string[],
 ): Promise<Record<string, string>> {
   const custom = slugs.filter((slug) => !genreLabel(slug));

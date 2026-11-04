@@ -17,12 +17,48 @@ import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { staggerDelay } from "@/lib/motion";
 import { routes } from "@/lib/routes";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { LINE, PROFILE, STORY_MEDIA, SWAP, TITLE_OUT } from "../lib/story";
+import {
+  CAPTION,
+  CAPTION_OUT,
+  LINE,
+  PROFILE,
+  STORY_MEDIA,
+  SWAP,
+  TITLE_OUT,
+} from "../lib/story";
 import { useStoryProgress } from "../lib/use-story-progress";
 import type { LandingShowcase } from "../queries";
 import { HeroBooks } from "./hero-books";
 
 const TITLE = "Sua vida de leitor, em uma estante só.";
+const CAPTION_TEXT = "Cada livro que você lê vira uma lombada na sua estante.";
+
+/** Uma palavra da legenda: acende quando a rolagem chega no pedaço dela. */
+function CaptionWord({
+  progress,
+  index,
+  count,
+  children,
+}: {
+  progress: MotionValue<number>;
+  index: number;
+  count: number;
+  children: string;
+}) {
+  const step = (CAPTION.end - CAPTION.start - CAPTION.word) / (count - 1);
+  const start = CAPTION.start + index * step;
+  const opacity = useTransform(
+    progress,
+    [start, start + CAPTION.word],
+    [0.14, 1],
+  );
+  const y = useTransform(progress, [start, start + CAPTION.word], [6, 0]);
+  return (
+    <motion.span style={{ opacity, y }} className="inline-block">
+      {children}
+    </motion.span>
+  );
+}
 
 /** Entrada só em CSS: o título aparece sem esperar o JavaScript (é o LCP). */
 const entering =
@@ -63,7 +99,10 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
   const endEvents = useTransform(profileOpacity, (value) =>
     value > 0.5 ? "auto" : "none",
   );
+  const captionOpacity = useTransform(progress, CAPTION_OUT, [1, 0]);
+  const captionY = useTransform(progress, CAPTION_OUT, [0, -16]);
   const words = splitWords(TITLE);
+  const captionWords = splitWords(CAPTION_TEXT);
 
   // O Tab não para no invisível: o foco numa camada escondida rola a página
   // até o trecho em que ela aparece (o começo ou o fim da história)
@@ -164,17 +203,41 @@ export function HeroStage({ showcase }: { showcase: LandingShowcase | null }) {
             // pt-14: o fim da história centra abaixo da barra
             className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 px-4 pt-14 sm:gap-10 sm:px-6 historia-parada:pointer-events-auto! historia-parada:relative historia-parada:pb-24"
           >
-            <motion.div
-              style={{ opacity: profileOpacity, y: profileY }}
-              // No celular, sem os gêneros: o fim da história cabe na tela
-              className="w-full max-w-3xl historia-parada:transform-none! historia-parada:opacity-100! max-sm:[&_[data-genres]]:hidden"
-            >
-              <ProfileHeader
-                profile={showcase.profile}
-                counts={showcase.counts}
-                titleAs="h2"
-              />
-            </motion.div>
+            <div className="relative w-full max-w-3xl">
+              {/* Enquanto os livros voam, a legenda ocupa o lugar do perfil:
+                  a tela nunca fica só com os livros. Parada, ela não existe */}
+              {story ? (
+                <motion.p
+                  aria-hidden
+                  style={{ opacity: captionOpacity, y: captionY }}
+                  className="pointer-events-none absolute inset-x-0 bottom-0 text-center font-serif text-4xl leading-tight tracking-tight text-balance lg:text-5xl historia-parada:hidden"
+                >
+                  {captionWords.map((word, index) => (
+                    <span key={`${word}-${index}`}>
+                      <CaptionWord
+                        progress={progress}
+                        index={index}
+                        count={captionWords.length}
+                      >
+                        {word}
+                      </CaptionWord>
+                      {index < captionWords.length - 1 ? " " : null}
+                    </span>
+                  ))}
+                </motion.p>
+              ) : null}
+              <motion.div
+                style={{ opacity: profileOpacity, y: profileY }}
+                // No celular, sem os gêneros: o fim da história cabe na tela
+                className="w-full historia-parada:transform-none! historia-parada:opacity-100! max-sm:[&_[data-genres]]:hidden"
+              >
+                <ProfileHeader
+                  profile={showcase.profile}
+                  counts={showcase.counts}
+                  titleAs="h2"
+                />
+              </motion.div>
+            </div>
             <div className="relative px-6">
               <motion.div
                 ref={shelf}

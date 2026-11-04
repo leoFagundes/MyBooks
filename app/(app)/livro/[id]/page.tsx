@@ -201,8 +201,9 @@ async function Discussions({ book }: { book: BookDetails }) {
 
 /** Gêneros, ISBN e idioma, em mono e discretos, logo abaixo do topo. */
 function BookFacts({ book }: { book: BookDetails }) {
+  // Os de leitores só aparecem aprovados (genreNames só tem esses)
   const genres = book.genres.flatMap((slug) => {
-    const label = genreLabel(slug);
+    const label = genreLabel(slug) ?? book.genreNames[slug];
     return label ? [label] : [];
   });
   const facts = [

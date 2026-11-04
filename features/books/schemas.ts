@@ -24,6 +24,9 @@ function optionalInteger(min: number, max: number, message: string) {
  * Livro cadastrado à mão. Os campos chegam como o formulário os tem (texto) e
  * saem no formato das colunas de books.
  */
+/** Quantos gêneros um livro cadastrado à mão pode ter. */
+export const BOOK_GENRES_MAX = 5;
+
 export const manualBookSchema = z
   .object({
     title: z
@@ -64,6 +67,17 @@ export const manualBookSchema = z
       "Use de 1 a 20.000 páginas",
     ),
     isbn: z.string().trim(),
+    // Slugs de gêneros que existem (o banco confere); a sugestão de edição não usa
+    genres: z
+      .array(
+        z
+          .string()
+          .max(40)
+          .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+      )
+      .max(BOOK_GENRES_MAX, `Até ${BOOK_GENRES_MAX} gêneros`)
+      .transform((genres) => [...new Set(genres)])
+      .default([]),
   })
   .transform(({ isbn, ...book }, ctx) => {
     const isbns = isbn ? pickIsbns([isbn]) : { isbn13: null, isbn10: null };

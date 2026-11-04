@@ -24,15 +24,19 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const BOOK_TOKEN = new RegExp(`\\[\\[livro:(${UUID})\\]\\]`, "g");
 const MENTION = /(^|[^a-zA-Z0-9_@])@([a-zA-Z0-9_]{3,20})/g;
 
-// Em ordem de preferência: o primeiro que casar no ponto mais cedo vence
+// Em ordem de preferência: o primeiro que casar no ponto mais cedo vence.
+// Os efeitos se misturam: negrito e itálico juntos (***), itálico dentro do
+// negrito e negrito dentro do itálico; o de dentro passa pelo parser de novo
 const INLINE = new RegExp(
   [
     `\\[\\[livro:(?<book>${UUID})\\]\\]`,
     String.raw`\|\|(?<spoiler>[^|\n]+?)\|\|`,
-    String.raw`\*\*(?<strong>[^*\n]+?)\*\*`,
+    String.raw`\*\*\*(?<strongem>[^*\n]+?)\*\*\*`,
+    String.raw`\*\*(?<strong>(?:[^*\n]|\*(?!\*))+?)\*\*`,
     String.raw`\[(?<label>[^\]\n]+)\]\((?<href>https?:\/\/[^\s)]+)\)`,
     String.raw`(?<url>https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])`,
-    String.raw`(?<![\w*])\*(?<em>[^*\n]+?)\*(?![\w*])`,
+    // A marca encosta no texto (2 * 3 * 4 não é itálico)
+    String.raw`(?<![\w*])\*(?!\s)(?<em>(?:[^*\n]|\*\*[^*\n]+?\*\*)+?)(?<!\s)\*(?![\w*])`,
     String.raw`(?<![\w])_(?<em2>[^_\n]+?)_(?![\w])`,
     String.raw`(?<![\w@])@(?<mention>[a-zA-Z0-9_]{3,20})`,
   ].join("|"),
@@ -63,6 +67,11 @@ export function parseInline(text: string): Inline[] {
     if (groups.book) out.push({ t: "book", id: groups.book });
     else if (groups.spoiler)
       out.push({ t: "spoiler", c: parseInline(groups.spoiler) });
+    else if (groups.strongem)
+      out.push({
+        t: "strong",
+        c: [{ t: "em", c: parseInline(groups.strongem) }],
+      });
     else if (groups.strong)
       out.push({ t: "strong", c: parseInline(groups.strong) });
     else if (groups.label && groups.href) {

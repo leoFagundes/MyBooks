@@ -34,8 +34,12 @@ export type CoverImage =
   | { kind: "none" }
   /** A imagem que o livro já tem (na edição). */
   | { kind: "current"; url: string }
-  /** Escolhida agora: já reduzida, com uma URL local para a prévia. */
-  | { kind: "new"; file: File; url: string };
+  /**
+   * Escolhida agora: já reduzida, com uma URL local para a prévia e o tom
+   * médio dela (a lombada da prévia, na cor automática; o servidor tira a
+   * cor de verdade ao salvar).
+   */
+  | { kind: "new"; file: File; url: string; tone: string | null };
 
 /** A capa sendo desenhada no cadastro ou na edição. */
 export type CoverDraft = {
@@ -56,9 +60,37 @@ export function previewBook(
     id: "previa",
     ...base,
     coverUrl: draft.image.kind === "none" ? null : draft.image.url,
-    coverColor: draft.color,
+    coverColor:
+      draft.color ?? (draft.image.kind === "new" ? draft.image.tone : null),
     coverStyle: draft.style,
   };
+}
+
+/** O tom médio da imagem, numa cópia de 8 × 8 (null se o navegador não ler). */
+async function averageTone(file: Blob): Promise<string | null> {
+  try {
+    const bitmap = await createImageBitmap(file, {
+      resizeWidth: 8,
+      resizeHeight: 8,
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = 8;
+    canvas.height = 8;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    context.drawImage(bitmap, 0, 0, 8, 8);
+    bitmap.close();
+    const { data } = context.getImageData(0, 0, 8, 8);
+    const sum = [0, 0, 0];
+    for (let index = 0; index < data.length; index += 4) {
+      sum[0] += data[index] ?? 0;
+      sum[1] += data[index + 1] ?? 0;
+      sum[2] += data[index + 2] ?? 0;
+    }
+    return toHex(sum.map((channel) => Math.round(channel / 64)));
+  } catch {
+    return null;
+  }
 }
 
 const PREVIEW_MODES = [
@@ -99,13 +131,15 @@ export function CoverPreview({ book }: { book: BookVisual }) {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="grid h-60 w-40 place-items-center">
+      <div className="relative grid h-60 w-40 place-items-center">
         {mode === "capa" ? (
           <BookCover book={book} size="md" tilt={false} />
         ) : mode === "lombada" ? (
           <SpinePreview book={book} />
         ) : (
-          <BookPreview3D book={book} className="size-full" />
+          // Preso ao quadro: numa grade que se ajusta ao conteúdo, o canvas
+          // ficaria com a largura padrão (300px) e o livro, fora do centro
+          <BookPreview3D book={book} className="absolute inset-0" />
         )}
       </div>
       <SegmentedControl<PreviewMode>
@@ -191,9 +225,18 @@ export function CoverControls({
       setImageError("Não deu para ler essa imagem. Tente JPG, PNG ou WebP.");
       return;
     }
+    const tone = await averageTone(small);
+    // Imagem nova volta à cor automática: a lombada sai na cor dela
+    setHexText("");
     onChange((current) => ({
       ...current,
-      image: { kind: "new", file: small, url: URL.createObjectURL(small) },
+      color: null,
+      image: {
+        kind: "new",
+        file: small,
+        url: URL.createObjectURL(small),
+        tone,
+      },
     }));
   }
 
@@ -208,7 +251,13 @@ export function CoverControls({
     if (hex) onChange((current) => ({ ...current, color: hex }));
   }
 
-  const effective = bookColor({ title: book.title, coverColor: draft.color });
+  const hasImage = draft.image.kind !== "none";
+  // Com imagem e a cor automática, a lombada é a cor dela (book.coverColor
+  // traz o tom médio na prévia)
+  const effective = bookColor({
+    title: book.title,
+    coverColor: draft.color ?? (hasImage ? book.coverColor : null),
+  });
   const readable = coverInk(effective);
   const ratio = contrastRatio(
     readable.background,
@@ -269,123 +318,123 @@ export function CoverControls({
         <div aria-live="polite">
           {imageError ? (
             <p className="text-xs text-destructive">{imageError}</p>
-          ) : draft.image.kind !== "none" ? (
+          ) : hasImage ? (
             <p className="text-xs text-pretty text-muted-foreground">
-              Com imagem, a lombada fica na cor tirada dela. Tirando a imagem,
-              você escolhe o estilo e a cor da capa.
+              A capa é a imagem. O estilo e a cor continuam valendo para a
+              lombada; na cor automática, ela sai na cor da imagem.
             </p>
           ) : null}
         </div>
       </div>
 
-      {draft.image.kind === "none" ? (
-        <>
-          <div className="flex flex-col gap-2">
-            <p id={`${id}-estilo`} className={sectionLabel}>
-              Estilo
-            </p>
-            <RadioGroupPrimitive.Root
-              aria-labelledby={`${id}-estilo`}
-              value={draft.style}
-              onValueChange={(style) =>
-                onChange((current) => ({
-                  ...current,
-                  style: style as CoverStyle,
-                }))
-              }
-              orientation="horizontal"
-              className="grid grid-cols-4 gap-2"
-            >
-              {COVER_STYLES.map((style) => (
-                <RadioGroupPrimitive.Item
-                  key={style}
-                  value={style}
-                  className="group/estilo flex cursor-pointer flex-col items-center gap-1.5 rounded-control p-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground data-[state=checked]:bg-muted data-[state=checked]:text-foreground"
-                >
-                  <span
-                    aria-hidden
-                    className="relative aspect-2/3 w-full max-w-14 overflow-hidden rounded-cover bg-(--cover) ring-1 ring-border group-data-[state=checked]/estilo:ring-2 group-data-[state=checked]/estilo:ring-foreground"
-                    style={
-                      { "--cover": readable.background } as React.CSSProperties
-                    }
-                  >
-                    <GeneratedCover
-                      book={{ ...book, coverUrl: null, coverStyle: style }}
-                      ink={readable.ink}
-                    />
-                  </span>
-                  {COVER_STYLE_LABEL[style]}
-                </RadioGroupPrimitive.Item>
-              ))}
-            </RadioGroupPrimitive.Root>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <p id={`${id}-cor`} className={sectionLabel}>
-              Cor
-            </p>
-            <RadioGroupPrimitive.Root
-              aria-labelledby={`${id}-cor`}
-              value={swatchValue}
-              onValueChange={(value) =>
-                chooseColor(value === "auto" ? null : value)
-              }
-              orientation="horizontal"
-              className="flex flex-wrap gap-2 p-1"
-            >
-              <Swatch
-                value="auto"
-                color={autoColor}
-                label="Automática, pelo título"
-              />
-              {COVER_PALETTE.map((swatch) => (
-                <Swatch
-                  key={swatch.hex}
-                  value={swatch.hex}
-                  color={swatch.hex}
-                  label={swatch.name}
-                />
-              ))}
-            </RadioGroupPrimitive.Root>
-            <div className="flex flex-wrap items-center gap-2">
-              <label
-                // O campo nativo fica invisível por cima: o contorno de foco
-                // vai na moldura
-                className="relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-control border border-input bg-(--cover) has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
-                style={{ "--cover": effective } as React.CSSProperties}
+      <>
+        <div className="flex flex-col gap-2">
+          <p id={`${id}-estilo`} className={sectionLabel}>
+            {hasImage ? "Estilo da lombada" : "Estilo"}
+          </p>
+          <RadioGroupPrimitive.Root
+            aria-labelledby={`${id}-estilo`}
+            value={draft.style}
+            onValueChange={(style) =>
+              onChange((current) => ({
+                ...current,
+                style: style as CoverStyle,
+              }))
+            }
+            orientation="horizontal"
+            className="grid grid-cols-4 gap-2"
+          >
+            {COVER_STYLES.map((style) => (
+              <RadioGroupPrimitive.Item
+                key={style}
+                value={style}
+                className="group/estilo flex cursor-pointer flex-col items-center gap-1.5 rounded-control p-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground data-[state=checked]:bg-muted data-[state=checked]:text-foreground"
               >
-                <span className="sr-only">Escolher outra cor</span>
-                <input
-                  type="color"
-                  value={effective}
-                  onChange={(event) => chooseColor(event.target.value)}
-                  className="absolute inset-0 size-full cursor-pointer opacity-0"
-                />
-              </label>
-              <Input
-                aria-label="Cor em hexadecimal"
-                aria-invalid={hexInvalid || undefined}
-                placeholder={autoColor}
-                value={hexText}
-                onChange={(event) => typeHex(event.target.value)}
-                spellCheck={false}
-                autoComplete="off"
-                className="w-28 font-mono"
+                <span
+                  aria-hidden
+                  className="relative aspect-2/3 w-full max-w-14 overflow-hidden rounded-cover bg-(--cover) ring-1 ring-border group-data-[state=checked]/estilo:ring-2 group-data-[state=checked]/estilo:ring-foreground"
+                  style={
+                    { "--cover": readable.background } as React.CSSProperties
+                  }
+                >
+                  <GeneratedCover
+                    book={{ ...book, coverUrl: null, coverStyle: style }}
+                    ink={readable.ink}
+                  />
+                </span>
+                {COVER_STYLE_LABEL[style]}
+              </RadioGroupPrimitive.Item>
+            ))}
+          </RadioGroupPrimitive.Root>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <p id={`${id}-cor`} className={sectionLabel}>
+            {hasImage ? "Cor da lombada" : "Cor"}
+          </p>
+          <RadioGroupPrimitive.Root
+            aria-labelledby={`${id}-cor`}
+            value={swatchValue}
+            onValueChange={(value) =>
+              chooseColor(value === "auto" ? null : value)
+            }
+            orientation="horizontal"
+            className="flex flex-wrap gap-2 p-1"
+          >
+            <Swatch
+              value="auto"
+              color={hasImage ? effective : autoColor}
+              label={
+                hasImage ? "Automática, pela imagem" : "Automática, pelo título"
+              }
+            />
+            {COVER_PALETTE.map((swatch) => (
+              <Swatch
+                key={swatch.hex}
+                value={swatch.hex}
+                color={swatch.hex}
+                label={swatch.name}
               />
-            </div>
-            <p
-              aria-live="polite"
-              className="text-xs text-pretty text-muted-foreground"
+            ))}
+          </RadioGroupPrimitive.Root>
+          <div className="flex flex-wrap items-center gap-2">
+            <label
+              // O campo nativo fica invisível por cima: o contorno de foco
+              // vai na moldura
+              className="relative size-10 shrink-0 cursor-pointer overflow-hidden rounded-control border border-input bg-(--cover) has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+              style={{ "--cover": effective } as React.CSSProperties}
             >
-              Texto em tinta {readable.ink === "ink" ? "escura" : "clara"},
-              contraste de {formatNumber(Math.round(ratio * 10) / 10)}:1 (AA).
-              {readable.background !== effective
-                ? " O tom foi ajustado um pouco para o texto ficar legível."
-                : null}
-            </p>
+              <span className="sr-only">Escolher outra cor</span>
+              <input
+                type="color"
+                value={effective}
+                onChange={(event) => chooseColor(event.target.value)}
+                className="absolute inset-0 size-full cursor-pointer opacity-0"
+              />
+            </label>
+            <Input
+              aria-label="Cor em hexadecimal"
+              aria-invalid={hexInvalid || undefined}
+              placeholder={autoColor}
+              value={hexText}
+              onChange={(event) => typeHex(event.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              className="w-28 font-mono"
+            />
           </div>
-        </>
-      ) : null}
+          <p
+            aria-live="polite"
+            className="text-xs text-pretty text-muted-foreground"
+          >
+            Texto em tinta {readable.ink === "ink" ? "escura" : "clara"},
+            contraste de {formatNumber(Math.round(ratio * 10) / 10)}:1 (AA).
+            {readable.background !== effective
+              ? " O tom foi ajustado um pouco para o texto ficar legível."
+              : null}
+          </p>
+        </div>
+      </>
     </fieldset>
   );
 }

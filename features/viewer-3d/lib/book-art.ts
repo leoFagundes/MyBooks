@@ -277,17 +277,15 @@ export function drawBackCover(book: BookVisual, description: string | null) {
   return canvas;
 }
 
-// O painel de papel da lombada no estilo Faixa, como no SpineArt
-const SPINE_BAND = { top: 0.14, bottom: 0.76 } as const;
-
 /** A lombada da página (BookSpine), em px: a 3D da landing cai em cima dela. */
 export type ShelfSpine = { width: number; height: number };
 
 /**
  * A lombada, como o BookSpine (SpineArt): título em serif descendo de cima
  * para baixo (a ABNT pede assim) e autoria em mono no pé, se a espessura
- * deixar, no estilo da capa: a Moldura ganha dois fios, a Faixa o painel de
- * papel com o título e a Mínima fica só com o título, no meio. Com `shelf`
+ * deixar, no estilo da capa: a Moldura ganha dois fios, a Faixa continua a
+ * tira de papel da capa (na mesma altura, com o texto por cima dela na tinta
+ * escura) e a Mínima fica só com o título, no meio. Com `shelf`
  * (a landing), as medidas são as da SpineArt na lombada da página, para a
  * troca de uma pela outra não mexer no texto.
  */
@@ -323,10 +321,9 @@ export function drawSpine(
       ctx.fillRect(side, top, width - 2 * side, bar);
     }
   }
-  const band = {
-    start: H * SPINE_BAND.top,
-    end: H * SPINE_BAND.bottom,
-  };
+  // A tira da Faixa na mesma altura da capa: quem olha a quina vê a faixa
+  // dar a volta no livro
+  const band = { start: H * BAND.top, end: H * BAND.bottom };
   if (style === "band") {
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, band.start, width, band.end - band.start);
@@ -337,57 +334,48 @@ export function drawSpine(
   ctx.translate(width / 2, 0);
   ctx.rotate(Math.PI / 2);
   ctx.textBaseline = "middle";
-  if (shelf) {
-    drawShelfSpineText(ctx, book, { H, u, band, ink, wide: shelf.width >= 24 });
-    return canvas;
-  }
   const margin = H * (style === "framed" ? 0.075 : 0.06);
   const titleSize = Math.min(width * 0.46, 56 * k);
   const author = (book.authors[0] ?? "").toUpperCase();
   const authorSize = Math.min(width * 0.22, 20 * k);
   const showAuthor = Boolean(author) && width >= 48 * k && style !== "minimal";
 
-  if (style === "band") {
-    const inset = H * 0.03;
-    setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.01);
-    const [title] = wrapLines(
-      ctx,
-      book.title,
-      band.end - band.start - 2 * inset,
-      1,
-    );
-    ctx.fillStyle = INK;
-    ctx.textAlign = "left";
-    if (title) ctx.fillText(title, band.start + inset, 0);
+  const drawText = (fill: string) => {
+    ctx.fillStyle = fill;
+    if (shelf) {
+      drawShelfSpineText(ctx, book, { H, u, wide: shelf.width >= 24 });
+      return;
+    }
+    let room = H - 2 * margin;
     if (showAuthor) {
       setFont(ctx, fontStack("--font-geist-mono"), authorSize, 0.05);
-      const [line] = wrapLines(ctx, author, H - band.end - 2 * inset, 1);
-      ctx.fillStyle = ink;
+      const [line] = wrapLines(ctx, author, room * 0.3, 1);
+      if (line) {
+        ctx.textAlign = "right";
+        ctx.fillText(line, H - margin, 0);
+        room -= ctx.measureText(line).width + H * 0.04;
+      }
+    }
+    setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.01);
+    const [title] = wrapLines(ctx, book.title, room, 1);
+    if (title && style === "minimal") {
       ctx.textAlign = "center";
-      if (line) ctx.fillText(line, (band.end + H) / 2, 0);
+      ctx.fillText(title, H / 2, 0);
+    } else if (title) {
+      ctx.textAlign = "left";
+      ctx.fillText(title, margin, 0);
     }
-    return canvas;
-  }
+  };
 
-  let room = H - 2 * margin;
-  if (showAuthor) {
-    setFont(ctx, fontStack("--font-geist-mono"), authorSize, 0.05);
-    const [line] = wrapLines(ctx, author, room * 0.3, 1);
-    if (line) {
-      ctx.textAlign = "right";
-      ctx.fillText(line, H - margin, 0);
-      room -= ctx.measureText(line).width + H * 0.04;
-    }
-  }
-
-  setFont(ctx, fontStack("--font-instrument-serif"), titleSize, -0.01);
-  const [title] = wrapLines(ctx, book.title, room, 1);
-  if (title && style === "minimal") {
-    ctx.textAlign = "center";
-    ctx.fillText(title, H / 2, 0);
-  } else if (title) {
-    ctx.textAlign = "left";
-    ctx.fillText(title, margin, 0);
+  drawText(ink);
+  if (style === "band") {
+    // O mesmo texto, recortado na tira, com a tinta que o papel pede
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(band.start, -width / 2, band.end - band.start, width);
+    ctx.clip();
+    drawText(INK);
+    ctx.restore();
   }
   return canvas;
 }
@@ -396,8 +384,8 @@ export function drawSpine(
  * O texto da lombada nas medidas da SpineArt (em px da página, vezes u):
  * título de 13px e autoria de 8px, folga de 12px nas pontas (16px na
  * Moldura) e 6px entre os dois; o título vai primeiro e deixa ao menos 48px,
- * e a autoria fica com o resto. Na Faixa, o título começa 8px dentro do
- * painel e a autoria 8px abaixo dele. O canvas já está girado.
+ * e a autoria fica com o resto (a Faixa também: a tira vem por cima). O
+ * canvas já está girado, e a tinta já está escolhida.
  */
 function drawShelfSpineText(
   ctx: CanvasRenderingContext2D,
@@ -405,14 +393,10 @@ function drawShelfSpineText(
   {
     H,
     u,
-    band,
-    ink,
     wide,
   }: {
     H: number;
     u: number;
-    band: { start: number; end: number };
-    ink: string;
     /** Espessa o bastante para a autoria (24px na página). */
     wide: boolean;
   },
@@ -422,24 +406,6 @@ function drawShelfSpineText(
   const style = book.coverStyle;
   const author = wide ? (book.authors[0] ?? "").toUpperCase() : "";
   ctx.textAlign = "left";
-
-  if (style === "band") {
-    const pad = 8 * u;
-    setFont(ctx, serif, 13 * u);
-    const [title] = wrapLines(
-      ctx,
-      book.title,
-      band.end - band.start - 2 * pad,
-      1,
-    );
-    ctx.fillStyle = INK;
-    if (title) ctx.fillText(title, band.start + pad, 0);
-    setFont(ctx, mono, 8 * u, 0.05);
-    const [line] = wrapLines(ctx, author, H - band.end - 2 * pad, 1);
-    ctx.fillStyle = ink;
-    if (line) ctx.fillText(line, band.end + pad, 0);
-    return;
-  }
 
   const pad = (style === "framed" ? 16 : 12) * u;
   const room = H - 2 * pad;

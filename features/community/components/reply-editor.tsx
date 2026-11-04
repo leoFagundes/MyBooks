@@ -150,6 +150,7 @@ function ReplyForm({
             setCited((current) => ({ ...current, [book.id]: book }))
           }
           maxLength={10000}
+          mentions
           rows={6}
           placeholder="Escreva a sua resposta"
         />

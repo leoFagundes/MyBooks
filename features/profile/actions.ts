@@ -61,6 +61,7 @@ export async function saveProfile(
   }
   if (error)
     return { ok: false, error: "Não deu para salvar agora. Tente de novo." };
+  if (avatarPath) await pruneAvatars(viewer.id, avatarPath).catch(() => {});
 
   updateTag(`profile:${viewer.username}`);
   if (username !== viewer.username) updateTag(`profile:${username}`);
@@ -138,6 +139,7 @@ export async function updateProfile(
     : await supabase.rpc("set_favorite_genres", { slugs: genres });
   if (error || saved?.error)
     return { ok: false, error: "Não deu para salvar agora. Tente de novo." };
+  if (avatarPath) await pruneAvatars(viewer.id, avatarPath).catch(() => {});
 
   updateTag(`profile:${viewer.username}`);
   return { ok: true, data: undefined };
@@ -221,6 +223,22 @@ export async function changePassword(
  * livros que a pessoa cadastrou ficam no catálogo, sem o nome dela. A foto
  * mora no Storage e sai antes.
  */
+/**
+ * Apaga da pasta da pessoa as fotos que não são a atual: a troca e as
+ * escolhidas e canceladas (o envio é direto do navegador, antes de salvar).
+ * Falhar aqui não desfaz o que foi salvo.
+ */
+async function pruneAvatars(userId: string, keepPath: string) {
+  const keep = keepPath.slice(`avatars/${userId}/`.length);
+  const admin = createAdminClient();
+  const { data: files } = await admin.storage.from("avatars").list(userId);
+  const old = (files ?? []).filter((file) => file.name !== keep);
+  if (old.length === 0) return;
+  await admin.storage
+    .from("avatars")
+    .remove(old.map((file) => `${userId}/${file.name}`));
+}
+
 export async function deleteAccount(input: {
   confirm: string;
 }): Promise<ActionResult> {

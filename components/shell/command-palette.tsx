@@ -6,6 +6,8 @@ import {
   BookPlus,
   Compass,
   CornerDownLeft,
+  FileText,
+  Heart,
   House,
   Library,
   LibraryBig,
@@ -19,6 +21,7 @@ import {
   Settings,
   Shapes,
   Shuffle,
+  ShieldCheck,
   SunMoon,
   UserPlus,
   type LucideIcon,
@@ -396,6 +399,31 @@ function PaletteBody({
     });
   }
 
+  // No fim da lista, para quem procura (não competem com o resto)
+  const about: PaletteCommand[] = [
+    {
+      id: "termos",
+      label: "Termos de uso",
+      keywords: "regras comunidade contrato",
+      icon: FileText,
+      run: () => go(routes.termos),
+    },
+    {
+      id: "privacidade",
+      label: "Privacidade",
+      keywords: "lgpd dados cookies política",
+      icon: ShieldCheck,
+      run: () => go(routes.privacidade),
+    },
+    {
+      id: "creditos",
+      label: "Créditos",
+      keywords: "readme bibliotecas licenças open library sobre",
+      icon: Heart,
+      run: () => go(routes.readme),
+    },
+  ];
+
   const matching = (list: PaletteCommand[]) =>
     term
       ? list.filter((command) =>
@@ -404,6 +432,7 @@ function PaletteBody({
       : list;
   const shownActions = matching(actions);
   const shownPlaces = matching(places);
+  const shownAbout = matching(about);
   const results = searching ? search.data : undefined;
 
   // Os resultados chegam depois da letra digitada: quando o primeiro muda,
@@ -415,6 +444,7 @@ function PaletteBody({
     ...(results?.collections ?? []).map((item) => `colecao:${item.id}`),
     ...shownActions.map((command) => `acao:${command.id}`),
     ...shownPlaces.map((command) => `ir:${command.id}`),
+    ...shownAbout.map((command) => `sobre:${command.id}`),
   ];
   const first = keys[0] ?? "";
   const [selected, setSelected] = useState(first);
@@ -568,6 +598,11 @@ function PaletteBody({
         {shownPlaces.length > 0 ? (
           <Command.Group heading="Ir para" className={groupClasses}>
             {commandItems(shownPlaces, "ir")}
+          </Command.Group>
+        ) : null}
+        {shownAbout.length > 0 ? (
+          <Command.Group heading="Sobre o MyBooks" className={groupClasses}>
+            {commandItems(shownAbout, "sobre")}
           </Command.Group>
         ) : null}
         {nothing ? (

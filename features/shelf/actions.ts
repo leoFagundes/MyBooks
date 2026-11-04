@@ -19,6 +19,8 @@ import {
   type CopyBookInput,
   copyBookSchema,
   currentPageSchema,
+  type FinishReadingInput,
+  finishReadingSchema,
   type ImportedBook,
   importBatchSchema,
   latestDay,
@@ -221,6 +223,51 @@ export async function startReading(
   }
   updateTag(`shelf:${viewer.id}`);
   updateTag(`book:${parsed.data.bookId}`);
+  return { ok: true, data: undefined };
+}
+
+/**
+ * "Terminei", no Lendo agora do Início: o livro passa de Lendo a Lido, com a
+ * página na última, a nota e a resenha (se veio). Só mexe em livro que ainda
+ * está em Lendo.
+ */
+export async function finishReading(
+  input: FinishReadingInput,
+): Promise<ActionResult> {
+  const parsed = finishReadingSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Confira a nota.",
+    };
+  }
+  const viewer = await requireViewer();
+  const { bookId, finishedAt, rating, review } = parsed.data;
+  const supabase = await createClient();
+  const { data: book } = await supabase
+    .from("books")
+    .select("page_count")
+    .eq("id", bookId)
+    .maybeSingle();
+  const { data, error } = await supabase
+    .from("user_books")
+    .update({
+      status: "read",
+      finished_at: finishedAt,
+      rating,
+      ...(review ? { review } : {}),
+      ...(book?.page_count ? { current_page: book.page_count } : {}),
+    })
+    .eq("user_id", viewer.id)
+    .eq("book_id", bookId)
+    .eq("status", "reading")
+    .select("book_id");
+  if (error) return { ok: false, error: "Não deu para salvar. Tente de novo." };
+  if (data.length === 0) {
+    return { ok: false, error: "Esse livro já não está em Lendo." };
+  }
+  updateTag(`shelf:${viewer.id}`);
+  updateTag(`book:${bookId}`);
   return { ok: true, data: undefined };
 }
 

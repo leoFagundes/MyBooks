@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReturningCover } from "@/features/books/components/returning-cover";
+import { getShelfConversations } from "@/features/community/queries";
+import { AffinityPicks } from "@/features/home/components/affinity-picks";
+import { Conversations } from "@/features/home/components/conversations";
+import { Greeting } from "@/features/home/components/greeting";
+import { HomeQuote } from "@/features/home/components/home-quote";
+import { NextRead } from "@/features/home/components/next-read";
+import { getAffinityPicks, getHomeQuotes } from "@/features/home/queries";
 import { getProfileCounts } from "@/features/profile/queries";
 import { ReadingNow } from "@/features/shelf/components/reading-now";
+import { pickRandom } from "@/features/shelf/lib/pick-random";
 import { getShelf } from "@/features/shelf/queries";
 import { Feed } from "@/features/social/components/feed/feed";
 import { FeedEmpty } from "@/features/social/components/feed/feed-empty";
@@ -20,7 +30,12 @@ export const metadata: Metadata = { title: "Início" };
 // clique: o roteador reaproveita estes dados por 5 minutos (ver o perfil)
 export const unstable_dynamicStaleTime = 300;
 
-/** Início (spec §5.3): "Lendo agora" e o que acontece com quem você segue. */
+/**
+ * Início (spec §5.3): "Lendo agora" (ou a próxima leitura) e o que acontece
+ * com quem você segue; ao lado, uma citação, as conversas sobre os seus
+ * livros e o que leitores parecidos leram. No celular, uma coluna só, com o
+ * feed por último (ele rola sem fim).
+ */
 export default function HomePage() {
   return (
     <PageTransition>
@@ -43,41 +58,82 @@ async function Home() {
   ]);
   const firstName = viewer.displayName.split(/\s+/)[0] || viewer.displayName;
   const reading = shelf.filter((item) => item.status === "reading");
+  const queue = shelf
+    .filter((item) => item.status === "want")
+    .map((item) => ({ ...item.book, genres: item.genres }));
+  const ownedIds = shelf.map((item) => item.book.id);
+  const lived = shelf
+    .filter((item) => item.status === "read" || item.status === "reading")
+    .map((item) => item.book.id);
+  // O que vai ao lado não segura a página: sem resposta, o bloco não aparece
+  const [conversations, picks, quotes] = await Promise.all([
+    getShelfConversations(viewer.id, lived).catch(() => []),
+    getAffinityPicks(viewer.id, ownedIds).catch(() => []),
+    getHomeQuotes(viewer.id).catch(() => []),
+  ]);
+  // Uma citação diferente a cada visita: o sorteio é do pedido, não do cache
+  await connection();
+  const quote = quotes.length > 0 ? pickRandom(quotes) : null;
+  const queueAside = reading.length > 0 && queue.length > 0;
+  const aside =
+    quote !== null ||
+    queueAside ||
+    conversations.length > 0 ||
+    picks.length > 0;
 
   return (
     <>
       <header className="flex flex-col gap-2">
-        <h1 className="font-serif text-4xl tracking-tight sm:text-5xl">
-          Oi, {firstName}.
-        </h1>
+        <Greeting name={firstName} />
         {shelf.length > 0 ? (
-          <p className="font-mono text-xs text-muted-foreground">
+          <Link
+            href={routes.profile(viewer.username)}
+            className="self-start rounded-sm font-mono text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
             {shelf.length === 1
               ? "1 livro na estante"
               : `${formatNumber(shelf.length)} livros na estante`}
-          </p>
+          </Link>
         ) : null}
       </header>
-      <ReadingNow entries={reading} />
-      {feed.groups.length > 0 ? (
-        <section
-          aria-labelledby="quem-voce-segue"
-          className="flex max-w-2xl flex-col gap-6"
-        >
-          <h2
-            id="quem-voce-segue"
-            className="font-serif text-2xl tracking-tight"
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-14">
+        <div className="flex min-w-0 flex-col gap-12 lg:col-start-1 lg:row-start-1">
+          <ReadingNow entries={reading} />
+          {reading.length === 0 ? <NextRead books={queue} /> : null}
+        </div>
+        {aside ? (
+          <aside
+            aria-label="Para você"
+            className="flex min-w-0 flex-col gap-10 lg:col-start-2 lg:row-span-2 lg:row-start-1"
           >
-            Quem você segue
-          </h2>
-          <Feed first={feed} ownedIds={shelf.map((item) => item.book.id)} />
-        </section>
-      ) : (
-        <FeedEmpty
-          viewerId={viewer.id}
-          followsSomeone={(counts?.following ?? 0) > 0}
-        />
-      )}
+            {quote ? <HomeQuote quote={quote} viewerId={viewer.id} /> : null}
+            {queueAside ? <NextRead books={queue} compact /> : null}
+            <Conversations conversations={conversations} />
+            <AffinityPicks picks={picks} />
+          </aside>
+        ) : null}
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          {feed.groups.length > 0 ? (
+            <section
+              aria-labelledby="quem-voce-segue"
+              className="flex max-w-2xl flex-col gap-6"
+            >
+              <h2
+                id="quem-voce-segue"
+                className="font-serif text-2xl tracking-tight"
+              >
+                Quem você segue
+              </h2>
+              <Feed first={feed} ownedIds={ownedIds} />
+            </section>
+          ) : (
+            <FeedEmpty
+              viewerId={viewer.id}
+              followsSomeone={(counts?.following ?? 0) > 0}
+            />
+          )}
+        </div>
+      </div>
     </>
   );
 }

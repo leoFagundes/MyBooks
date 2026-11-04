@@ -2,8 +2,9 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyBookScope } from "@/features/shelf/components/copy-book";
 import {
@@ -12,11 +13,26 @@ import {
   staggerDelay,
   tweens,
 } from "@/lib/motion";
-import type { FeedCursor, FeedPage } from "../../types";
+import type { ActivityType, FeedCursor, FeedPage } from "../../types";
 import { FeedCard } from "./feed-card";
 
 // Os primeiros cards entram em sequência; os que chegam rolando, um a um
 const SEQUENCED_ITEMS = 8;
+
+const FILTERS = [
+  { value: "tudo", label: "Tudo" },
+  { value: "leituras", label: "Leituras" },
+  { value: "colecoes", label: "Coleções" },
+  { value: "pessoas", label: "Pessoas" },
+] as const;
+type FeedFilter = (typeof FILTERS)[number]["value"];
+
+function inFilter(type: ActivityType, filter: FeedFilter) {
+  if (filter === "leituras") return type.startsWith("shelf_");
+  if (filter === "colecoes") return type.startsWith("collection_");
+  if (filter === "pessoas") return type === "follow";
+  return true;
+}
 
 /**
  * Cada card entra quando aparece (spec §3, momento 3). O grupo de entradas
@@ -102,10 +118,30 @@ export function Feed({
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
-  const groups = feed.data.pages.flatMap((page) => page.groups);
+  const [filter, setFilter] = useState<FeedFilter>("tudo");
+  const groups = feed.data.pages
+    .flatMap((page) => page.groups)
+    .filter((group) => inFilter(group.type, filter));
 
   return (
     <CopyBookScope>
+      {/* Para quem segue muita gente: o filtro é sobre o que já chegou, e a
+          rolagem continua buscando mais */}
+      <div className="@container mb-6 flex flex-col">
+        <SegmentedControl<FeedFilter>
+          aria-label="Mostrar no feed"
+          size="sm"
+          value={filter}
+          onValueChange={setFilter}
+          options={FILTERS}
+          className="grid grid-cols-2 @min-[24rem]:inline-flex @min-[24rem]:self-start"
+        />
+      </div>
+      {groups.length === 0 && !hasNextPage ? (
+        <p className="text-sm text-muted-foreground">
+          Nada desse tipo por enquanto.
+        </p>
+      ) : null}
       <div className="flex flex-col gap-8">
         {groups.map((group, index) => (
           <FeedItem key={group.key} index={index}>

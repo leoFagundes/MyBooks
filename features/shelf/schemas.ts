@@ -131,6 +131,19 @@ export const reviewSchema = z
   .max(10_000, "Até 10 mil caracteres")
   .transform((review) => review || null);
 
+/**
+ * "Terminei" no Lendo agora: o livro passa a Lido no dia de quem leu, com a
+ * nota e, se quiser, uma resenha curta.
+ */
+export const finishReadingSchema = z.object({
+  bookId: z.uuid(),
+  finishedAt: daySchema,
+  rating: ratingSchema.nullable(),
+  review: reviewSchema.optional(),
+});
+
+export type FinishReadingInput = z.input<typeof finishReadingSchema>;
+
 /** Citação: o trecho (até mil caracteres) e, se a pessoa quiser, a página. */
 export const quoteSchema = z.object({
   text: z

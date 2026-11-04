@@ -326,3 +326,71 @@ export async function getTopicTitle(id: string): Promise<string | null> {
     .maybeSingle();
   return data?.title ?? null;
 }
+
+/** Uma conversa do Início: o tópico e o motivo de ele aparecer. */
+export type ShelfConversation = {
+  topic: TopicSummary;
+  /** O livro da estante de quem vê de que o tópico fala, se houver. */
+  book: BookVisual | null;
+  /** A pessoa segue o tópico (abriu, respondeu ou pediu para seguir). */
+  following: boolean;
+};
+
+/**
+ * As conversas do Início: os tópicos sobre os livros da estante de quem vê e
+ * os que ela segue, do mais movimentado ao menos. Tópico sem resposta, aberto
+ * por ela mesma, não conta (não há conversa para ver).
+ */
+export async function getShelfConversations(
+  viewerId: string,
+  bookIds: string[],
+  limit = 4,
+): Promise<ShelfConversation[]> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag("forum", `shelf:${viewerId}`);
+
+  const supabase = await createClient();
+  const [links, subscriptions] = await Promise.all([
+    bookIds.length > 0
+      ? supabase
+          .from("forum_topic_books")
+          .select("topic_id")
+          .in("book_id", bookIds.slice(0, 200))
+          .limit(100)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("forum_subscriptions")
+      .select("topic_id")
+      .eq("user_id", viewerId)
+      .limit(100),
+  ]);
+  if (links.error) throw links.error;
+  if (subscriptions.error) throw subscriptions.error;
+  const following = new Set(subscriptions.data.map((row) => row.topic_id));
+  const ids = [
+    ...new Set([...links.data.map((row) => row.topic_id), ...following]),
+  ];
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("forum_topics")
+    .select(TOPIC)
+    .in("id", ids)
+    .is("hidden_at", null)
+    .order("last_activity_at", { ascending: false })
+    .limit(limit * 3);
+  if (error) throw error;
+  const mine = new Set(bookIds);
+  return ((data ?? []) as unknown as TopicRow[])
+    .map(toSummary)
+    .filter(
+      (topic) => !(topic.author?.id === viewerId && topic.replyCount === 0),
+    )
+    .slice(0, limit)
+    .map((topic) => ({
+      topic,
+      book: topic.books.find((book) => mine.has(book.id)) ?? null,
+      following: following.has(topic.id),
+    }));
+}

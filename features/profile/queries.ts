@@ -295,6 +295,22 @@ export function canSeeContent(
 }
 
 /** O e-mail da conta de quem está vendo, das claims da sessão. */
+/**
+ * Se a conta tem senha: com ela, trocar a senha e excluir a conta pedem a
+ * atual; sem ela (só Google ou link mágico), pedem uma entrada recente.
+ */
+export async function getAccountHasPassword(
+  username: string,
+): Promise<boolean> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`profile:${username}`);
+
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("viewer_has_password");
+  return data === true;
+}
+
 export async function getAccountEmail(
   username: string,
 ): Promise<string | null> {

@@ -217,15 +217,20 @@ export function UsersTable({
         );
       },
     }),
-    helper.accessor("email", {
-      header: "E-mail",
-      enableSorting: false,
-      cell: ({ getValue }) => (
-        <span className="font-mono text-xs break-all text-muted-foreground">
-          {getValue() ?? "—"}
-        </span>
-      ),
-    }),
+    // O e-mail é só do admin (o banco nem manda para quem modera)
+    ...(role === "admin"
+      ? [
+          helper.accessor("email", {
+            header: "E-mail",
+            enableSorting: false,
+            cell: ({ getValue }) => (
+              <span className="font-mono text-xs break-all text-muted-foreground">
+                {getValue() ?? "—"}
+              </span>
+            ),
+          }),
+        ]
+      : []),
     helper.accessor("createdAt", {
       id: "created_at",
       header: "Entrou",
@@ -318,8 +323,12 @@ export function UsersTable({
           />
           <Input
             type="search"
-            aria-label="Buscar por nome, @ ou e-mail"
-            placeholder="Nome, @ ou e-mail"
+            aria-label={
+              role === "admin"
+                ? "Buscar por nome, @ ou e-mail"
+                : "Buscar por nome ou @"
+            }
+            placeholder={role === "admin" ? "Nome, @ ou e-mail" : "Nome ou @"}
             value={state.q}
             onChange={(event) => update({ q: event.target.value })}
             className="pl-9"

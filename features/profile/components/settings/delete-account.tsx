@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/features/auth/components/auth-card";
+import { PasswordInput } from "@/features/auth/components/password-input";
 import { routes } from "@/lib/routes";
 import { deleteAccount } from "../../actions";
 
@@ -23,10 +24,18 @@ import { deleteAccount } from "../../actions";
  * Excluir a conta: o diálogo só libera o botão com o @ digitado. Depois, a
  * página recarrega do zero na landing, que agradece pelas leituras.
  */
-export function DeleteAccount({ username }: { username: string }) {
+export function DeleteAccount({
+  username,
+  hasPassword,
+}: {
+  username: string;
+  /** Com senha, a atual confirma (uma sessão esquecida aberta não basta). */
+  hasPassword: boolean;
+}) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [deleting, startDeleting] = useTransition();
   const matches = typed.trim().toLowerCase().replace(/^@+/, "") === username;
@@ -38,9 +47,16 @@ export function DeleteAccount({ username }: { username: string }) {
       return;
     }
     startDeleting(async () => {
-      const result = await deleteAccount({ confirm: typed });
+      const result = await deleteAccount({
+        confirm: typed,
+        password: hasPassword ? password : undefined,
+      });
       if (!result.ok) {
-        setError(result.fieldErrors?.confirm ?? result.error);
+        setError(
+          result.fieldErrors?.confirm ??
+            result.fieldErrors?.password ??
+            result.error,
+        );
         return;
       }
       // Recarrega do zero, como o sair: nada da sessão antiga fica na memória
@@ -58,6 +74,7 @@ export function DeleteAccount({ username }: { username: string }) {
         setOpen(next);
         if (!next) {
           setTyped("");
+          setPassword("");
           setError(null);
         }
       }}
@@ -99,6 +116,27 @@ export function DeleteAccount({ username }: { username: string }) {
               message={error ?? undefined}
             />
           </div>
+          {hasPassword ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`${id}-senha`}>Sua senha</Label>
+              <PasswordInput
+                id={`${id}-senha`}
+                value={password}
+                autoComplete="current-password"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? `${id}-confirmar-erro` : undefined}
+                onChange={(event) => {
+                  setError(null);
+                  setPassword(event.target.value);
+                }}
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-pretty text-muted-foreground">
+              Por segurança, é preciso ter entrado na conta há menos de 10
+              minutos.
+            </p>
+          )}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="ghost" disabled={deleting}>
@@ -108,7 +146,7 @@ export function DeleteAccount({ username }: { username: string }) {
             <Button
               type="submit"
               variant="destructive"
-              disabled={!matches || deleting}
+              disabled={!matches || (hasPassword && !password) || deleting}
               aria-busy={deleting}
             >
               <SwapText

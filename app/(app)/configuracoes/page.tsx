@@ -9,6 +9,7 @@ import {
 } from "@/features/profile/components/settings/settings-sections";
 import {
   getAccountEmail,
+  getAccountHasPassword,
   getOwnFavoriteGenres,
   getProfileByUsername,
 } from "@/features/profile/queries";
@@ -45,9 +46,10 @@ export default function SettingsPage() {
 async function Settings() {
   const viewer = await requireViewer();
   if (!viewer.onboarded) redirect(routes.onboarding);
-  const [profile, email, genres, importing] = await Promise.all([
+  const [profile, email, hasPassword, genres, importing] = await Promise.all([
     getProfileByUsername(viewer.username),
     getAccountEmail(viewer.username),
+    getAccountHasPassword(viewer.username),
     getOwnFavoriteGenres(viewer),
     isFeatureOn("importar_goodreads"),
   ]);
@@ -57,6 +59,7 @@ async function Settings() {
       profile={profile}
       genres={genres}
       email={email}
+      hasPassword={hasPassword}
       importer={
         importing ? <GoodreadsImport username={profile.username} /> : undefined
       }

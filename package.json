@@ -30,7 +30,8 @@
     "capas:copiar": "tsx --conditions=react-server --env-file=.env.local scripts/copiar-capas.mts",
     "pwa:icones": "tsx scripts/gerar-icones.tsx",
     "pwa:capturas": "tsx scripts/gerar-capturas.mts",
-    "creditos": "node scripts/gerar-creditos.mjs"
+    "creditos": "node scripts/gerar-creditos.mjs",
+    "contas:teste": "tsx --env-file=.env.local scripts/contas-teste.mts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

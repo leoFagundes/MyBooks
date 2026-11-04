@@ -1715,6 +1715,7 @@ export type Database = {
           username: string
         }[]
       }
+      viewer_has_password: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

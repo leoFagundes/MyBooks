@@ -176,7 +176,11 @@ export type UserSummary = AdminUserRow & {
  * O perfil resumido de alguém no painel. Com a chave secreta: só depois de
  * conferir o papel de quem pede (requireStaff na rota).
  */
-export async function getUserSummary(id: string): Promise<UserSummary | null> {
+/** O resumo de alguém no painel; o e-mail, só para o admin (LGPD). */
+export async function getUserSummary(
+  id: string,
+  { withEmail }: { withEmail: boolean },
+): Promise<UserSummary | null> {
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
@@ -188,7 +192,7 @@ export async function getUserSummary(id: string): Promise<UserSummary | null> {
   if (!profile) return null;
   const [user, books, reviews, quotes, collections, roles, sanctions] =
     await Promise.all([
-      admin.auth.admin.getUserById(id),
+      withEmail ? admin.auth.admin.getUserById(id) : null,
       admin
         .from("user_books")
         .select("*", { count: "exact", head: true })
@@ -236,7 +240,7 @@ export async function getUserSummary(id: string): Promise<UserSummary | null> {
     username: profile.username,
     displayName: profile.display_name?.trim() || profile.username,
     avatarUrl: avatarSrc(profile.avatar_url, getPublicEnv().supabaseUrl),
-    email: user.data.user?.email ?? null,
+    email: user?.data.user?.email ?? null,
     createdAt: profile.created_at,
     books: books.count ?? 0,
     role: roleNames.includes("admin")

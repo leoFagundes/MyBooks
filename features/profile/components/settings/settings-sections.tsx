@@ -26,12 +26,15 @@ export function SettingsSections({
   profile,
   genres,
   email,
+  hasPassword,
   importer,
 }: {
   profile: ProfileSummary;
   /** Os favoritos com nome, inclusive os criados e ainda em análise. */
   genres: Genre[];
   email: string | null;
+  /** Com senha, trocar a senha e excluir a conta pedem a atual. */
+  hasPassword: boolean;
   /** A importação do Goodreads, que mora na estante. */
   importer?: React.ReactNode;
 }) {
@@ -81,7 +84,7 @@ export function SettingsSections({
               : "Você entra com a sua conta do Google."
           }
         >
-          <PasswordForm />
+          <PasswordForm hasPassword={hasPassword} />
           <SignOutButton />
         </SettingsSection>
       </StaggerItem>
@@ -152,7 +155,10 @@ export function SettingsSections({
           title="Excluir conta"
           description="Para sempre: não dá para desfazer depois."
         >
-          <DeleteAccount username={profile.username} />
+          <DeleteAccount
+            username={profile.username}
+            hasPassword={hasPassword}
+          />
         </SettingsSection>
       </StaggerItem>
     </Stagger>

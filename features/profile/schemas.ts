@@ -83,6 +83,8 @@ export const passwordChangeSchema = z
       )
       .max(72, "Até 72 caracteres"),
     confirm: z.string(),
+    /** A senha atual (quem tem senha confirma com ela; o servidor confere). */
+    current: z.string().max(72).optional(),
   })
   .refine((values) => values.password === values.confirm, {
     path: ["confirm"],
@@ -93,6 +95,8 @@ export type PasswordChangeValues = z.input<typeof passwordChangeSchema>;
 
 /** Excluir a conta só com o @ digitado (com ou sem a arroba). */
 export const deleteAccountSchema = z.object({
+  /** A senha atual, para quem tem (o servidor confere). */
+  password: z.string().max(72).optional(),
   confirm: z
     .string()
     .trim()

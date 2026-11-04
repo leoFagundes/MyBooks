@@ -14,8 +14,11 @@ import { PASSWORD_MIN } from "@/features/auth/schemas";
 import { changePassword } from "../../actions";
 import { type PasswordChangeValues, passwordChangeSchema } from "../../schemas";
 
-/** Senha nova, com confirmação. Serve também para quem nunca teve senha. */
-export function PasswordForm() {
+/**
+ * Senha nova, com confirmação. Quem tem senha confirma com a atual; quem
+ * nunca teve (Google, link mágico) cria a primeira logo depois de entrar.
+ */
+export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
   const id = useId();
   const [serverError, setServerError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
@@ -27,7 +30,7 @@ export function PasswordForm() {
     formState: { errors },
   } = useForm<PasswordChangeValues>({
     resolver: zodResolver(passwordChangeSchema),
-    defaultValues: { password: "", confirm: "" },
+    defaultValues: { password: "", confirm: "", current: "" },
   });
 
   const submit = handleSubmit((values) => {
@@ -41,7 +44,11 @@ export function PasswordForm() {
       }
       const fields = Object.entries(result.fieldErrors ?? {});
       for (const [field, message] of fields) {
-        if (field === "password" || field === "confirm") {
+        if (
+          field === "password" ||
+          field === "confirm" ||
+          field === "current"
+        ) {
           setError(field, { message });
         }
       }
@@ -54,6 +61,24 @@ export function PasswordForm() {
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
       <FormAlert message={serverError} />
+      {hasPassword ? (
+        <div className="flex flex-col gap-1.5 sm:max-w-[calc(50%-0.5rem)]">
+          <Label htmlFor={`${id}-atual`}>Senha atual</Label>
+          <PasswordInput
+            id={`${id}-atual`}
+            autoComplete="current-password"
+            aria-invalid={errors.current ? true : undefined}
+            aria-describedby={errors.current ? errorId("atual") : undefined}
+            {...register("current")}
+          />
+          <FieldError id={errorId("atual")} message={errors.current?.message} />
+        </div>
+      ) : (
+        <p className="text-sm text-pretty text-muted-foreground">
+          Você entra pelo Google ou por link no e-mail. Para criar uma senha,
+          por segurança, é preciso ter entrado há menos de 10 minutos.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${id}-senha`}>Senha nova</Label>

@@ -7,6 +7,7 @@ import { authErrorMessage } from "@/features/auth/errors";
 import { requireViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { confirmIdentity } from "./lib/confirm-identity";
 import { createClient } from "@/lib/supabase/server";
 import { isFeatureOn } from "@/features/admin/queries";
 import { type Genre, genreSlug } from "./lib/genre-name";
@@ -210,6 +211,17 @@ export async function changePassword(
   }
   await requireViewer();
   const supabase = await createClient();
+  // Uma sessão esquecida aberta não basta para tomar a conta
+  const confirmed = await confirmIdentity(supabase, parsed.data.current);
+  if (!confirmed.ok) {
+    return confirmed.field
+      ? {
+          ok: false,
+          error: confirmed.error,
+          fieldErrors: { current: confirmed.error },
+        }
+      : { ok: false, error: confirmed.error };
+  }
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.password,
   });
@@ -241,12 +253,27 @@ async function pruneAvatars(userId: string, keepPath: string) {
 
 export async function deleteAccount(input: {
   confirm: string;
+  password?: string;
 }): Promise<ActionResult> {
   const viewer = await requireViewer();
   const parsed = deleteAccountSchema.safeParse(input);
   if (!parsed.success || parsed.data.confirm !== viewer.username) {
     const message = `Digite @${viewer.username} para confirmar`;
     return { ok: false, error: message, fieldErrors: { confirm: message } };
+  }
+
+  const confirmed = await confirmIdentity(
+    await createClient(),
+    parsed.data.password,
+  );
+  if (!confirmed.ok) {
+    return confirmed.field
+      ? {
+          ok: false,
+          error: confirmed.error,
+          fieldErrors: { password: confirmed.error },
+        }
+      : { ok: false, error: confirmed.error };
   }
 
   const admin = createAdminClient();

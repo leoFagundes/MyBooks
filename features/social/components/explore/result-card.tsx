@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,7 +27,7 @@ export const COVER_GRID =
  * Um livro na grade do Explorar: a capa, o título e o selo da origem
  * (MELHORIAS 5.2). Do catálogo, leva à página dele (a capa viaja); de fora, o
  * clique o traz para o catálogo e abre a página. Na busca, o de fora ganha o
- * botão explícito "Cadastrar no MyBooks" (`register`).
+ * botão explícito "Cadastrar" (`register`).
  */
 export function ResultCard({
   result,
@@ -36,11 +37,12 @@ export function ResultCard({
   result: SearchResult;
   /** Como o servidor acha o livro de fora (a busca ou o conjunto da grade). */
   outside: Exclude<BookRef, { catalogId: string }> | null;
-  /** Mostra "Cadastrar no MyBooks" no livro de fora. */
+  /** Mostra "Cadastrar" no livro de fora. */
   register?: boolean;
 }) {
   const { enabled: signedIn } = useAddBook();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [opening, startOpening] = useTransition();
   const visual = resultVisual(result);
   const { catalogId } = result;
@@ -62,7 +64,11 @@ export function ResultCard({
         }),
       });
       const id = await bringing.catch(() => null);
-      if (id) router.push(routes.book(id));
+      if (!id) return;
+      // As buscas guardadas no navegador ainda o têm como "de fora": refeitas,
+      // ele aparece no MyBooks (e não dá para cadastrar de novo)
+      void queryClient.invalidateQueries({ queryKey: ["busca-livros"] });
+      router.push(routes.book(id));
     });
   }
 
@@ -109,19 +115,19 @@ export function ResultCard({
             size="sm"
             disabled={opening}
             onClick={open}
-            className="mt-2 self-start"
+            aria-label={
+              opening ? undefined : `Cadastrar ${result.title} no MyBooks`
+            }
+            className="mt-2 w-full"
           >
-            <Plus aria-hidden />
-            {opening ? "Cadastrando…" : "Cadastrar no MyBooks"}
+            <Plus aria-hidden className="max-sm:hidden" />
+            {opening ? "Cadastrando…" : "Cadastrar"}
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="mt-2 self-start"
-          >
+          <Button variant="outline" size="sm" asChild className="mt-2 w-full">
+            {/* Sem conta, o mesmo botão leva a entrar */}
             <Link
+              aria-label={`Cadastrar ${result.title} no MyBooks (entrar)`}
               href={{
                 pathname: routes.entrar,
                 query: {
@@ -133,7 +139,8 @@ export function ResultCard({
                 },
               }}
             >
-              Entrar para cadastrar
+              <Plus aria-hidden className="max-sm:hidden" />
+              Cadastrar
             </Link>
           </Button>
         )

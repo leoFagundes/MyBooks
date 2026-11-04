@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   use,
@@ -86,6 +87,10 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
+  const queryClient = useQueryClient();
+  const refreshSearches = () =>
+    void queryClient.invalidateQueries({ queryKey: ["busca-livros"] });
+
   function save(
     book: ChosenBook,
     details: ShelfDetails,
@@ -120,7 +125,8 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
                 },
         }),
       });
-      await saving.catch(() => {});
+      // O livro de fora entrou no catálogo: as buscas guardadas o refazem
+      if (await saving.then(() => true).catch(() => false)) refreshSearches();
     });
   }
 
@@ -146,7 +152,7 @@ export function AddBookProvider({ children }: { children: React.ReactNode }) {
           },
         }),
       });
-      await adding.catch(() => {});
+      if (await adding.then(() => true).catch(() => false)) refreshSearches();
     });
   }
 

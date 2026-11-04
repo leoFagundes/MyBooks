@@ -11,3 +11,5 @@ supabase/templates
 lib/supabase/database.types.ts
 # Arquivos da CLI do Supabase (supabase link)
 supabase/.temp
+# Gerado no postbuild (scripts/gerar-sw.mjs)
+public/sw.js

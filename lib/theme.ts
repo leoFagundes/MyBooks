@@ -21,6 +21,17 @@ export function resolveTheme(
 export function applyTheme(root: HTMLElement, theme: ResolvedTheme) {
   root.setAttribute("data-theme", theme);
   root.style.colorScheme = theme;
+  // A barra do sistema (e a do app instalado) segue o tema escolhido aqui,
+  // não só o do aparelho: as duas metas do layout passam a ter a mesma cor
+  const background = getComputedStyle(root)
+    .getPropertyValue("--background")
+    .trim();
+  if (!background) return;
+  for (const meta of document.querySelectorAll<HTMLMetaElement>(
+    'meta[name="theme-color"]',
+  )) {
+    meta.content = background;
+  }
 }
 
 // Roda no <head>, antes da primeira pintura, como texto: não pode importar nada.

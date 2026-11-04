@@ -4,6 +4,7 @@ import { ThemeSelect } from "@/components/shell/theme-select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InstallAppButton } from "@/features/pwa/components/install-app-button";
 import { initials } from "@/lib/initials";
 import { routes } from "@/lib/routes";
 import type { Genre } from "../../lib/genre-name";
@@ -102,6 +103,16 @@ export function SettingsSections({
           description="Claro, escuro ou o mesmo do seu aparelho."
         >
           <ThemeSelect className="self-start" />
+        </SettingsSection>
+      </StaggerItem>
+
+      <StaggerItem>
+        <SettingsSection
+          id="instalar-app"
+          title="Instalar o app"
+          description="O MyBooks na tela de início, abrindo direto, sem o navegador."
+        >
+          <InstallAppButton />
         </SettingsSection>
       </StaggerItem>
 

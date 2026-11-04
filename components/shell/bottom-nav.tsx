@@ -44,7 +44,7 @@ export function BottomNav({
         className={cn(
           "pointer-events-none flex justify-center",
           !preview &&
-            "fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden",
+            "fixed inset-x-0 bottom-0 z-40 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] md:hidden",
         )}
         style={preview ? undefined : { viewTransitionName: "site-pill" }}
       >

@@ -249,7 +249,8 @@ export function AddBookShortcut() {
   useEffect(() => {
     setEnabled(true);
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "n") return;
+      // O autopreenchimento do navegador (senha salva) dispara keydown sem key
+      if (!event.key || event.key.toLowerCase() !== "n") return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat)
         return;
       if (event.defaultPrevented || isTyping(event.target)) return;

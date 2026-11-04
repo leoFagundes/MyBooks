@@ -13,6 +13,7 @@ const OPEN_IN_MAINTENANCE = [
   "/auth",
   "/api",
   "/manutencao",
+  "/sem-conexao",
   "/robots.txt",
   "/sitemap.xml",
 ];
@@ -98,6 +99,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Fora: arquivos do Next, imagens e as capas de exemplo em public/
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|capas/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|capas/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

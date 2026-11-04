@@ -10,6 +10,24 @@ const nextConfig: NextConfig = {
     // (lado maior de 1200px), bem abaixo disso; o servidor recusa acima de 2 MB
     serverActions: { bodySizeLimit: "3mb" },
   },
+  // O service worker nunca fica em cache: a versão nova chega na hora
+  headers() {
+    return Promise.resolve([
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self'",
+          },
+        ],
+      },
+    ]);
+  },
   // O perfil tem URL pública /@usuario, servida por app/(app)/u/[username]
   rewrites() {
     return [

@@ -316,6 +316,102 @@ async function auditAs(
 const book = (slug: string) => seedId("book", slug);
 
 /** Uma leitora com a estante cheia: lendo, lidos com nota, citações e coleção. */
+/**
+ * Um tópico com o que mais estica a página (títulos, card de livro, citação,
+ * lista, spoiler, tags longas e respostas aninhadas) e uma sugestão com a
+ * resposta oficial. A conta é envelhecida antes: conta de menos de um dia só
+ * publica uma vez por minuto.
+ */
+async function seedCommunity(user: TestUser, staff: TestUser) {
+  const admin = adminClient();
+  const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+  for (const id of [user.id, staff.id]) {
+    const { error } = await admin
+      .from("profiles")
+      .update({ created_at: twoDaysAgo })
+      .eq("id", id);
+    if (error) throw error;
+  }
+  const { data: category, error: categoryError } = await admin
+    .from("forum_categories")
+    .select("id")
+    .eq("slug", "discussoes-de-livros")
+    .single();
+  if (categoryError) throw categoryError;
+  const { data: topic, error: topicError } = await admin
+    .from("forum_topics")
+    .insert({
+      category_id: category.id,
+      author_id: user.id,
+      title:
+        "Capitu traiu Bentinho? Uma releitura de Dom Casmurro com a cabeça de hoje",
+      body: `# Por que reler
+
+Machado escreve como quem sorri de canto, e a cada leitura **a dúvida muda de lugar**.
+
+[[livro:${book("dom-casmurro")}]]
+
+## O que eu reparei agora
+
+- Bentinho conta tudo depois, de memória
+- A cena do enterro de Escobar muda tudo
+- ||O retrato de Ezequiel não prova nada||
+
+> Olhos de cigana oblíqua e dissimulada.`,
+      tags: ["machado-de-assis", "releituras-de-classicos", "realismo"],
+      contains_spoilers: true,
+    })
+    .select("id")
+    .single();
+  if (topicError) throw topicError;
+  await admin
+    .from("forum_topic_books")
+    .insert({ topic_id: topic.id, book_id: book("dom-casmurro") });
+  const { data: reply, error: replyError } = await admin
+    .from("forum_replies")
+    .insert({
+      topic_id: topic.id,
+      author_id: staff.id,
+      body: "Li na escola e achei que era óbvio. Relendo adulta, a narração é que é suspeita: quem conta é o ciumento.",
+    })
+    .select("id")
+    .single();
+  if (replyError) throw replyError;
+  const { error: nestedError } = await admin.from("forum_replies").insert({
+    topic_id: topic.id,
+    author_id: user.id,
+    parent_id: reply.id,
+    quoted_reply_id: reply.id,
+    body: "Exatamente! E ele mesmo admite que a memória é um campo de ruínas.",
+  });
+  if (nestedError) throw nestedError;
+  const { data: suggestion, error: suggestionError } = await admin
+    .from("feature_suggestions")
+    .insert({
+      author_id: user.id,
+      title: "Marcar a página em que parei com um lembrete para continuar",
+      body: "Seria ótimo receber um aviso quando passo uma semana sem abrir o livro que estou lendo.",
+      category: "funcionalidade",
+      status: "planejada",
+      official_response:
+        "Boa ideia! Entrou no planejamento, junto com os avisos da estante.",
+      responded_by: staff.id,
+      responded_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (suggestionError) throw suggestionError;
+  const { error: commentError } = await admin
+    .from("suggestion_comments")
+    .insert({
+      suggestion_id: suggestion.id,
+      author_id: staff.id,
+      body: "Também queria, principalmente para os livros longos.",
+    });
+  if (commentError) throw commentError;
+  return { topicId: topic.id, suggestionId: suggestion.id };
+}
+
 async function seedReader(user: TestUser) {
   const admin = adminClient();
   const shelf = [
@@ -457,6 +553,12 @@ test("páginas abertas", async ({ browser, baseURL }) => {
       name: "nao-encontrado",
       path: "/livro/00000000-0000-4000-8000-000000000000",
     },
+    { name: "comunidade", path: "/comunidade" },
+    { name: "sugestoes", path: "/sugestoes" },
+    { name: "creditos", path: "/readme" },
+    { name: "termos", path: "/termos" },
+    { name: "privacidade", path: "/privacidade" },
+    { name: "sem-conexao", path: "/sem-conexao" },
     { name: "dev", path: "/dev" },
     { name: "dev-livro", path: "/dev/livro/dom-casmurro" },
     { name: "dev-colecao", path: "/dev/colecao/classicos-brasileiros" },
@@ -493,6 +595,51 @@ test("leitora com a estante cheia", async ({ browser, baseURL }) => {
     );
   } finally {
     await deleteTestUser(user.id);
+  }
+});
+
+test("comunidade e painel, com a equipe", async ({ browser, baseURL }) => {
+  const user = await createTestUser({
+    onboarded: true,
+    displayName: "Ariadne Albuquerque Nogueira",
+  });
+  const staff = await createTestUser({ onboarded: true, displayName: "Iara" });
+  try {
+    const { error } = await adminClient()
+      .from("user_roles")
+      .insert({ user_id: staff.id, role: "admin" });
+    if (error) throw error;
+    const { topicId, suggestionId } = await seedCommunity(user, staff);
+    await auditAs(
+      browser,
+      [
+        { name: "comunidade-com-conta", path: "/comunidade" },
+        { name: "topico", path: `/comunidade/${topicId}` },
+        { name: "sugestoes-com-conta", path: "/sugestoes" },
+        { name: "sugestao", path: `/sugestoes/${suggestionId}` },
+        { name: "livro-com-discussao", path: `/livro/${book("dom-casmurro")}` },
+      ],
+      user,
+      baseURL ?? "",
+    );
+    await auditAs(
+      browser,
+      [
+        { name: "admin", path: "/admin" },
+        { name: "admin-usuarios", path: "/admin/usuarios" },
+        { name: "admin-moderacao", path: "/admin/moderacao" },
+        { name: "admin-livros", path: "/admin/livros" },
+        { name: "admin-configuracoes", path: "/admin/configuracoes" },
+        { name: "admin-auditoria", path: "/admin/auditoria" },
+        { name: "topico-da-equipe", path: `/comunidade/${topicId}` },
+        { name: "sugestao-da-equipe", path: `/sugestoes/${suggestionId}` },
+      ],
+      staff,
+      baseURL ?? "",
+    );
+  } finally {
+    await deleteTestUser(user.id);
+    await deleteTestUser(staff.id);
   }
 });
 

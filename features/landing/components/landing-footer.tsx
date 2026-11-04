@@ -34,7 +34,7 @@ export function LandingCallToAction() {
   );
 }
 
-/** O rodapé: a marca, os caminhos e o crédito da Open Library. */
+/** O rodapé: a marca, os caminhos, as páginas legais e o crédito da Open Library. */
 export function LandingFooter() {
   return (
     <footer className="border-t border-border">
@@ -52,6 +52,15 @@ export function LandingFooter() {
           </Link>
           <Link href={routes.cadastro} className={quietLink}>
             Criar conta
+          </Link>
+          <Link href={routes.readme} className={quietLink}>
+            Créditos
+          </Link>
+          <Link href={routes.termos} className={quietLink}>
+            Termos
+          </Link>
+          <Link href={routes.privacidade} className={quietLink}>
+            Privacidade
           </Link>
         </nav>
         <p className="font-mono text-xs text-muted-foreground">

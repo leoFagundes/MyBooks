@@ -243,6 +243,9 @@
 
   body {
     @apply min-h-dvh bg-background text-foreground;
+    /* viewport-fit=cover: de lado, o notch não cobre o conteúdo */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   ::selection {
@@ -257,6 +260,16 @@
   /* Ícones discretos: traço 1.5 em todo o app (spec §2) */
   svg.lucide {
     stroke-width: 1.5;
+  }
+}
+
+/* No toque, o iOS dá zoom em campo com letra abaixo de 16px. Fora das
+   camadas, vence o text-sm dos campos; zoom do usuário continua livre. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]),
+  textarea,
+  select {
+    font-size: 16px;
   }
 }
 

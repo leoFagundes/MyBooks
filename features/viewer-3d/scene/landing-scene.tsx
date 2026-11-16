@@ -13,11 +13,23 @@ import {
   Vector3,
 } from "three";
 import { INK_RGB, toHex } from "@/features/books/lib/color";
-import { hashString } from "@/features/books/lib/hash";
-import { spineHeight, spineWidth } from "@/features/books/lib/spine";
 import type { BookVisual } from "@/features/books/types";
 import { easing } from "@/lib/motion";
-import { type BookDimensions, bookDimensionsForSpine } from "../lib/dimensions";
+import type { BookDimensions } from "../lib/dimensions";
+import {
+  cameraDistance,
+  FLOAT_PX,
+  FLOAT_TURN,
+  FOV,
+  type LandingBlock,
+  type LandingSlot,
+  landingDimensions,
+  landingStart,
+  landingTime,
+  PX,
+  type Wave,
+  wave,
+} from "../lib/landing-layout";
 import { BookModel } from "./book-model";
 import {
   type LandingBookSurfaces,
@@ -33,19 +45,10 @@ export type LandingTarget = {
   height: number;
 };
 
-/** Onde o livro flutua no começo (frações do palco) e o quanto está perto. */
-export type LandingSlot = { x: number; y: number; depth: number };
+export type { LandingBlock, LandingSlot } from "../lib/landing-layout";
 
 /** O trecho da rolagem em que cada livro voa até a prateleira. */
 export type LandingFlight = { start: number; spread: number; length: number };
-
-/** Um bloco de texto do título, em px no palco, que os livros não cobrem. */
-export type LandingBlock = {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-};
 
 export type LandingSceneProps = {
   books: BookVisual[];
@@ -67,26 +70,7 @@ export type LandingSceneProps = {
   onReady: () => void;
 };
 
-// Um px do palco vale 1/100 de unidade no plano z = 0, onde ficam as lombadas
-const PX = 100;
-// Campo estreito: as lombadas no fim quase não mostram os lados
-const FOV = 22;
 const EASE = cubicBezier(...easing);
-// O tamanho de partida, sobre o da lombada: no celular, menor; na tela larga,
-// cheio a partir de FULL_WIDTH (px) e menor abaixo dela (no tablet em pé, os
-// livros do tamanho do computador se amontoavam)
-const NARROW_SCALE = 0.6;
-const WIDE_SCALE = 0.95;
-const FULL_WIDTH = 1280;
-// A flutuação, em px no plano e em radianos
-const FLOAT_PX = 12;
-const FLOAT_TURN = 0.09;
-// Sem a história, a cena acaba no meio da página e tem o texto no meio:
-// cada livro, com a flutuação e mais esta folga (px), fica inteiro dentro
-// dela e fora do texto, menor se o espaço for curto; se nem com esta fração
-// do tamanho ele couber, fica de fora
-const FLOAT_MARGIN = 8;
-const MIN_FIT = 0.6;
 // Sem o verniz da capa (o material físico, caro com muitos livros), a lombada
 // sairia uns 5% mais escura que a da página, que assume no fim
 const VARNISH_LIGHT = 0.35;
@@ -100,71 +84,6 @@ const SHADOW_SPREAD = 0.12;
 // dev) desmonta e monta de novo na hora, e a volta pelo histórico também
 const RELEASE_MS = 2000;
 
-const cameraDistance = (heightPx: number) =>
-  heightPx / PX / 2 / Math.tan((FOV * Math.PI) / 360);
-
-/** As medidas da lombada de verdade (as mesmas da BookSpine), em unidades. */
-const dimensionsOf = (book: BookVisual) =>
-  bookDimensionsForSpine(
-    spineHeight(book.id) / PX,
-    spineWidth(book.pageCount) / PX,
-  );
-
-/** Aleatório repetível por livro: a mesma flutuação a cada visita. */
-function seeded(seed: number) {
-  let state = seed || 1;
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 2 ** 32;
-  };
-}
-
-const overlaps = (a: LandingBlock, b: LandingBlock) =>
-  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-
-/**
- * Onde o livro flutua sem a história: na altura da vaga, se não cobrir o
- * texto; senão, acima ou abaixo dele (o lado da vaga), encolhido até caber.
- */
-function floatPlacement(
-  slot: LandingSlot,
-  dims: BookDimensions,
-  stage: { width: number; height: number },
-  startScale: number,
-  avoid: LandingBlock[],
-) {
-  const pad = FLOAT_PX + FLOAT_MARGIN;
-  const height = dims.height * PX * startScale;
-  const x = slot.x * stage.width;
-  const halfWidth = (dims.width * PX * startScale) / 2 + pad;
-  const inside = (y: number, top: number, bottom: number, fit: number) => {
-    const half = (height * fit) / 2 + pad;
-    return MathUtils.clamp(y, top + half, Math.max(top + half, bottom - half));
-  };
-  let top = 0;
-  let bottom = stage.height;
-  const y = inside(slot.y * stage.height, top, bottom, 1);
-  const half = height / 2 + pad;
-  const box = {
-    left: x - halfWidth,
-    right: x + halfWidth,
-    top: y - half,
-    bottom: y + half,
-  };
-  if (avoid.some((block) => overlaps(box, block))) {
-    const textTop = Math.min(...avoid.map((block) => block.top));
-    const textBottom = Math.max(...avoid.map((block) => block.bottom));
-    if (slot.y * stage.height < (textTop + textBottom) / 2) bottom = textTop;
-    else top = textBottom;
-  }
-  const fit = Math.min(1, (bottom - top - 2 * pad) / height);
-  if (fit < MIN_FIT) return null;
-  return {
-    y: inside(slot.y * stage.height, top, bottom, fit),
-    scale: startScale * fit,
-  };
-}
-
 type Plan = {
   start: Vector3;
   /** Onde pousa, em cima da lombada da página; sem a história, não pousa. */
@@ -173,7 +92,7 @@ type Plan = {
   endTurn: Quaternion;
   begin: number;
   /** Frequências (rad/s) e fases da flutuação, uma por eixo e por giro. */
-  waves: { speed: number; phase: number }[];
+  waves: [Wave, Wave, Wave, Wave, Wave];
 };
 
 function planBook(
@@ -198,30 +117,10 @@ function planBook(
       z,
     );
   };
+  const from = landingStart(book, slot, !target, avoid, dims, stage, wide);
+  if (!from) return null;
   // Perto é maior: a escala de partida vira a profundidade, pela perspectiva
-  let startScale =
-    slot.depth *
-    (wide
-      ? WIDE_SCALE * MathUtils.clamp(stage.width / FULL_WIDTH, 0.6, 1)
-      : NARROW_SCALE);
-  let y = slot.y * stage.height;
-  if (!target) {
-    const placement = floatPlacement(
-      slot,
-      dims,
-      stage,
-      startScale,
-      avoid ?? [],
-    );
-    if (!placement) return null;
-    y = placement.y;
-    startScale = placement.scale;
-  }
-  const start = toWorld(
-    slot.x * stage.width,
-    y,
-    distance * (1 - 1 / startScale),
-  );
+  const start = toWorld(from.x, from.y, distance * (1 - 1 / from.scale));
   // No fim, a lombada fica no plano z = 0, em cima da lombada da página: o
   // centro do livro, girado 90°, fica meia capa para trás
   let end: Vector3 | null = null;
@@ -230,33 +129,14 @@ function planBook(
     end.z = -dims.width / 2;
   }
 
-  const random = seeded(hashString(book.id));
-  // Partida de 3/4, nunca de perfil: um pouco da lombada ou da borda das
-  // folhas, e às vezes do alto
-  const side = random() < 0.5 ? -1 : 1;
   const startTurn = new Quaternion().setFromEuler(
-    new Euler(
-      -0.08 + random() * 0.22,
-      side * (0.34 + random() * 0.3),
-      (random() - 0.5) * 0.2,
-      "YXZ",
-    ),
+    new Euler(from.pitch, from.yaw, from.roll, "YXZ"),
   );
   const endTurn = new Quaternion().setFromEuler(new Euler(0, Math.PI / 2, 0));
-  // Cinco ondas sem relação entre si: x, y, e os três giros
-  const waves = Array.from({ length: 5 }, () => ({
-    speed: 0.35 + random() * 0.45,
-    phase: random() * Math.PI * 2,
-  }));
   const begin =
     flight.start + (total > 1 ? (index / (total - 1)) * flight.spread : 0);
-  return { start, end, startTurn, endTurn, begin, waves };
+  return { start, end, startTurn, endTurn, begin, waves: from.waves };
 }
-
-/** Uma onda suave: dois senos com razão irracional, que nunca se repetem juntos. */
-const wave = (time: number, { speed, phase }: Plan["waves"][number]) =>
-  Math.sin(time * speed + phase) * 0.7 +
-  Math.sin(time * speed * 2.17 + phase * 1.3) * 0.3;
 
 let shadowMap: CanvasTexture | null = null;
 
@@ -296,8 +176,9 @@ function FlyingBook({
   const group = useRef<Group>(null);
   const shade = useRef<MeshBasicMaterial>(null);
   // O relógio da flutuação para com a cena e segue de onde parou (o do R3F
-  // volta a zero quando o frameloop muda, e os livros saltariam)
-  const time = useRef(0);
+  // volta a zero quando o frameloop muda, e os livros saltariam). Começa onde
+  // estão as capas que seguravam o lugar: a troca não sai do lugar
+  const time = useRef<number | null>(null);
   const [scratch] = useState(() => ({
     euler: new Euler(0, 0, 0, "YXZ"),
     sway: new Quaternion(),
@@ -307,22 +188,20 @@ function FlyingBook({
   useFrame((_, delta) => {
     const node = group.current;
     if (!node) return;
-    time.current += Math.min(delta, 0.1);
+    const elapsed =
+      time.current === null
+        ? landingTime()
+        : time.current + Math.min(delta, 0.1);
+    time.current = elapsed;
     const end = plan.end ?? plan.start;
     const t = plan.end
       ? MathUtils.clamp((progress.get() - plan.begin) / flightLength, 0, 1)
       : 0;
     const k = EASE(t);
     const loose = 1 - k;
-    const [wx, wy, wPitch, wYaw, wRoll] = plan.waves as [
-      Plan["waves"][number],
-      Plan["waves"][number],
-      Plan["waves"][number],
-      Plan["waves"][number],
-      Plan["waves"][number],
-    ];
-    const floatX = (wave(time.current, wx) * FLOAT_PX * loose) / PX;
-    const floatY = (wave(time.current, wy) * FLOAT_PX * loose) / PX;
+    const [wx, wy, wPitch, wYaw, wRoll] = plan.waves;
+    const floatX = (wave(elapsed, wx) * FLOAT_PX * loose) / PX;
+    const floatY = (wave(elapsed, wy) * FLOAT_PX * loose) / PX;
     node.position.set(
       MathUtils.lerp(plan.start.x + floatX, end.x, k),
       MathUtils.lerp(plan.start.y + floatY, end.y, k),
@@ -331,9 +210,9 @@ function FlyingBook({
     // O balanço solto vai sumindo no voo, e o giro anda pelo caminho mais
     // curto (slerp): nenhum livro vira pelo lado errado
     scratch.euler.set(
-      wave(time.current, wPitch) * FLOAT_TURN * 0.6 * loose,
-      wave(time.current, wYaw) * FLOAT_TURN * loose,
-      wave(time.current, wRoll) * FLOAT_TURN * 0.5 * loose,
+      wave(elapsed, wPitch) * FLOAT_TURN * 0.6 * loose,
+      wave(elapsed, wYaw) * FLOAT_TURN * loose,
+      wave(elapsed, wRoll) * FLOAT_TURN * 0.5 * loose,
     );
     scratch.sway.setFromEuler(scratch.euler);
     scratch.from.copy(plan.startTurn).multiply(scratch.sway);
@@ -456,7 +335,7 @@ function Books({
     const target = targets ? targets[index] : null;
     return slot && target !== undefined ? [{ book, slot, target }] : [];
   });
-  const dims = entries.map(({ book }) => dimensionsOf(book));
+  const dims = entries.map(({ book }) => landingDimensions(book));
   // As medidas vêm só dos livros: medir a página de novo não recarrega nada
   const key = entries.map(({ book }) => book.id).join("|");
   const surfaces = use(

@@ -28,8 +28,10 @@ export const routes = {
   adminConfiguracoes: "/admin/configuracoes" as const satisfies Route,
   adminAuditoria: "/admin/auditoria" as const satisfies Route,
   profile: (username: string) => `/@${username}` as Route,
-  profileTab: (username: string, tab: "colecoes" | "citacoes") =>
-    `/@${username}/${tab}` as Route,
+  profileTab: (
+    username: string,
+    tab: "colecoes" | "citacoes" | "publicacoes",
+  ) => `/@${username}/${tab}` as Route,
   book: (id: string) => `/livro/${id}` as Route,
   collection: (id: string) => `/colecao/${id}` as Route,
 };

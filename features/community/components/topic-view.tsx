@@ -575,7 +575,14 @@ function ReplyItem({
   const mine = viewer?.id === reply.author?.id;
   const open = !topic.locked || viewer?.staff;
   return (
-    <div className={cn("flex flex-col gap-3", reply.hidden && "opacity-60")}>
+    // A âncora leva da aba Publicações do perfil direto à resposta
+    <div
+      id={`resposta-${reply.id}`}
+      className={cn(
+        "flex scroll-mt-24 flex-col gap-3",
+        reply.hidden && "opacity-60",
+      )}
+    >
       <Byline
         author={reply.author}
         at={reply.createdAt}

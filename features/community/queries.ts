@@ -313,6 +313,73 @@ export async function getTopic(id: string): Promise<TopicDetail | null> {
   };
 }
 
+/** Uma resposta na aba Publicações do perfil: o começo e o tópico dela. */
+export type ProfileReply = {
+  id: string;
+  excerpt: string;
+  topic: { id: string; title: string };
+  likeCount: number;
+  createdAt: string;
+};
+
+const PROFILE_POSTS = 30;
+
+/**
+ * O que a pessoa publicou no fórum (a aba Publicações do perfil): os tópicos
+ * que abriu e as respostas que deu, das mais novas às mais antigas. Só o que
+ * está à vista de todos: nada oculto pela equipe nem excluído.
+ */
+export async function getProfilePosts(profileId: string): Promise<{
+  topics: TopicSummary[];
+  replies: ProfileReply[];
+}> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("forum");
+  const supabase = createPublicClient();
+  const [topics, replies] = await Promise.all([
+    supabase
+      .from("forum_topics")
+      .select(TOPIC)
+      .eq("author_id", profileId)
+      .is("hidden_at", null)
+      .order("created_at", { ascending: false })
+      .limit(PROFILE_POSTS),
+    supabase
+      .from("forum_replies")
+      .select(
+        "id, body, like_count, created_at, topic:forum_topics!forum_replies_topic_id_fkey(id, title, hidden_at)",
+      )
+      .eq("author_id", profileId)
+      .is("hidden_at", null)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(PROFILE_POSTS),
+  ]);
+  if (topics.error) throw topics.error;
+  if (replies.error) throw replies.error;
+  return {
+    topics: (topics.data as unknown as TopicRow[]).map(toSummary),
+    replies: replies.data.flatMap((reply) => {
+      const topic = reply.topic;
+      if (!topic || topic.hidden_at) return [];
+      const text = plainText(reply.body);
+      return [
+        {
+          id: reply.id,
+          excerpt:
+            text.length > EXCERPT
+              ? `${text.slice(0, EXCERPT - 1).trimEnd()}…`
+              : text,
+          topic: { id: topic.id, title: topic.title },
+          likeCount: reply.like_count,
+          createdAt: reply.created_at,
+        },
+      ];
+    }),
+  };
+}
+
 /** O título do tópico para o <title> (público; oculto ou excluído não tem). */
 export async function getTopicTitle(id: string): Promise<string | null> {
   "use cache";

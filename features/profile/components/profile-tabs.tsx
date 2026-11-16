@@ -8,7 +8,8 @@ import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 /**
- * Estante · Coleções · Citações, com o indicador deslizando entre as abas.
+ * Estante · Coleções · Citações · Publicações, com o indicador deslizando
+ * entre as abas.
  * A aba ativa vem do segmento abaixo do layout, e não da URL: o /@usuario é
  * um rewrite, e o pathname do servidor e o do navegador não batem.
  */
@@ -26,11 +27,16 @@ export function ProfileTabs({ username }: { username: string }) {
       label: "Citações",
       href: routes.profileTab(username, "citacoes"),
     },
+    {
+      segment: "publicacoes",
+      label: "Publicações",
+      href: routes.profileTab(username, "publicacoes"),
+    },
   ];
 
   return (
     <nav aria-label="Seções do perfil" className="border-b border-border">
-      <ul className="flex items-center gap-6">
+      <ul className="flex items-center gap-5 sm:gap-6">
         {tabs.map((tab) => {
           const active = tab.segment === segment;
           return (

@@ -70,7 +70,8 @@ export function ReactionButton({
       aria-pressed={state.active}
       aria-label={`${state.active ? done : label}: ${state.count}`}
       className={cn(
-        "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
+        // select-none: cliques seguidos não selecionam o número
+        "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-sm transition-colors select-none",
         state.active
           ? "border-foreground text-foreground"
           : "border-border text-muted-foreground hover:text-foreground",
@@ -80,7 +81,7 @@ export function ReactionButton({
         <Icon
           className={cn(
             "size-4",
-            state.active && kind === "like" && "fill-accent text-accent",
+            state.active && kind === "like" && "fill-brand text-brand",
           )}
           strokeWidth={1.5}
           aria-hidden

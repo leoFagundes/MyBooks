@@ -4,6 +4,7 @@ import {
   animate,
   type MotionValue,
   motion,
+  useAnimationFrame,
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
@@ -11,8 +12,20 @@ import {
 } from "motion/react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { BookCover } from "@/features/books/components/book-cover";
 import type { BookVisual } from "@/features/books/types";
 import { SceneBoundary } from "@/features/viewer-3d/components/scene-boundary";
+import {
+  cameraDistance,
+  FLOAT_PX,
+  FLOAT_TURN,
+  type LandingStart,
+  landingDimensions,
+  landingStart,
+  landingTime,
+  PX,
+  wave,
+} from "@/features/viewer-3d/lib/landing-layout";
 import { tweens } from "@/lib/motion";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { FLIGHT, HIDE_SCENE, NARROW_SLOTS, WIDE_SLOTS } from "../lib/story";
@@ -30,6 +43,10 @@ const IDLE_TIMEOUT_MS = 1500;
 // A folga entre o texto do título e os livros que flutuam em volta dele, em px
 const TEXT_GAP = 12;
 
+// Rolando antes de a cena chegar, as capas saem neste trecho da história:
+// elas não voam até a prateleira
+const COVERS_OUT = 0.03;
+
 type Size = { width: number; height: number };
 type Target = { x: number; y: number; width: number; height: number };
 type Block = { left: number; right: number; top: number; bottom: number };
@@ -41,6 +58,11 @@ type Block = { left: number; right: number; top: number; bottom: number };
  * dos blocos de texto (`data-hero-text`). A cena carrega quando o navegador
  * sossega e para de desenhar fora da tela e depois da troca pela prateleira
  * da página. Com movimento reduzido, não há cena.
+ *
+ * Até a cena chegar (o three é pesado), as capas de verdade seguram o lugar:
+ * cada uma onde o livro 3D vai estar, do mesmo tamanho, no mesmo giro e na
+ * mesma onda. Quando a cena aparece por cima, elas saem; com movimento
+ * reduzido, ou se a cena falhar, ficam paradas.
  */
 export function HeroBooks({
   books,
@@ -149,30 +171,165 @@ export function HeroBooks({
 
   const ready =
     !reduced && idle && size !== null && (!story || targets.length > 0);
+  const [covered, setCovered] = useState(false);
+  useMotionValueEvent(appear, "change", (value) => {
+    if (value >= 1) setCovered(true);
+  });
+  const shown = books.slice(0, slots.length);
+
   return (
-    <motion.div
+    <div
       ref={box}
       aria-hidden
-      style={{ opacity: story ? storyOpacity : appear }}
       // Fora da história, só o trecho do título, abaixo da barra (h-14)
       className="pointer-events-none absolute inset-0 historia-parada:top-14 historia-parada:bottom-auto historia-parada:h-[calc(88svh-3.5rem)]"
     >
-      {ready ? (
-        <SceneBoundary onError={() => undefined}>
-          <LandingScene
-            books={books.slice(0, slots.length)}
-            slots={slots}
-            targets={story ? targets : null}
-            avoid={story ? null : blocks}
-            stage={size}
-            wide={wide}
-            flight={FLIGHT}
-            progress={progress}
-            active={inView && (!story || beforeHide)}
-            onReady={() => animate(appear, 1, tweens.slow)}
-          />
-        </SceneBoundary>
+      {size && !covered ? (
+        <HeroCovers
+          books={shown}
+          slots={slots}
+          targets={story ? targets : null}
+          avoid={story ? null : blocks}
+          stage={size}
+          wide={wide}
+          still={reduced ?? false}
+          appear={appear}
+          progress={story ? progress : null}
+        />
       ) : null}
+      <motion.div
+        style={{ opacity: story ? storyOpacity : appear }}
+        className="absolute inset-0"
+      >
+        {ready ? (
+          <SceneBoundary onError={() => undefined}>
+            <LandingScene
+              books={shown}
+              slots={slots}
+              targets={story ? targets : null}
+              avoid={story ? null : blocks}
+              stage={size}
+              wide={wide}
+              flight={FLIGHT}
+              progress={progress}
+              active={inView && (!story || beforeHide)}
+              onReady={() => animate(appear, 1, tweens.slow)}
+            />
+          </SceneBoundary>
+        ) : null}
+      </motion.div>
+    </div>
+  );
+}
+
+type CoverPlan = {
+  book: BookVisual;
+  start: LandingStart;
+  width: number;
+  height: number;
+  /** A distância da câmera até o livro, em px: a perspectiva do giro. */
+  perspective: number;
+};
+
+// O giro do three (y para cima) em CSS (y para baixo): o y e o z trocam de
+// sinal; o balanço da onda vem depois do giro de partida, como na cena
+function coverTransform({ start, perspective }: CoverPlan, time: number) {
+  const [wx, wy, wPitch, wYaw, wRoll] = start.waves;
+  const float = FLOAT_PX * start.scale;
+  const x = wave(time, wx) * float;
+  const y = -wave(time, wy) * float;
+  const pitch = wave(time, wPitch) * FLOAT_TURN * 0.6;
+  const yaw = wave(time, wYaw) * FLOAT_TURN;
+  const roll = wave(time, wRoll) * FLOAT_TURN * 0.5;
+  return `translate3d(${x}px, ${y}px, 0) perspective(${perspective}px) rotateY(${start.yaw}rad) rotateX(${-start.pitch}rad) rotateZ(${-start.roll}rad) rotateY(${yaw}rad) rotateX(${-pitch}rad) rotateZ(${-roll}rad)`;
+}
+
+/**
+ * As capas que seguram o lugar dos livros 3D enquanto a cena carrega: as
+ * mesmas contas da cena (landing-layout), a mesma onda no mesmo relógio. A
+ * cena aparece por cima e elas saem na segunda metade dessa entrada, já
+ * cobertas; rolando antes disso (na história), saem também.
+ */
+function HeroCovers({
+  books,
+  slots,
+  targets,
+  avoid,
+  stage,
+  wide,
+  still,
+  appear,
+  progress,
+}: {
+  books: BookVisual[];
+  slots: typeof WIDE_SLOTS;
+  targets: Target[] | null;
+  avoid: Block[] | null;
+  stage: Size;
+  wide: boolean;
+  still: boolean;
+  appear: MotionValue<number>;
+  progress: MotionValue<number> | null;
+}) {
+  const nodes = useRef<(HTMLDivElement | null)[]>([]);
+  const enter = useMotionValue(0);
+  const opacity = useTransform(() => {
+    const leaving = Math.max(0, appear.get() * 2 - 1);
+    const scrolled = progress
+      ? Math.min(1, Math.max(0, progress.get() / COVERS_OUT))
+      : 0;
+    return enter.get() * (1 - leaving) * (1 - scrolled);
+  });
+  const distance = cameraDistance(stage.height) * PX;
+  const plans = books.flatMap((book, index): CoverPlan[] => {
+    const slot = slots[index];
+    // Na história, como na cena, só quem tem lombada
+    if (!slot || (targets && targets[index] === undefined)) return [];
+    const dims = landingDimensions(book);
+    const start = landingStart(book, slot, !targets, avoid, dims, stage, wide);
+    if (!start) return [];
+    return [
+      {
+        book,
+        start,
+        width: dims.width * PX * start.scale,
+        height: dims.height * PX * start.scale,
+        perspective: distance / start.scale,
+      },
+    ];
+  });
+
+  useEffect(() => {
+    const controls = animate(enter, 1, tweens.base);
+    return () => controls.stop();
+  }, [enter]);
+
+  useAnimationFrame(() => {
+    const time = still ? 0 : landingTime();
+    plans.forEach((plan, index) => {
+      const node = nodes.current[index];
+      if (node) node.style.transform = coverTransform(plan, time);
+    });
+  });
+
+  return (
+    <motion.div style={{ opacity }} className="absolute inset-0">
+      {plans.map((plan, index) => (
+        <div
+          key={plan.book.id}
+          ref={(node) => {
+            nodes.current[index] = node;
+          }}
+          className="absolute"
+          style={{
+            left: plan.start.x - plan.width / 2,
+            top: plan.start.y - plan.height / 2,
+            width: plan.width,
+          }}
+        >
+          <BookCover book={plan.book} size="fan" tilt={false} />
+        </div>
+      ))}
     </motion.div>
   );
 }

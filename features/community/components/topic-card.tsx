@@ -13,7 +13,14 @@ import type { TopicSummary } from "../types";
  * tem spoilers), quem abriu, a categoria, as tags e os números. Editorial e
  * limpo: uma linha por tópico, sem caixa.
  */
-export function TopicCard({ topic }: { topic: TopicSummary }) {
+export function TopicCard({
+  topic,
+  titleAs: Title = "h2",
+}: {
+  topic: TopicSummary;
+  /** No perfil, as seções já são h2. */
+  titleAs?: "h2" | "h3";
+}) {
   return (
     <article className="flex gap-4 py-5">
       <Avatar className="mt-1 size-9 shrink-0">
@@ -47,11 +54,11 @@ export function TopicCard({ topic }: { topic: TopicSummary }) {
           <span aria-hidden>·</span>
           <RelativeTime iso={topic.lastActivityAt} />
         </p>
-        <h2 className="font-serif text-xl leading-snug tracking-tight text-balance">
+        <Title className="font-serif text-xl leading-snug tracking-tight text-balance">
           <Link href={routes.topic(topic.id)} className="hover:underline">
             {topic.title}
           </Link>
-        </h2>
+        </Title>
         {topic.containsSpoilers ? (
           <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <EyeOff className="size-3.5" strokeWidth={1.5} aria-hidden />

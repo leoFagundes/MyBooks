@@ -57,6 +57,8 @@ export type ForumReply = {
   editedAt: string | null;
   deleted: boolean;
   hidden: boolean;
+  /** De alguém que quem vê bloqueou ou silenciou: chega recolhida. */
+  muted: boolean;
   createdAt: string;
 };
 
@@ -86,4 +88,11 @@ export const REPORT_REASONS = [
 export type ReportReason = (typeof REPORT_REASONS)[number]["value"];
 
 export type ReportTarget =
-  "topic" | "reply" | "suggestion" | "suggestion_comment";
+  "topic" | "reply" | "suggestion" | "suggestion_comment" | "profile";
+
+/** Num perfil, spoiler e fora do tema não fazem sentido. */
+export const PROFILE_REPORT_REASONS: ReportReason[] = [
+  "spam",
+  "ofensivo",
+  "outro",
+];

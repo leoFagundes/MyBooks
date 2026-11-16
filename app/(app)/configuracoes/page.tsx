@@ -14,6 +14,8 @@ import {
   getProfileByUsername,
 } from "@/features/profile/queries";
 import { GoodreadsImport } from "@/features/shelf/components/goodreads-import";
+import { BlockedReaders } from "@/features/social/components/blocked-readers";
+import { getOwnBlocks } from "@/features/social/queries";
 import { requireViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 
@@ -46,13 +48,15 @@ export default function SettingsPage() {
 async function Settings() {
   const viewer = await requireViewer();
   if (!viewer.onboarded) redirect(routes.onboarding);
-  const [profile, email, hasPassword, genres, importing] = await Promise.all([
-    getProfileByUsername(viewer.username),
-    getAccountEmail(viewer.username),
-    getAccountHasPassword(viewer.username),
-    getOwnFavoriteGenres(viewer),
-    isFeatureOn("importar_goodreads"),
-  ]);
+  const [profile, email, hasPassword, genres, importing, blocks] =
+    await Promise.all([
+      getProfileByUsername(viewer.username),
+      getAccountEmail(viewer.username),
+      getAccountHasPassword(viewer.username),
+      getOwnFavoriteGenres(viewer),
+      isFeatureOn("importar_goodreads"),
+      getOwnBlocks(viewer),
+    ]);
   if (!profile) notFound();
   return (
     <SettingsSections
@@ -63,6 +67,7 @@ async function Settings() {
       importer={
         importing ? <GoodreadsImport username={profile.username} /> : undefined
       }
+      blocks={<BlockedReaders initial={blocks} />}
     />
   );
 }

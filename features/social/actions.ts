@@ -40,7 +40,13 @@ export async function followReader(
     .from("follows")
     .insert({ follower_id: viewer.id, following_id: parsed.data });
   if (error && error.code !== UNIQUE_VIOLATION) {
-    return { ok: false, error: "Não deu para seguir agora. Tente de novo." };
+    return {
+      ok: false,
+      error:
+        error.hint === "blocked"
+          ? "Não dá para seguir este perfil."
+          : "Não deu para seguir agora. Tente de novo.",
+    };
   }
   const { data } = await supabase
     .from("follows")
@@ -178,5 +184,83 @@ export async function markNotificationsRead(): Promise<ActionResult> {
     .eq("user_id", viewer.id)
     .is("read_at", null);
   if (error) return { ok: false, error: "Não deu para marcar como lidos." };
+  return { ok: true, data: undefined };
+}
+
+const blockSchema = z.object({
+  id: readerId,
+  kind: z.enum(["block", "mute"]).nullable(),
+});
+
+/**
+ * Bloqueia, silencia ou desfaz (kind null). Bloquear também desfaz o seguir
+ * dos dois lados e apaga do sino os avisos da pessoa; o banco cuida disso.
+ */
+export async function setReaderBlock(
+  id: string,
+  kind: "block" | "mute" | null,
+): Promise<ActionResult> {
+  const parsed = blockSchema.safeParse({ id, kind });
+  if (!parsed.success) return { ok: false, error: "Leitor inválido." };
+  const viewer = await requireViewer();
+  if (parsed.data.id === viewer.id) {
+    return { ok: false, error: "Não dá para fazer isso com o próprio perfil." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_user_block", {
+    target: parsed.data.id,
+    new_kind: parsed.data.kind ?? undefined,
+  });
+  if (error) return { ok: false, error: "Não deu agora. Tente de novo." };
+  await refreshProfiles(viewer.username, parsed.data.id);
+  updateTag(`feed:${viewer.id}`);
+  updateTag(`feed:${parsed.data.id}`);
+  updateTag("forum");
+  return { ok: true, data: undefined };
+}
+
+const recommendSchema = z.object({
+  bookId: z.uuid(),
+  recipientId: readerId,
+  note: z.string().trim().max(280, "Até 280 caracteres"),
+});
+
+export type RecommendInput = z.input<typeof recommendSchema>;
+
+/**
+ * Indica um livro a quem segue você, com uma frase se quiser: chega no sino
+ * dela, com "Pôr na fila". O mesmo livro, uma vez por pessoa.
+ */
+export async function recommendBook(
+  input: RecommendInput,
+): Promise<ActionResult> {
+  const parsed = recommendSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira." };
+  }
+  const viewer = await requireViewer();
+  const { bookId, recipientId, note } = parsed.data;
+  if (recipientId === viewer.id) {
+    return { ok: false, error: "Escolha outra pessoa." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("book_recommendations").insert({
+    id: crypto.randomUUID(),
+    sender_id: viewer.id,
+    recipient_id: recipientId,
+    book_id: bookId,
+    note: note || null,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === UNIQUE_VIOLATION
+          ? "Você já indicou este livro para essa pessoa."
+          : error.code === "42501"
+            ? "Só dá para indicar a quem segue você."
+            : "Não deu para indicar agora. Tente de novo.",
+    };
+  }
   return { ok: true, data: undefined };
 }

@@ -17,6 +17,7 @@ import {
   type AddBookInput,
   addBookSchema,
   type CopyBookInput,
+  type CopyStatus,
   copyBookSchema,
   currentPageSchema,
   type FinishReadingInput,
@@ -28,6 +29,7 @@ import {
   quoteSchema,
   reviewSchema,
   startReadingSchema,
+  statusChangeSchema,
   shelfEntrySchema,
   type ShelfEntryUpdate,
   shelfEntryUpdateSchema,
@@ -193,6 +195,54 @@ export async function updateShelfEntry(
   if (error) return { ok: false, error: "Não deu para salvar. Tente de novo." };
   updateTag(`shelf:${viewer.id}`);
   updateTag(`book:${id.data}`);
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Trocar só o status (deslizar na Lista, no celular), com as datas coerentes:
+ * Quero ler limpa nota e datas; Lendo começa hoje se não tinha começo; Lido
+ * termina hoje se não tinha fim.
+ */
+export async function changeShelfStatus(
+  bookId: string,
+  status: CopyStatus,
+  today: string,
+): Promise<ActionResult> {
+  const parsed = statusChangeSchema.safeParse({ bookId, status, today });
+  if (!parsed.success) return { ok: false, error: "Esse livro não deu certo." };
+  const viewer = await requireViewer();
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("user_books")
+    .select("started_at, finished_at")
+    .eq("user_id", viewer.id)
+    .eq("book_id", parsed.data.bookId)
+    .maybeSingle();
+  if (!current) return { ok: false, error: "Esse livro não está na estante." };
+  const day = parsed.data.today;
+  // O fim nunca antes do começo (o check user_books_dates_ordered)
+  const finishedAt =
+    current.finished_at ??
+    (current.started_at && current.started_at > day ? current.started_at : day);
+  const changes =
+    parsed.data.status === "want"
+      ? {
+          rating: null,
+          started_at: null,
+          finished_at: null,
+          current_page: null,
+        }
+      : parsed.data.status === "reading"
+        ? { started_at: current.started_at ?? day, finished_at: null }
+        : { finished_at: finishedAt, current_page: null };
+  const { error } = await supabase
+    .from("user_books")
+    .update({ status: parsed.data.status, ...changes })
+    .eq("user_id", viewer.id)
+    .eq("book_id", parsed.data.bookId);
+  if (error) return { ok: false, error: "Não deu para mudar agora." };
+  updateTag(`shelf:${viewer.id}`);
+  updateTag(`book:${parsed.data.bookId}`);
   return { ok: true, data: undefined };
 }
 

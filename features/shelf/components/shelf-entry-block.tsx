@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useOptimistic, useState, useTransition } from "react";
+import { useId, useOptimistic, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { useShelfFlight } from "@/components/shell/shelf-flight";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -75,6 +76,23 @@ export function ShelfEntryBlock({
   );
   const [pageDraft, setPageDraft] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const { fly } = useShelfFlight();
+  const anchor = useRef<HTMLSpanElement>(null);
+
+  // Terminou: a capa voa até "Minha estante". Sai do topo da página se ele
+  // está na tela; senão, do próprio controle de status
+  function celebrate() {
+    const hero = [
+      ...document.querySelectorAll(
+        `[data-testid="capa-${CSS.escape(book.id)}"]`,
+      ),
+    ].find((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+    });
+    const from = hero ?? anchor.current;
+    if (from) fly(from, book);
+  }
 
   function save(changes: Partial<ShelfEntryDetails>) {
     const next = coherent({ ...entry, ...changes });
@@ -129,13 +147,24 @@ export function ShelfEntryBlock({
       </div>
 
       {/* Os quatro status não cabem numa linha no celular: viram 2 × 2 */}
-      <SegmentedControl
-        aria-label="Status"
-        options={STATUS_OPTIONS}
-        value={entry.status}
-        onValueChange={(status) => save({ status })}
-        className="grid grid-cols-2 @xs:inline-flex @xs:self-start"
-      />
+      <div className="relative flex flex-col">
+        <SegmentedControl
+          aria-label="Status"
+          options={STATUS_OPTIONS}
+          value={entry.status}
+          onValueChange={(status) => {
+            if (status === "read" && entry.status !== "read") celebrate();
+            save({ status });
+          }}
+          className="grid grid-cols-2 @xs:inline-flex @xs:self-start"
+        />
+        {/* De onde a capa sai quando o topo da página já rolou para fora */}
+        <span
+          ref={anchor}
+          aria-hidden
+          className="pointer-events-none invisible absolute top-1/2 left-1/2 aspect-2/3 w-10 -translate-1/2"
+        />
+      </div>
 
       {entry.status !== "want" ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

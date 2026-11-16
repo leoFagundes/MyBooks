@@ -43,7 +43,13 @@ async function PostsTab({ params }: { params: Params }) {
   if (!tab) return null;
   const { profile, relation } = tab;
   if (!tab.visible) {
-    return <PrivateProfileNotice profile={profile} relation={relation} />;
+    return (
+      <PrivateProfileNotice
+        profile={profile}
+        relation={relation}
+        blocked={tab.blocked}
+      />
+    );
   }
   const posts = await getProfilePosts(profile.id);
   const self = relation === "self";

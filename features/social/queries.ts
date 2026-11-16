@@ -158,6 +158,7 @@ const NOTIFICATION_TYPES = new Set<string>([
   "forum_reply",
   "forum_mention",
   "suggestion_status",
+  "book_recommendation",
 ]);
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
@@ -262,9 +263,43 @@ export async function readNotificationItems(
     (collections ?? []).map((collection) => [collection.id, collection]),
   );
 
+  const recommendationOf = (refs: unknown) =>
+    refs && typeof refs === "object" && "recommendation_id" in refs
+      ? String(refs.recommendation_id)
+      : null;
+  const recommendationIds = [
+    ...new Set(page.flatMap((item) => recommendationOf(item.refs) ?? [])),
+  ];
+  const { data: recommendations } =
+    recommendationIds.length > 0
+      ? await supabase
+          .from("book_recommendations")
+          .select(
+            "id, note, book:books(id, title, authors, cover_url, cover_color, cover_style, page_count, published_year)",
+          )
+          .in("id", recommendationIds)
+      : { data: [] };
+  const recommended = new Map(
+    (recommendations ?? []).flatMap((row) =>
+      row.book
+        ? [
+            [
+              row.id,
+              { id: row.id, note: row.note, book: toBookVisual(row.book) },
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+
   const mapped = page.flatMap((item) => {
     if (!isNotificationType(item.type)) return [];
     const collectionId = collectionOf(item.refs);
+    const recommendationId = recommendationOf(item.refs);
+    const recommendation = recommendationId
+      ? (recommended.get(recommendationId) ?? null)
+      : null;
+    if (item.type === "book_recommendation" && !recommendation) return [];
     return [
       {
         id: item.id,
@@ -278,6 +313,7 @@ export async function readNotificationItems(
             : null,
         suggestion:
           item.type === "suggestion_status" ? suggestionOf(item.refs) : null,
+        recommendation,
         at: item.created_at,
         unread: item.read_at === null,
       },
@@ -459,4 +495,33 @@ export async function getFeedFirstPage(viewerId: string): Promise<FeedPage> {
   cacheLife("minutes");
   cacheTag(`feed:${viewerId}`);
   return readFeedPage(await createClient(), null);
+}
+
+/** Um leitor que quem vê bloqueou ou silenciou (Configurações). */
+export type BlockedReader = { reader: Reader; kind: "block" | "mute" };
+
+/** Quem a pessoa bloqueou ou silenciou, do mais recente ao mais antigo. */
+export async function getOwnBlocks(viewer: {
+  id: string;
+  username: string;
+}): Promise<BlockedReader[]> {
+  "use cache: private";
+  cacheLife("minutes");
+  cacheTag(`profile:${viewer.username}`);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_blocks")
+    .select(
+      `kind, person:profiles!user_blocks_blocked_id_fkey(${READER_COLUMNS})`,
+    )
+    .eq("blocker_id", viewer.id)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return data.flatMap(({ kind, person }) =>
+    person && (kind === "block" || kind === "mute")
+      ? [{ reader: toReader(person), kind }]
+      : [],
+  );
 }

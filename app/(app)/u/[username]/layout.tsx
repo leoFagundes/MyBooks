@@ -13,12 +13,14 @@ import {
 } from "@/features/profile/components/profile-tabs";
 import {
   canSeeContent,
+  getBlockState,
   getOwnFavoriteGenres,
   getProfileCounts,
   getProfileFromParam,
   getProfileRelation,
 } from "@/features/profile/queries";
 import { FollowButton } from "@/features/social/components/follow-button";
+import { ReaderMenu } from "@/features/social/components/reader-menu";
 import { relationToState } from "@/features/social/lib/follow-state";
 import { getAffinity } from "@/features/social/queries";
 import { getViewer } from "@/lib/auth";
@@ -73,12 +75,15 @@ export default function ProfileLayout({
 async function ProfileTop({ params }: { params: Params }) {
   const profile = await getProfileFromParam((await params).username);
   if (!profile) notFound();
-  const [counts, relation, viewer] = await Promise.all([
+  const [counts, relation, viewer, block] = await Promise.all([
     getProfileCounts(profile),
     getProfileRelation(profile),
     getViewer(),
+    getBlockState(profile),
   ]);
-  const visible = canSeeContent(profile, relation);
+  const visible = canSeeContent(profile, relation) && !block.blockedMe;
+  // Com bloqueio de um lado ou do outro, não há como seguir
+  const blocked = block.mine === "block" || block.blockedMe;
   // Na gaveta "Editar perfil", os favoritos com nome, inclusive os em análise
   const ownGenres =
     relation === "self" && viewer ? await getOwnFavoriteGenres(viewer) : [];
@@ -100,14 +105,28 @@ async function ProfileTop({ params }: { params: Params }) {
           relation === "self" ? (
             <EditProfileSheet profile={profile} genres={ownGenres} />
           ) : (
-            <FollowButton
-              reader={{
-                id: profile.id,
-                username: profile.username,
-                isPrivate: profile.isPrivate,
-              }}
-              state={relationToState(relation)}
-            />
+            <div className="flex items-center gap-2">
+              {blocked ? (
+                <p className="font-mono text-xs text-muted-foreground">
+                  {block.mine === "block" ? "Bloqueado" : "Indisponível"}
+                </p>
+              ) : (
+                <FollowButton
+                  reader={{
+                    id: profile.id,
+                    username: profile.username,
+                    isPrivate: profile.isPrivate,
+                  }}
+                  state={relationToState(relation)}
+                />
+              )}
+              {viewer ? (
+                <ReaderMenu
+                  reader={{ id: profile.id, username: profile.username }}
+                  block={block.mine}
+                />
+              ) : null}
+            </div>
           )
         }
       />

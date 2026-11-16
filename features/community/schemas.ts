@@ -46,7 +46,13 @@ export const replySchema = z.object({
 export type ReplyInput = z.input<typeof replySchema>;
 
 export const reportSchema = z.object({
-  targetType: z.enum(["topic", "reply", "suggestion", "suggestion_comment"]),
+  targetType: z.enum([
+    "topic",
+    "reply",
+    "suggestion",
+    "suggestion_comment",
+    "profile",
+  ]),
   targetId: z.uuid(),
   reason: z.enum(["spam", "ofensivo", "spoiler", "fora_do_tema", "outro"], {
     error: "Escolha o motivo",
@@ -67,6 +73,9 @@ export function postingError(
   }
   if (error?.hint === "links") {
     return "Links ficam liberados depois das suas três primeiras publicações.";
+  }
+  if (error?.hint === "blocked") {
+    return "Não dá para responder aqui: há um bloqueio entre vocês.";
   }
   if (error?.code === "42501") return denied;
   return "Não deu para publicar agora. Tente de novo.";

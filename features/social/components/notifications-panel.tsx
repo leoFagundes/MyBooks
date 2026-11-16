@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { BookCheck, Lightbulb, Trash2, X } from "lucide-react";
+import { BookCheck, BookmarkPlus, Lightbulb, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -19,7 +19,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { QuietBellIllustration } from "@/components/ui/illustrations";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ActionResult } from "@/lib/action";
+import { useShelfFlight } from "@/components/shell/shelf-flight";
+import { BookCover } from "@/features/books/components/book-cover";
+import { copyBook } from "@/features/shelf/actions";
+import {
+  type ActionResult,
+  actionErrorMessage,
+  unwrapAction,
+} from "@/lib/action";
 import { initials } from "@/lib/initials";
 import { springs, tweens } from "@/lib/motion";
 import { routes } from "@/lib/routes";
@@ -65,6 +72,7 @@ const VERB: Record<NotificationItem["type"], string> = {
   forum_reply: "respondeu em",
   forum_mention: "mencionou você em",
   suggestion_status: "",
+  book_recommendation: "indicou",
 };
 
 // O status das sugestões, como a página delas mostra
@@ -121,12 +129,14 @@ const WITHOUT_COLLECTION: Record<NotificationItem["type"], string> = {
   forum_reply: "um tópico",
   forum_mention: "um tópico",
   suggestion_status: "",
+  book_recommendation: "",
 };
 
 function hrefOf(item: NotificationItem) {
   if (item.type === "catalog_review") {
     return item.review?.bookId ? routes.book(item.review.bookId) : null;
   }
+  if (item.recommendation) return routes.book(item.recommendation.book.id);
   if (item.forum) return routes.topic(item.forum.topicId);
   if (item.suggestion) return routes.suggestion(item.suggestion.id);
   if (item.type !== "follow" && item.collection) {
@@ -355,7 +365,30 @@ function ItemRow({
   const href = hrefOf(item);
   const review = item.type === "catalog_review" ? item.review : null;
   const suggestion = item.suggestion;
-  const content = suggestion ? (
+  const recommendation = item.recommendation;
+  const content = recommendation ? (
+    <>
+      <ReaderAvatar reader={item.actor} />
+      <p className="min-w-0 flex-1 text-sm text-pretty">
+        <span className="font-medium">
+          {item.actor?.displayName ?? "Alguém"}
+        </span>{" "}
+        indicou <span className="font-medium">{recommendation.book.title}</span>{" "}
+        para você{recommendation.note ? ":" : "."}
+        {recommendation.note ? (
+          <span className="mt-0.5 block text-muted-foreground">
+            “{recommendation.note}”
+          </span>
+        ) : null}{" "}
+        <RelativeTime iso={item.at} />
+      </p>
+      {fresh ? (
+        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground">
+          <span className="sr-only">Novo</span>
+        </span>
+      ) : null}
+    </>
+  ) : suggestion ? (
     <>
       <span
         aria-hidden
@@ -436,7 +469,7 @@ function ItemRow({
       layout
       exit={{ opacity: 0, x: 24, transition: tweens.fast }}
       transition={springs.snappy}
-      className="group flex items-start transition-colors hover:bg-muted"
+      className="group flex flex-wrap items-start transition-colors hover:bg-muted"
     >
       {href ? (
         <Link
@@ -460,7 +493,84 @@ function ItemRow({
       >
         <X className="size-4" />
       </Button>
+      {recommendation ? (
+        <WantButton
+          book={recommendation.book}
+          fromUserId={item.actor?.id ?? null}
+          onDone={onNavigate}
+        />
+      ) : null}
     </motion.li>
+  );
+}
+
+/**
+ * "Pôr na fila" de uma indicação: o livro vai para Quero ler, guardando de
+ * quem veio, e a capa voa até "Minha estante".
+ */
+function WantButton({
+  book,
+  fromUserId,
+  onDone,
+}: {
+  book: NonNullable<NotificationItem["recommendation"]>["book"];
+  fromUserId: string | null;
+  onDone: () => void;
+}) {
+  const { fly } = useShelfFlight();
+  const cover = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
+  const [, startTransition] = useTransition();
+
+  function want() {
+    if (!fromUserId) return;
+    const node = cover.current?.querySelector("[data-cover]") ?? null;
+    if (node) fly(node, book);
+    setDone(true);
+    startTransition(async () => {
+      const adding = unwrapAction(
+        copyBook({
+          bookId: book.id,
+          status: "want",
+          collectionId: null,
+          fromUserId,
+        }),
+      );
+      toast.promise(adding, {
+        loading: "Guardando em Quero ler…",
+        description: book.title,
+        success: (result) => ({
+          message: result.added ? "Em Quero ler" : "Já estava na sua estante",
+          description: book.title,
+        }),
+        error: (error: unknown) => {
+          setDone(false);
+          return {
+            message: actionErrorMessage(error),
+            description: book.title,
+          };
+        },
+      });
+      await adding.catch(() => undefined);
+      onDone();
+    });
+  }
+
+  return (
+    <div className="flex basis-full items-center gap-3 pr-4 pb-3 pl-16">
+      <div ref={cover} className="w-8 shrink-0">
+        <BookCover book={book} size="fill" tilt={false} />
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={done || !fromUserId}
+        onClick={want}
+      >
+        <BookmarkPlus />
+        {done ? "Na fila" : "Pôr na fila"}
+      </Button>
+    </div>
   );
 }
 

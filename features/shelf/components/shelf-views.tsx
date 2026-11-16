@@ -1,5 +1,7 @@
 "use client";
 
+import type { CopyStatus } from "../schemas";
+import { SwipeStatus } from "./swipe-status";
 import { LayoutGrid, LibraryBig, List } from "lucide-react";
 import { motion } from "motion/react";
 import type { Route } from "next";
@@ -216,6 +218,12 @@ export type BookAction = (
   active: boolean,
 ) => React.ReactNode;
 
+/** Na própria estante, a Lista deixa mudar o status deslizando (toque). */
+export type RowSwipe = {
+  statusOf: (bookId: string) => string | null;
+  onChange: (book: BookVisual, status: CopyStatus) => void;
+};
+
 type ShelfViewsProps = {
   books: BookVisual[];
   /** A vista e a troca (useShelfViewSwitch), com o controle em outro lugar. */
@@ -223,6 +231,7 @@ type ShelfViewsProps = {
   /** Para onde cada livro leva (padrão: a página do livro). */
   bookHref?: BookHref;
   bookAction?: BookAction;
+  swipe?: RowSwipe;
   className?: string;
 };
 
@@ -239,6 +248,7 @@ export function ShelfViews({
   switcher,
   bookHref = toBookPage,
   bookAction,
+  swipe,
   className,
 }: ShelfViewsProps) {
   const { view, fade, container, names, takeAnchor } = switcher;
@@ -288,6 +298,7 @@ export function ShelfViews({
               books={books}
               bookHref={bookHref}
               bookAction={bookAction}
+              swipe={swipe}
             />
           )}
         </motion.div>
@@ -343,10 +354,12 @@ function BookTable({
   books,
   bookHref,
   bookAction,
+  swipe,
 }: {
   books: BookVisual[];
   bookHref: BookHref;
   bookAction?: BookAction;
+  swipe?: RowSwipe;
 }) {
   const cell = "border-b border-border py-3 group-last:border-b-0";
 
@@ -379,6 +392,7 @@ function BookTable({
             href={bookHref(book)}
             cell={cell}
             action={bookAction?.(book, "lista", false)}
+            swipe={swipe}
           />
         ))}
       </tbody>
@@ -391,11 +405,13 @@ function BookRow({
   href,
   cell,
   action,
+  swipe,
 }: {
   book: BookVisual;
   href: Route;
   cell: string;
   action?: React.ReactNode;
+  swipe?: RowSwipe;
 }) {
   // Capa e título da linha são a mesma origem: os dois viajam juntos
   const source = useTransitionSource(book);
@@ -423,31 +439,33 @@ function BookRow({
         </BookLink>
       </td>
       <td className={cn(cell, "pr-4")}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <BookLink
-              book={book}
-              href={href}
-              source={source}
-              className="font-serif text-lg leading-tight tracking-tight"
-            >
-              {/* Uma caixa só, do tamanho do texto, como o título do topo */}
-              <ViewTransition
-                name={source.isSource ? titleName(book.id) : undefined}
-                share="titulo"
-                default="none"
+        <RowSwipeArea book={book} swipe={swipe}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <BookLink
+                book={book}
+                href={href}
+                source={source}
+                className="font-serif text-lg leading-tight tracking-tight"
               >
-                <span className="inline-block text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4">
-                  {book.title}
-                </span>
-              </ViewTransition>
-            </BookLink>
-            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-              {book.authors.join(", ")}
-            </p>
+                {/* Uma caixa só, do tamanho do texto, como o título do topo */}
+                <ViewTransition
+                  name={source.isSource ? titleName(book.id) : undefined}
+                  share="titulo"
+                  default="none"
+                >
+                  <span className="inline-block text-balance hover:underline hover:decoration-border-strong hover:underline-offset-4">
+                    {book.title}
+                  </span>
+                </ViewTransition>
+              </BookLink>
+              <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                {book.authors.join(", ")}
+              </p>
+            </div>
+            {action}
           </div>
-          {action}
-        </div>
+        </RowSwipeArea>
       </td>
       <td
         className={cn(
@@ -466,5 +484,26 @@ function BookRow({
         {book.pageCount === null ? "—" : formatNumber(book.pageCount)}
       </td>
     </tr>
+  );
+}
+
+function RowSwipeArea({
+  book,
+  swipe,
+  children,
+}: {
+  book: BookVisual;
+  swipe?: RowSwipe;
+  children: React.ReactNode;
+}) {
+  const status = swipe?.statusOf(book.id) ?? null;
+  if (!swipe || !status) return <>{children}</>;
+  return (
+    <SwipeStatus
+      status={status}
+      onChange={(next) => swipe.onChange(book, next)}
+    >
+      {children}
+    </SwipeStatus>
   );
 }

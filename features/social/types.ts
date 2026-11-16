@@ -31,7 +31,15 @@ export type NotificationType =
   | "catalog_review"
   | "forum_reply"
   | "forum_mention"
-  | "suggestion_status";
+  | "suggestion_status"
+  | "book_recommendation";
+
+/** Um livro que alguém indicou a quem vê, com a frase (se houver). */
+export type RecommendationNotice = {
+  id: string;
+  book: BookVisual;
+  note: string | null;
+};
 
 /** O tópico de um aviso do fórum (resposta ou menção). */
 export type ForumNotice = {
@@ -72,6 +80,8 @@ export type NotificationItem = {
   forum: ForumNotice | null;
   /** Só no suggestion_status. */
   suggestion: SuggestionNotice | null;
+  /** Só no book_recommendation (sumida a indicação, o aviso não aparece). */
+  recommendation: RecommendationNotice | null;
   at: string;
   unread: boolean;
 };

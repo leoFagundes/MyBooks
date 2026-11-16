@@ -28,6 +28,7 @@ export function SettingsSections({
   email,
   hasPassword,
   importer,
+  blocks,
 }: {
   profile: ProfileSummary;
   /** Os favoritos com nome, inclusive os criados e ainda em análise. */
@@ -37,6 +38,8 @@ export function SettingsSections({
   hasPassword: boolean;
   /** A importação do Goodreads, que mora na estante. */
   importer?: React.ReactNode;
+  /** Quem a pessoa bloqueou ou silenciou, para desfazer. */
+  blocks?: React.ReactNode;
 }) {
   const name = profile.displayName || profile.username;
 
@@ -98,6 +101,18 @@ export function SettingsSections({
           <PrivacySetting isPrivate={profile.isPrivate} />
         </SettingsSection>
       </StaggerItem>
+
+      {blocks ? (
+        <StaggerItem>
+          <SettingsSection
+            id="bloqueados"
+            title="Bloqueados e silenciados"
+            description="Silenciar some com a pessoa do seu feed e do sino; bloquear também fecha a sua estante para ela."
+          >
+            {blocks}
+          </SettingsSection>
+        </StaggerItem>
+      ) : null}
 
       <StaggerItem>
         <SettingsSection

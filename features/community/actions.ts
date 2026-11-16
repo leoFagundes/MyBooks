@@ -249,7 +249,10 @@ export async function toggleSubscription(
   return { ok: true, data: undefined };
 }
 
-/** Denuncia um tópico, resposta, sugestão ou comentário: vai à fila da equipe. */
+/**
+ * Denuncia um tópico, resposta, sugestão, comentário ou perfil: vai à fila
+ * da equipe.
+ */
 export async function reportContent(input: ReportInput): Promise<ActionResult> {
   const parsed = reportSchema.safeParse(input);
   if (!parsed.success) {

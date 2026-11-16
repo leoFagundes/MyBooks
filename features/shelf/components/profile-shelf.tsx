@@ -4,12 +4,14 @@ import { Shuffle } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   EmptyShelfIllustration,
   SearchIllustration,
 } from "@/components/ui/illustrations";
+import { actionErrorMessage, unwrapAction } from "@/lib/action";
 import { tweens } from "@/lib/motion";
 import {
   countByStatus,
@@ -24,14 +26,21 @@ import {
 } from "../lib/filters";
 import { shelfViewOf, type ShelfView } from "../lib/view";
 import { rememberedShelfView, rememberShelfView } from "../lib/view-preference";
-import { saveShelfView } from "../actions";
+import { changeShelfStatus, saveShelfView } from "../actions";
+import { today } from "../lib/today";
 import type { ShelfItem } from "../queries";
 import type { ShelfStatus } from "../schemas";
 import { useAddBook } from "./add-book/add-book-provider";
 import { BookShelfAction, CopyBookScope } from "./copy-book";
 import { useNextRead } from "./next-read/next-read-provider";
 import { ShelfToolbar } from "./shelf-toolbar";
-import { type BookAction, ShelfViews, useShelfViewSwitch } from "./shelf-views";
+import { STATUS_LABEL } from "./swipe-status";
+import {
+  type BookAction,
+  type RowSwipe,
+  ShelfViews,
+  useShelfViewSwitch,
+} from "./shelf-views";
 
 const EMPTY_STATUS: Record<ShelfStatus, string> = {
   read: "Nenhum livro lido por aqui",
@@ -176,6 +185,34 @@ export function ProfileShelf({
       )
     : undefined;
 
+  // Na própria estante, a Lista muda o status deslizando (no toque)
+  const statuses = new Map(
+    entries.map((entry) => [entry.book.id, entry.status]),
+  );
+  const swipe: RowSwipe | undefined =
+    owner === null
+      ? {
+          statusOf: (bookId) => statuses.get(bookId) ?? null,
+          onChange: (book, status) => {
+            const changing = unwrapAction(
+              changeShelfStatus(book.id, status, today()),
+            );
+            toast.promise(changing, {
+              loading: "Mudando o status…",
+              description: book.title,
+              success: {
+                message: `Em ${STATUS_LABEL[status]}`,
+                description: book.title,
+              },
+              error: (error: unknown) => ({
+                message: actionErrorMessage(error),
+                description: book.title,
+              }),
+            });
+          },
+        }
+      : undefined;
+
   const shelf = (
     <div className="flex flex-col gap-6">
       <ShelfToolbar
@@ -223,6 +260,7 @@ export function ProfileShelf({
           books={visible.map((entry) => entry.book)}
           switcher={views}
           bookAction={bookAction}
+          swipe={swipe}
         />
       ) : hasRefinements(current) || !current.status ? (
         <EmptyState

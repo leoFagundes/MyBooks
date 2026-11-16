@@ -564,7 +564,8 @@ export async function getAdminBookDetails(
 export type PendingReport = {
   /** A denúncia mais antiga do alvo (as outras vão junto na revisão). */
   id: string;
-  targetType: "topic" | "reply" | "suggestion" | "suggestion_comment";
+  targetType:
+    "topic" | "reply" | "suggestion" | "suggestion_comment" | "profile";
   targetId: string;
   /** Para onde levar: o tópico ou a sugestão. */
   href: string | null;
@@ -600,7 +601,7 @@ export async function getPendingReports(): Promise<PendingReport[]> {
     [...groups.values()]
       .filter((rows) => rows[0]?.target_type === type)
       .map((rows) => rows[0]?.target_id as string);
-  const [topics, replies, suggestions, comments] = await Promise.all([
+  const [topics, replies, suggestions, comments, profiles] = await Promise.all([
     ids("topic").length
       ? admin
           .from("forum_topics")
@@ -632,6 +633,12 @@ export async function getPendingReports(): Promise<PendingReport[]> {
             "id, suggestion_id, body, author:profiles!suggestion_comments_author_id_fkey(username), suggestion:feature_suggestions!suggestion_comments_suggestion_id_fkey(title)",
           )
           .in("id", ids("suggestion_comment"))
+      : Promise.resolve({ data: [] }),
+    ids("profile").length
+      ? admin
+          .from("profiles")
+          .select("id, username, display_name, bio")
+          .in("id", ids("profile"))
       : Promise.resolve({ data: [] }),
   ]);
   type Target = {
@@ -671,6 +678,16 @@ export async function getPendingReports(): Promise<PendingReport[]> {
       body: row.body,
       author: row.author?.username ?? null,
       href: `/sugestoes/${row.suggestion_id}`,
+    });
+  }
+  for (const row of profiles.data ?? []) {
+    targets.set(`profile:${row.id}`, {
+      title: row.display_name
+        ? `${row.display_name} (@${row.username})`
+        : `@${row.username}`,
+      body: row.bio ?? "",
+      author: row.username,
+      href: `/@${row.username}`,
     });
   }
   return [...groups.entries()].flatMap(([key, rows]) => {

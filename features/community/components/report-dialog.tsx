@@ -14,7 +14,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { reportContent } from "../actions";
-import { REPORT_REASONS, type ReportReason, type ReportTarget } from "../types";
+import {
+  PROFILE_REPORT_REASONS,
+  REPORT_REASONS,
+  type ReportReason,
+  type ReportTarget,
+} from "../types";
 
 /**
  * Denunciar (MELHORIAS 8): o motivo e, se quiser, um detalhe. Vai para a fila
@@ -34,6 +39,12 @@ export function ReportDialog({
   const [details, setDetails] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const profile = target?.type === "profile";
+  const reasons = profile
+    ? REPORT_REASONS.filter((option) =>
+        PROFILE_REPORT_REASONS.includes(option.value),
+      )
+    : REPORT_REASONS;
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -63,14 +74,16 @@ export function ReportDialog({
       <DialogContent>
         <form onSubmit={submit} className="flex flex-col gap-5">
           <DialogHeader>
-            <DialogTitle>Denunciar</DialogTitle>
+            <DialogTitle>
+              {profile ? "Denunciar perfil" : "Denunciar"}
+            </DialogTitle>
             <DialogDescription>
               Ninguém além da equipe vê quem denunciou.
             </DialogDescription>
           </DialogHeader>
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-sm font-medium">O motivo</legend>
-            {REPORT_REASONS.map((option) => (
+            {reasons.map((option) => (
               <label
                 key={option.value}
                 className="flex items-center gap-2.5 text-sm"

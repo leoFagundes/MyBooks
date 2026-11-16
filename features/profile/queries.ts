@@ -278,12 +278,57 @@ export async function getProfileRelation(
   return data.status === "accepted" ? "following" : "requested";
 }
 
+/** Bloquear e silenciar, entre quem vê e o perfil. */
+export type BlockState = {
+  /** O que quem vê fez com o perfil: bloqueou, silenciou ou nada. */
+  mine: "block" | "mute" | null;
+  /** O perfil bloqueou quem vê: o conteúdo dele não aparece. */
+  blockedMe: boolean;
+};
+
+const NO_BLOCK: BlockState = { mine: null, blockedMe: false };
+
+export async function getBlockState(
+  profile: Pick<ProfileSummary, "id" | "username">,
+): Promise<BlockState> {
+  "use cache: private";
+  cacheLife("minutes");
+  // Bloquear e desbloquear atualizam o perfil das duas pessoas
+  cacheTag(`profile:${profile.username}`);
+
+  const viewer = await getViewer();
+  if (!viewer || viewer.id === profile.id) return NO_BLOCK;
+  const supabase = await createClient();
+  const [mine, blockedMe] = await Promise.all([
+    supabase
+      .from("user_blocks")
+      .select("kind")
+      .eq("blocker_id", viewer.id)
+      .eq("blocked_id", profile.id)
+      .maybeSingle(),
+    supabase.rpc("viewer_blocked_by", { other: profile.id }),
+  ]);
+  const kind = mine.data?.kind;
+  return {
+    mine: kind === "block" || kind === "mute" ? kind : null,
+    blockedMe: blockedMe.data === true,
+  };
+}
+
 /** O perfil de uma aba e se quem está vendo pode ver o conteúdo dela. */
 export async function getProfileTab(param: string) {
   const profile = await getProfileFromParam(param);
   if (!profile) return null;
-  const relation = await getProfileRelation(profile);
-  return { profile, relation, visible: canSeeContent(profile, relation) };
+  const [relation, block] = await Promise.all([
+    getProfileRelation(profile),
+    getBlockState(profile),
+  ]);
+  return {
+    profile,
+    relation,
+    blocked: block.blockedMe,
+    visible: canSeeContent(profile, relation) && !block.blockedMe,
+  };
 }
 
 /** Estante, coleções e citações: de todos, ou só de quem segue (perfil privado). */

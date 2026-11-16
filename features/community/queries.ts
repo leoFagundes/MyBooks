@@ -212,7 +212,7 @@ export async function getTopic(id: string): Promise<TopicDetail | null> {
     edited_at: string | null;
   };
 
-  const [replies, reactions, subscription, staff] = await Promise.all([
+  const [replies, reactions, subscription, staff, blocks] = await Promise.all([
     supabase
       .from("forum_replies")
       .select(
@@ -236,7 +236,14 @@ export async function getTopic(id: string): Promise<TopicDetail | null> {
           .maybeSingle()
       : Promise.resolve({ data: null }),
     viewer ? supabase.rpc("is_moderator") : Promise.resolve({ data: false }),
+    viewer
+      ? supabase
+          .from("user_blocks")
+          .select("blocked_id")
+          .eq("blocker_id", viewer.id)
+      : Promise.resolve({ data: [] as { blocked_id: string }[] }),
   ]);
+  const muted = new Set((blocks.data ?? []).map((row) => row.blocked_id));
   const mine = (reactions.data ?? []) as ReactionRow[];
   const replyRows = replies.data ?? [];
   const byId = new Map(replyRows.map((reply) => [reply.id, reply]));
@@ -285,6 +292,7 @@ export async function getTopic(id: string): Promise<TopicDetail | null> {
       editedAt: reply.edited_at,
       deleted,
       hidden: reply.hidden_at !== null,
+      muted: Boolean(reply.author && muted.has(reply.author.id)),
       createdAt: reply.created_at,
     };
   });

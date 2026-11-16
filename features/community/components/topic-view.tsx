@@ -567,6 +567,7 @@ function ReplyItem({
   signIn: () => void;
 }) {
   const viewer = topic.viewer;
+  const [revealed, setRevealed] = useState(false);
   if (reply.deleted) {
     return (
       <p className="text-sm text-muted-foreground italic">Resposta excluída.</p>
@@ -574,6 +575,20 @@ function ReplyItem({
   }
   const mine = viewer?.id === reply.author?.id;
   const open = !topic.locked || viewer?.staff;
+  if (reply.muted && !revealed) {
+    return (
+      <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+        Resposta de alguém que você bloqueou ou silenciou.
+        <button
+          type="button"
+          onClick={() => setRevealed(true)}
+          className="cursor-pointer text-foreground underline-offset-4 hover:underline"
+        >
+          Mostrar
+        </button>
+      </p>
+    );
+  }
   return (
     // A âncora leva da aba Publicações do perfil direto à resposta
     <div

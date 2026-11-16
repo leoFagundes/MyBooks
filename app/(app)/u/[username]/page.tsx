@@ -39,7 +39,13 @@ async function ShelfTab({ params }: { params: Params }) {
   if (!tab) return null;
   const { profile, relation } = tab;
   if (!tab.visible) {
-    return <PrivateProfileNotice profile={profile} relation={relation} />;
+    return (
+      <PrivateProfileNotice
+        profile={profile}
+        relation={relation}
+        blocked={tab.blocked}
+      />
+    );
   }
   const [shelf, viewer, jar] = await Promise.all([
     getShelf(profile.id),

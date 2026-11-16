@@ -773,6 +773,7 @@ const TARGET_LABEL: Record<PendingReport["targetType"], string> = {
   reply: "Resposta",
   suggestion: "Sugestão",
   suggestion_comment: "Comentário",
+  profile: "Perfil",
 };
 
 /** Uma denúncia (todas as do mesmo alvo juntas): ocultar ou dispensar. */
@@ -828,16 +829,48 @@ function ReportItem({ report }: { report: PendingReport }) {
       ) : null}
       <ErrorLine error={review.error} />
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="destructive"
-          disabled={review.pending}
-          onClick={() =>
-            review.run(() => reviewReport(report.id, true), "Conteúdo ocultado")
-          }
-        >
-          Ocultar o conteúdo
-        </Button>
+        {report.targetType === "profile" ? (
+          // Perfil não se oculta: a equipe olha a conta (e suspende ou bane lá)
+          <>
+            {report.author ? (
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={
+                    `${routes.adminUsuarios}?q=${encodeURIComponent(report.author)}` as typeof routes.adminUsuarios
+                  }
+                >
+                  Ver a conta
+                </Link>
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              disabled={review.pending}
+              onClick={() =>
+                review.run(
+                  () => reviewReport(report.id, true),
+                  "Denúncia resolvida",
+                )
+              }
+            >
+              Resolvida
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={review.pending}
+            onClick={() =>
+              review.run(
+                () => reviewReport(report.id, true),
+                "Conteúdo ocultado",
+              )
+            }
+          >
+            Ocultar o conteúdo
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"

@@ -48,7 +48,13 @@ async function CollectionsTab({ params }: { params: Params }) {
   if (!tab) return null;
   const { profile, relation } = tab;
   if (!tab.visible) {
-    return <PrivateProfileNotice profile={profile} relation={relation} />;
+    return (
+      <PrivateProfileNotice
+        profile={profile}
+        relation={relation}
+        blocked={tab.blocked}
+      />
+    );
   }
   const self = relation === "self";
   const { owned, member, saved } = await getProfileCollections(profile);

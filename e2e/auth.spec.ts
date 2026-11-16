@@ -183,4 +183,13 @@ test.describe("links do e-mail", () => {
     await expect(page).toHaveURL(/\/entrar\?erro=otp_expired$/);
     await expect(formAlert(page)).toBeVisible();
   });
+
+  // Endereço de retorno fora da lista do Supabase: o código cai na raiz
+  test("o código do login que cai na raiz segue para a troca", async ({
+    page,
+  }) => {
+    await page.goto("/?code=codigo-que-nao-existe");
+    await expect(page).toHaveURL(/\/entrar\?erro=/);
+    await expect(formAlert(page)).toBeVisible();
+  });
 });

@@ -10,7 +10,12 @@ import { AmbientGlow } from "@/features/books/components/ambient-glow";
 import { BookBackLink } from "@/features/books/components/book-back-link";
 import { BookHero } from "@/features/books/components/book-hero";
 import { BookPageSkeleton } from "@/features/books/components/book-page-skeleton";
-import { CommunityBlock } from "@/features/books/components/community-block";
+import {
+  CollectionsList,
+  ReadersLine,
+  ReviewsList,
+} from "@/features/books/components/community-block";
+import { CommunityTabs } from "@/features/books/components/community-tabs";
 import { EditBookButton } from "@/features/books/components/edit-book-button";
 import { SuggestBookActions } from "@/features/books/components/suggest-book";
 import { bookColor } from "@/features/books/lib/color";
@@ -34,6 +39,7 @@ import {
   getBookDiscussions,
   getForumCategories,
 } from "@/features/community/queries";
+import { RecommendBook } from "@/features/social/components/recommend-book";
 import { getViewer } from "@/lib/auth";
 import { routes } from "@/lib/routes";
 
@@ -104,21 +110,10 @@ async function BookContent({ params }: { params: Params }) {
               Comunidade
             </h2>
             <Suspense fallback={<Skeleton className="h-48 rounded-card" />}>
-              <Community bookId={book.id} />
+              <Community book={book} />
             </Suspense>
           </section>
         </div>
-        <section
-          aria-labelledby="discussoes"
-          className="mt-14 flex flex-col gap-4"
-        >
-          <h2 id="discussoes" className="font-serif text-2xl tracking-tight">
-            Discussões
-          </h2>
-          <Suspense fallback={<Skeleton className="h-32 rounded-card" />}>
-            <Discussions book={book} />
-          </Suspense>
-        </section>
       </main>
     </PageTransition>
   );
@@ -155,18 +150,70 @@ async function BookActions({ book }: { book: BookDetails }) {
 }
 
 /**
- * Os tópicos do fórum ligados ao livro (MELHORIAS 8) e o convite para abrir
- * um, já com o livro e na categoria de discussões.
+ * A comunidade do livro, em abas: quem leu em cima e, embaixo, as resenhas,
+ * as discussões do fórum e as coleções em que ele está.
  */
-async function Discussions({ book }: { book: BookDetails }) {
-  const [topics, categories, viewer] = await Promise.all([
+async function Community({ book }: { book: BookDetails }) {
+  const [community, topics, categories, viewer] = await Promise.all([
+    getBookCommunity(book.id),
     getBookDiscussions(book.id),
     getForumCategories(),
     getViewer(),
   ]);
+  return (
+    <div className="flex flex-col gap-6">
+      <ReadersLine community={community} />
+      <CommunityTabs
+        tabs={[
+          {
+            value: "resenhas",
+            label: "Resenhas",
+            count: community.reviews.length,
+            content: <ReviewsList reviews={community.reviews} />,
+          },
+          {
+            value: "discussoes",
+            label: "Discussões",
+            count: topics.length,
+            content: (
+              <Discussions
+                book={book}
+                topics={topics}
+                categories={categories}
+                viewer={viewer?.username ?? null}
+              />
+            ),
+          },
+          {
+            value: "colecoes",
+            label: "Coleções",
+            count: community.collections.length,
+            content: <CollectionsList collections={community.collections} />,
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+/**
+ * Os tópicos do fórum ligados ao livro (MELHORIAS 8) e o convite para abrir
+ * um, já com o livro e na categoria de discussões.
+ */
+function Discussions({
+  book,
+  topics,
+  categories,
+  viewer,
+}: {
+  book: BookDetails;
+  topics: Awaited<ReturnType<typeof getBookDiscussions>>;
+  categories: Awaited<ReturnType<typeof getForumCategories>>;
+  viewer: string | null;
+}) {
   const open = (
     <NewTopicButton
-      viewer={viewer?.username ?? null}
+      viewer={viewer}
       categories={categories}
       category="discussoes-de-livros"
       book={book}
@@ -190,7 +237,7 @@ async function Discussions({ book }: { book: BookDetails }) {
       <ul className="flex flex-col divide-y divide-border">
         {topics.map((topic) => (
           <li key={topic.id}>
-            <TopicCard topic={topic} />
+            <TopicCard topic={topic} titleAs="h3" />
           </li>
         ))}
       </ul>
@@ -262,11 +309,10 @@ async function ViewerBlock({ book }: { book: BookDetails }) {
       ) : (
         <AddToShelfPrompt book={book} />
       )}
-      <AddToCollection book={book} collections={collections} />
+      <div className="flex flex-wrap gap-2">
+        <AddToCollection book={book} collections={collections} />
+        <RecommendBook book={book} />
+      </div>
     </div>
   );
-}
-
-async function Community({ bookId }: { bookId: string }) {
-  return <CommunityBlock community={await getBookCommunity(bookId)} />;
 }

@@ -102,6 +102,13 @@ export const shelfDetailsSchema = z
  * O livro sorteado sai de Quero ler e passa a Lendo, com início no dia de
  * quem sorteou (o navegador sabe o dia; o servidor só conhece o UTC).
  */
+/** Deslizar na Lista: só o status, com o dia de quem usa para as datas. */
+export const statusChangeSchema = z.object({
+  bookId: z.uuid(),
+  status: z.enum(COPY_STATUSES, { error: "Status inválido" }),
+  today: daySchema,
+});
+
 export const startReadingSchema = z.object({
   bookId: z.uuid(),
   startedAt: daySchema,

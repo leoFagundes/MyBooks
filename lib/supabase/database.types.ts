@@ -252,6 +252,55 @@ export type Database = {
           },
         ]
       }
+      book_recommendations: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          note: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_recommendations_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_recommendations_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_recommendations_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books: {
         Row: {
           authors: string[]
@@ -1301,6 +1350,42 @@ export type Database = {
           },
         ]
       }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          kind: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          kind: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_books: {
         Row: {
           book_id: string
@@ -1694,6 +1779,10 @@ export type Database = {
         Args: { new_status: string; response?: string; suggestion: string }
         Returns: undefined
       }
+      set_user_block: {
+        Args: { new_kind?: string; target: string }
+        Returns: undefined
+      }
       similar_suggestions: {
         Args: { max_results?: number; q: string }
         Returns: {
@@ -1715,6 +1804,7 @@ export type Database = {
           username: string
         }[]
       }
+      viewer_blocked_by: { Args: { other: string }; Returns: boolean }
       viewer_has_password: { Args: never; Returns: boolean }
     }
     Enums: {

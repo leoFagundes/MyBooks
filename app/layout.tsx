@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   // As imagens vêm dos opengraph-image de cada rota
   openGraph: { siteName: "MyBooks", locale: "pt_BR", type: "website" },
   twitter: { card: "summary_large_image" },
-  icons: { apple: "/pwa/apple-icon-180.png" },
   appleWebApp: {
     capable: true,
     title: "MyBooks",

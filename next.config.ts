@@ -67,6 +67,8 @@ const nextConfig: NextConfig = {
     // A imagem da capa enviada no cadastro chega reduzida pelo navegador
     // (lado maior de 1200px), bem abaixo disso; o servidor recusa acima de 2 MB
     serverActions: { bodySizeLimit: "3mb" },
+    // Atualizações de segurança do Next aplicadas pelo agente de upgrade
+    agentUpgrade: "security",
   },
   headers() {
     return Promise.resolve([
